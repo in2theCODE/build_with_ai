@@ -1,0 +1,52 @@
+# Neural Interpreter Agent Configuration
+role: neural_interpreter
+agent_type: event_classifier
+version: 1.0.0
+description: "Scores incoming tasks across multiple dimensions to enable agent subscription"
+
+# This agent is special and subscribes to all incoming tasks
+subscription:
+  intent:
+    information_retrieval: 10
+    task_execution: 10
+    creative_generation: 10
+    analysis: 10
+    conversation: 10
+  domain:
+    technical: 10
+    business: 10
+    creative: 10
+    scientific: 10
+    general: 10
+  complexity:
+    tokens_required: 10
+    context_depth: 10
+    specialized_knowledge: 10
+  actionability:
+    tool_usage: 10
+    external_data: 10
+    computation: 10
+  urgency:
+    time_sensitivity: 10
+    importance: 10
+  specificity:
+    clarity: 10
+    constraints: 10
+    examples_provided: 10
+  multimodality:
+    code_required: 10
+    visual_required: 10
+    structured_data: 10
+
+# Circuit breaker settings
+circuit_breaker:
+  failure_threshold: 5
+  reset_timeout_seconds: 30
+  half_open_max_requests: 2
+
+# Retry policy
+retry_policy:
+  max_attempts: 3
+  initial_backoff_ms: 1000
+  max_backoff_ms: 10000
+  backoff_multiplier: 2.0

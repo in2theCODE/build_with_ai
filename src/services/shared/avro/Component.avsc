@@ -1,0 +1,20 @@
+{
+  "namespace": "com.programsynthesis.schema",
+  "type": "record",
+  "name": "Component",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "project_id", "type": "string"},
+    {"name": "spec_sheet_id", "type": ["string", "null"]},
+    {"name": "name", "type": ["string", "null"]},
+    {"name": "description", "type": ["string", "null"]},
+    {"name": "type", "type": ["string", "null"]},
+    {"name": "language", "type": ["string", "null"]},
+    {"name": "framework", "type": ["string", "null"]},
+    {"name": "code", "type": "string"},
+    {"name": "created_at", "type": "string"},
+    {"name": "updated_at", "type": "string"},
+    {"name": "dependencies", "type": {"type": "array", "items": "string"}, "default": []},
+    {"name": "metadata", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double"]}, "default": {}}
+  ]
+}

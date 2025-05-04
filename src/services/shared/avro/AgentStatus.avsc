@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "AgentStatus",
+  "namespace": "com.app.schema",
+  "fields": [
+    {
+      "name": "agent_id",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": "string"
+    },
+    {
+      "name": "load",
+      "type": "double"
+    },
+    {
+      "name": "timestamp",
+      "type": "string"
+    }
+  ]
+}

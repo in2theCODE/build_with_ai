@@ -1,0 +1,28 @@
+# ===============================================================================
+# Grafana Dashboard Provider Configuration
+# ===============================================================================
+# Purpose: Defines how Grafana should load dashboards
+#
+# Architectural Significance: This file establishes the mechanism for Grafana
+#                            to automatically load preconfigured dashboards
+#                            for Pulsar monitoring
+#
+# Responsibilities:
+# - Define dashboard provider for Grafana
+# - Set up path for dashboard files
+# - Configure dashboard provider behavior
+# ===============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: 'Pulsar Monitoring'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

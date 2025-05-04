@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    volumes:
+      - ./shared:/app/shared
+      - ./validation:/app/validation
+      - ./pulsar:/app/pulsar
+      - ./models:/app/models
+      - ./monitoring:/app/monitoring
+      - ./logging:/app/logging
+      - ./concurrency:/app/concurrency
+      - ./main.py:/app/main.py
+      - pip-cache:/home/appuser/.cache/pip
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    user: "1000:1000"  # Match your host user ID for volume permissions
+    command: ["python"]
+
+  pulsar:
+    image: apachepulsar/pulsar:4.0.4
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    volumes:
+      - pulsar-data:/pulsar/data
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pip-cache:
+  pulsar-data:

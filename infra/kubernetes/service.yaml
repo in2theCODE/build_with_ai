@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neural-code-generator
+  namespace: program-synthesis
+  labels:
+    app: neural-code-generator
+    component: code-generation
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: neural-code-generator

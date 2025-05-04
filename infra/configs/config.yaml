@@ -1,0 +1,151 @@
+# System-wide configuration
+system:
+  name: "Neural Program Synthesis System"
+  version: "2.0.0"
+  default_language: "python"
+  allow_best_effort: true
+  log_level: "INFO"
+
+# Messaging configuration for Apache Pulsar
+messaging:
+  provider: "apache_pulsar"
+  connection:
+    service_url: "pulsar://pulsar-broker:6650"
+    websocket_url: "ws://pulsar-broker:8080/ws"
+  topics:
+    specification: "synthesis.specification"
+    synthesis: "synthesis.process"
+    verification: "synthesis.verification"
+    code_generation: "synthesis.code"
+    feedback: "synthesis.feedback"
+    metrics: "synthesis.metrics"
+
+# Component configurations
+components:
+  specification_parser:
+    class: "program_synthesis_system.services.specification_parser.smt_parser.SMTSpecificationParser"
+    params:
+      smt_solver: "z3"
+      type_system: "advanced"
+      timeout: 30
+
+  synthesis_engine:
+    class: "program_synthesis_system.services.synthesis_engine.neural_synthesis.NeuralSynthesisEngine"
+    params:
+      timeout: 120
+      max_iterations: 500
+      strategies: ["neural", "hierarchical", "tree_transformer", "hybrid"]
+      beam_width: 10
+      use_knowledge_base: true
+      early_stopping: true
+      max_retries: 3
+
+  code_generator:
+    class: "program_synthesis_system.services.neural_code_generator.NeuralCodeGenerator"
+    params:
+      model_path: "models/neural_code_generator"
+      target_language: "${system.default_language}"
+      max_context_length: 8192
+      generation:
+        temperature: 0.2
+        top_p: 0.95
+        top_k: 50
+      techniques:
+        retrieval_augmentation: true
+        tree_transformers: true
+        hierarchical_generation: true
+        syntax_aware_search: true
+        hybrid_grammar_neural: true
+      attention:
+        heads: 16
+        head_dim: 64
+        dropout: 0.1
+      retrieval:
+        top_k: 5
+        similarity_threshold: 0.75
+
+  verifier:
+    class: "program_synthesis_system.services.verifier.statistical_verifier.StatisticalVerifier"
+    params:
+      sample_size: 2000
+      confidence_threshold: 0.98
+      timeout_per_test: 5
+
+  knowledge_base:
+    class: "program_synthesis_system.services.knowledge_base.vector_knowledge_base.VectorKnowledgeBase"
+    params:
+      storage_type: "file"
+      file_storage_path: "knowledge_base"
+      embedding_model: "all-mpnet-base-v2"
+      similarity_threshold: 0.85
+      cache_size: 1000
+      max_results: 20
+
+  ast_code_generator:
+    class: "program_synthesis_system.services.ast_code_generator.ast_code_generator.ASTCodeGenerator"
+    params:
+      optimization_level: 3
+      style_guide: "pep8"
+      include_comments: true
+      cache_results: true
+
+  feedback_collector:
+    class: "program_synthesis_system.services.feedback_collector.mongodb_collector.MongoDBFeedbackCollector"
+    params:
+      connection_string: "mongodb://localhost:27017/synthesis"
+      collection_name: "feedback"
+      batch_size: 50
+      async_processing: true
+
+# Neural model configurations
+models:
+  attention_model:
+    type: "transformer"
+    pretrained_name: "codegen-16b"
+    context_length: 8192
+    attention_type: "sparse_local_global"
+    quantization: "int8"
+    batch_size: 4
+    gradient_checkpointing: true
+
+  tree_transformer:
+    type: "tree_transformer"
+    pretrained_name: "codetree-7b"
+    max_tree_depth: 50
+    node_embedding_dim: 768
+    attention_heads: 16
+    cache_size: 128
+
+  hierarchical_model:
+    type: "hierarchical"
+    outline_model: "outline-3b"
+    implementation_model: "impl-7b"
+    outline_temperature: 0.3
+    implementation_temperature: 0.2
+    max_outline_tokens: 1024
+
+  hybrid_model:
+    type: "hybrid"
+    grammar_model: "grammar-3b"
+    completion_model: "completion-7b"
+    grammar_weight: 0.6
+    neural_weight: 0.4
+    cache_grammar_results: true
+
+# Resource management settings
+resources:
+  memory_limits:
+    synthesis_engine: "8Gi"
+    code_generator: "16Gi"
+    verifier: "4Gi"
+    knowledge_base: "4Gi"
+  cpu_limits:
+    synthesis_engine: "4"
+    code_generator: "8"
+    verifier: "2"
+    knowledge_base: "2"
+  auto_scaling:
+    enabled: true
+    min_replicas: 1
+    max_replicas: 5
+    target_cpu_utilization: 75

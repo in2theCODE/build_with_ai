@@ -1,0 +1,20 @@
+{
+  "namespace": "com.programsynthesis.schema",
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {"name": "event_id", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "source_container", "type": "string"},
+    {"name": "payload", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double", {
+      "type": "array", "items": ["null", "string", "int", "boolean", "double"]
+    }, {
+      "type": "map", "values": ["null", "string", "int", "boolean", "double"]
+    }]}, "default": {}},
+    {"name": "timestamp", "type": "string"},
+    {"name": "priority", "type": "int", "default": 1},
+    {"name": "correlation_id", "type": ["string", "null"]},
+    {"name": "metadata", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double"]}, "default": {}},
+    {"name": "version", "type": "string", "default": "1.0"}
+  ]
+}

@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # API Gateway (Traefik)
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./traefik/certs:/etc/traefik/certs:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Authentication Sidecar
+  auth-sidecar:
+    build:
+      context: auth-sidecar
+    container_name: auth-sidecar
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLERK_JWT_PUBLIC_KEY=${CLERK_JWT_PUBLIC_KEY}
+      - ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Neural Interpreter
+  neural-interpreter:
+    build:
+      context: ./neural-interpreter
+    container_name: neural-interpreter
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+      - ./certs:/opt/certs
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+    networks:
+      - api-network
+      - pulsar-network
+    healthcheck:
+      test: ["CMD", "test", "-e", "/tmp/agent-health.txt"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - pulsar
+      - auth-sidecar
+
+  # Pulsar
+  pulsar:
+    image: apachepulsar/pulsar:3.0.0
+    container_name: pulsar
+    restart: unless-stopped
+    ports:
+      - "6650:6650"  # Internal use only - not exposed externally
+      - "8080:8080"  # Internal use only - not exposed externally
+    volumes:
+      - pulsar-data:/pulsar/data
+      - ./certs:/pulsar/certs
+      - ./pulsar/conf:/pulsar/conf
+    command: >
+      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone -nss -nfw"
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g
+      - webServicePortTls=8443
+      - tlsEnabled=true
+      - tlsCertificateFilePath=/pulsar/certs/pulsar.crt
+      - tlsKeyFilePath=/pulsar/certs/pulsar.key
+      - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
+      - authenticationEnabled=true
+      - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
+      - webSocketServiceEnabled=true
+    networks:
+      - pulsar-network
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional Dashboard
+  dashboard:
+    image: node:18-alpine
+    container_name: dashboard
+    restart: unless-stopped
+    volumes:
+      - ./dashboard:/app
+    working_dir: /app
+    command: ["npm", "start"]
+    networks:
+      - api-network
+    depends_on:
+      - neural-interpreter
+
+networks:
+  api-network:
+    driver: bridge
+  pulsar-network:
+    driver: bridge
+
+volumes:
+  pulsar-data:

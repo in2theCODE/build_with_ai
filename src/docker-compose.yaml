@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - template-service
+      - project-service
+      - spec-generator
+      - storage-service
+    networks:
+      - spec-template-network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    environment:
+      - API_URL=http://api-gateway:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - spec-template-network
+
+  # Template Service - Manages spec templates
+  template-service:
+    build:
+      context: ./template-service
+    environment:
+      - STORAGE_URL=http://storage-service:3002
+      - TEMPLATE_ROOT=/templates
+    volumes:
+      - ./spec-templates:/templates
+    networks:
+      - spec-template-network
+
+  # Project Service - Manages projects and spec sheets
+  project-service:
+    build:
+      context: ./project-service
+    environment:
+      - TEMPLATE_SERVICE_URL=http://template-service:3001
+      - STORAGE_URL=http://storage-service:3002
+    depends_on:
+      - template-service
+      - storage-servicep
+      - spec-template-network
+
+  # Spec Generator - AI-assisted spec completion
+  spec-generator:
+    build:
+      context: ./spec-generator
+    environment:
+      - TEMPLATE_SERVICE_URL=http://template-service:3001
+      - PROJECT_SERVICE_URL=http://project-service:3003
+      - AI_SERVICE_URL=http://ai-service:3005
+    depends_on:
+      - template-service
+      - project-service
+      - ai-service
+    networks:
+      - spec-template-network
+
+  # AI Service - Handles AI model interactions
+  ai-service:
+    build:
+      context: ./ai-service
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - MODEL_CACHE_SIZE=1024
+    volumes:
+      - ai-cache:/cache
+    networks:
+      - spec-template-network
+
+  # Storage Service - Handles persistence
+  storage-service:
+    build:
+      context: ./storage-service
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=specdb
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - database
+    volumes:
+      - storage-data:/data
+    networks:
+      - spec-template-network
+
+  # Database - PostgreSQL for storing projects and completed specs
+  database:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=specdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - spec-template-network
+
+  # Vector Database - For template similarity search
+  vector-db:
+    image: pgvector/pgvector:latest
+    environment:
+      - POSTGRES_DB=vectordb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - vector-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - spec-template-network
+
+  # Event Bus - Apache Pulsar for event-driven communication
+  event-bus:
+    image: apachepulsar/pulsar:latest
+    command: >
+      bin/pulsar standalone
+    ports:
+      - "8080:8080"
+      - "6650:6650"
+    volumes:
+      - pulsar-data:/pulsar/data
+    networks:
+      - spec-template-network
+
+  # Workflow Engine - Orchestrates the entire flow
+  workflow-engine:
+    build:
+      context: ./workflow-engine
+    environment:
+      - PROJECT_SERVICE_URL=http://project-service:3003
+      - SPEC_GENERATOR_URL=http://spec-generator:3004
+      - EVENT_BUS_URL=pulsar://event-bus:6650
+    depends_on:
+      - project-service
+      - spec-generator
+      - event-bus
+    networks:
+      - spec-template-network
+
+  # Evolution Analyzer - Tracks template usage and suggests improvements
+  evolution-analyzer:
+    build:
+      context: ./evolution-analyzer
+    environment:
+      - TEMPLATE_SERVICE_URL=http://template-service:3001
+      - STORAGE_URL=http://storage-service:3002
+      - VECTOR_DB_HOST=vector-db
+      - VECTOR_DB_PORT=5432
+      - VECTOR_DB_NAME=vectordb
+      - VECTOR_DB_USER=${DB_USER}
+      - VECTOR_DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - template-service
+      - storage-service
+      - vector-db
+    networks:
+      - spec-template-network
+
+networks:
+  spec-template-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  vector-db-data:
+  pulsar-data:
+  ai-cache:
+  storage-data:

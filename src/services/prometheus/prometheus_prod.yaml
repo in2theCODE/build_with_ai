@@ -1,0 +1,84 @@
+global:
+  scrape_interval: 15s     # How frequently to scrape targets
+  evaluation_interval: 15s # How frequently to evaluate rules
+
+# Scrape configurations for all Pulsar services
+scrape_configs:
+  # Pulsar Brokers
+  - job_name: 'pulsar-broker'
+    static_configs:
+      - targets: ['broker-1:8080']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'broker'
+          instance: 'broker-1'
+      - targets: ['broker-2:8080']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'broker'
+          instance: 'broker-2'
+
+  # Pulsar BookKeeper (Bookies)
+  - job_name: 'pulsar-bookie'
+    static_configs:
+      - targets: ['bookie-1:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'bookie'
+          instance: 'bookie-1'
+      - targets: ['bookie-2:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'bookie'
+          instance: 'bookie-2'
+      - targets: ['bookie-3:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'bookie'
+          instance: 'bookie-3'
+
+  # Pulsar ZooKeeper
+  - job_name: 'pulsar-zookeeper'
+    static_configs:
+      - targets: ['zookeeper-1:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'zookeeper'
+          instance: 'zookeeper-1'
+      - targets: ['zookeeper-2:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'zookeeper'
+          instance: 'zookeeper-2'
+      - targets: ['zookeeper-3:8000']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'zookeeper'
+          instance: 'zookeeper-3'
+
+  # Pulsar Proxy
+  - job_name: 'pulsar-proxy'
+    static_configs:
+      - targets: ['proxy:8080']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'proxy'
+          instance: 'proxy-1'
+
+  # Pulsar Function Workers
+  - job_name: 'pulsar-function-worker'
+    static_configs:
+      - targets: ['function-worker:6750']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'function-worker'
+          instance: 'function-worker-1'
+
+  # Self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'monitoring'
+          instance: 'prometheus'

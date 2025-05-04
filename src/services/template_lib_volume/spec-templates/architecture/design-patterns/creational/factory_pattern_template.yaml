@@ -1,0 +1,165 @@
+id: factory_pattern_template
+name: Factory Design Pattern
+description: Template for implementing the Factory design pattern
+version: 1.0.0
+category: architecture/design-patterns
+sections:
+  - name: pattern_info
+    description: Basic information about the pattern implementation
+    fields:
+      - name: pattern_name
+        type: STRING
+        description: Name of the pattern (Factory, Abstract Factory, etc.)
+        required: true
+        default_value: "Factory Method"
+        validation_rules:
+          - rule_type: ENUM_VALUES
+            expression: "Factory Method,Abstract Factory,Simple Factory"
+            error_message: "Must be a valid factory pattern type"
+      - name: language
+        type: ENUM
+        description: Programming language
+        required: true
+        default_value: "TypeScript"
+        validation_rules:
+          - rule_type: ENUM_VALUES
+            expression: "TypeScript,JavaScript,Python,Java,C#,Go,Rust,PHP,Ruby"
+            error_message: "Must be a supported programming language"
+      - name: purpose
+        type: STRING
+        description: Purpose of this factory implementation
+        required: true
+        default_value: ""
+        validation_rules:
+          - rule_type: MIN_LENGTH
+            expression: "10"
+            error_message: "Purpose description should be meaningful"
+  - name: product_interface
+    description: Definition of the product interface/class
+    fields:
+      - name: product_name
+        type: STRING
+        description: Name of the product interface or abstract class
+        required: true
+        default_value: ""
+        validation_rules:
+          - rule_type: PATTERN
+            expression: "^[A-Z][a-zA-Z0-9]*$"
+            error_message: "Product name should be in PascalCase"
+      - name: methods
+        type: ARRAY
+        description: Methods that the product interface declares
+        required: true
+        default_value: "[]"
+        validation_rules: []
+      - name: method_template
+        type: OBJECT
+        description: Template for a method (not to be filled out directly)
+        required: false
+        default_value: |
+          {
+            "name": "operation",
+            "return_type": "string",
+            "parameters": [],
+            "description": "Main operation that concrete products implement"
+          }
+        validation_rules: []
+  - name: concrete_products
+    description: Concrete product implementations
+    fields:
+      - name: product_implementations
+        type: ARRAY
+        description: List of concrete product implementations
+        required: true
+        default_value: "[]"
+        validation_rules: []
+      - name: product_template
+        type: OBJECT
+        description: Template for a concrete product (not to be filled out directly)
+        required: false
+        default_value: |
+          {
+            "name": "ConcreteProductA",
+            "description": "First concrete implementation of the product",
+            "method_implementations": [
+              {
+                "method": "operation",
+                "implementation": "Returns result from ConcreteProductA"
+              }
+            ]
+          }
+        validation_rules: []
+  - name: factory
+    description: Factory implementation
+    fields:
+      - name: factory_name
+        type: STRING
+        description: Name of the factory class/interface
+        required: true
+        default_value: ""
+        validation_rules:
+          - rule_type: PATTERN
+            expression: "^[A-Z][a-zA-Z0-9]*$"
+            error_message: "Factory name should be in PascalCase"
+      - name: factory_type
+        type: ENUM
+        description: Type of factory implementation
+        required: true
+        default_value: "Class"
+        validation_rules:
+          - rule_type: ENUM_VALUES
+            expression: "Class,Interface,Function"
+            error_message: "Must be a valid factory type"
+      - name: creation_method
+        type: STRING
+        description: Name of the creation method
+        required: true
+        default_value: "createProduct"
+        validation_rules: []
+      - name: parameters
+        type: ARRAY
+        description: Parameters for the creation method
+        required: false
+        default_value: "[]"
+        validation_rules: []
+  - name: concrete_factories
+    description: Concrete factory implementations (for abstract factory)
+    fields:
+      - name: has_concrete_factories
+        type: BOOLEAN
+        description: Whether this pattern uses concrete factories
+        required: true
+        default_value: "false"
+        validation_rules: []
+      - name: factory_implementations
+        type: ARRAY
+        description: List of concrete factory implementations
+        required: false
+        default_value: "[]"
+        validation_rules: []
+      - name: factory_template
+        type: OBJECT
+        description: Template for a concrete factory (not to be filled out directly)
+        required: false
+        default_value: |
+          {
+            "name": "ConcreteFactoryA",
+            "description": "Factory that creates product variant A",
+            "products_created": ["ConcreteProductA"]
+          }
+        validation_rules: []
+  - name: client_code
+    description: Example client code using the factory
+    fields:
+      - name: client_code_sample
+        type: CODE
+        description: Sample client code showing how to use the factory
+        required: false
+        default_value: ""
+        validation_rules: []
+      - name: dependencies
+        type: ARRAY
+        description: Dependencies required by the client code
+        required: false
+        default_value: "[]"
+        validation_rules: []

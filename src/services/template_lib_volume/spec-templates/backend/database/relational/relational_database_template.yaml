@@ -1,0 +1,103 @@
+id: relational_database_template
+name: Relational Database Schema
+description: Template for defining relational database schemas
+version: 1.0.0
+category: backend/database
+sections:
+  - name: database_metadata
+    description: General information about the database
+    fields:
+      - name: database_name
+        type: STRING
+        description: Name of the database
+        required: true
+        default_value: ""
+        validation_rules:
+          - rule_type: MIN_LENGTH
+            expression: "1"
+            error_message: "Database name cannot be empty"
+          - rule_type: PATTERN
+            expression: "^[a-zA-Z0-9_]+$"
+            error_message: "Database name must contain only alphanumeric characters and underscores"
+      - name: description
+        type: STRING
+        description: Detailed description of the database
+        required: false
+        default_value: ""
+        validation_rules: []
+      - name: database_type
+        type: ENUM
+        description: Type of relational database
+        required: true
+        default_value: "PostgreSQL"
+        validation_rules:
+          - rule_type: ENUM_VALUES
+            expression: "PostgreSQL,MySQL,SQLite,SQL Server,Oracle"
+            error_message: "Database type must be one of PostgreSQL, MySQL, SQLite, SQL Server, or Oracle"
+  - name: tables
+    description: Database tables
+    fields:
+      - name: table_definitions
+        type: ARRAY
+        description: List of table definitions
+        required: true
+        default_value: "[]"
+        validation_rules: []
+      - name: table_template
+        type: OBJECT
+        description: Template for a table (not to be filled out directly)
+        required: false
+        default_value: |
+          {
+            "name": "table_name",
+            "description": "Description of table",
+            "columns": [
+              {
+                "name": "id",
+                "type": "UUID",
+                "primary_key": true,
+                "nullable": false,
+                "description": "Primary key"
+              },
+              {
+                "name": "column_name",
+                "type": "VARCHAR(255)",
+                "primary_key": false,
+                "nullable": true,
+                "description": "Description of column",
+                "default": null
+              }
+            ],
+            "indexes": [
+              {
+                "name": "idx_table_column",
+                "columns": ["column_name"],
+                "unique": false
+              }
+            ]
+          }
+        validation_rules: []
+  - name: relationships
+    description: Relationships between tables
+    fields:
+      - name: relationship_definitions
+        type: ARRAY
+        description: List of relationships
+        required: true
+        default_value: "[]"
+        validation_rules: []
+      - name: relationship_template
+        type: OBJECT
+        description: Template for a relationship (not to be filled out directly)
+        required: false
+        default_value: |
+          {
+            "name": "relationship_name",
+            "type": "ONE_TO_MANY",
+            "source_table": "parent_table",
+            "target_table": "child_table",
+            "source_column": "id",
+            "target_column": "parent_id",
+            "on_delete": "CASCADE"
+          }
+        validation_rules: []

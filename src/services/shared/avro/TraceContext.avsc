@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "TraceContext",
+  "namespace": "com.app.schema",
+  "fields": [
+    {
+      "name": "trace_id",
+      "type": "string"
+    },
+    {
+      "name": "span_id",
+      "type": "string"
+    },
+    {
+      "name": "parent_span_id",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    }
+  ]
+}

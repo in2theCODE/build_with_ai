@@ -1,0 +1,21 @@
+{
+  "namespace": "com.programsynthesis.schema",
+  "type": "record",
+  "name": "Template",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "description", "type": ["string", "null"]},
+    {"name": "category", "type": ["string", "null"]},
+    {"name": "language", "type": ["string", "null"]},
+    {"name": "framework", "type": ["string", "null"]},
+    {"name": "content", "type": "string"},
+    {"name": "variables", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double"]}, "default": {}},
+    {"name": "metadata", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double"]}, "default": {}},
+    {"name": "version", "type": "string", "default": "1.0"},
+    {"name": "created_at", "type": "string"},
+    {"name": "updated_at", "type": "string"},
+    {"name": "author", "type": ["string", "null"]},
+    {"name": "tags", "type": {"type": "array", "items": "string"}, "default": []}
+  ]
+}

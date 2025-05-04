@@ -1,0 +1,10 @@
+I'm working on enhancing my program synthesis system with advanced specification parsing techniques. I'll provide you with the system context through uploaded files, and I'd like your help implementing these specific techniques:
+
+1. Domain-specific pre-training on technical documentation and requirements
+2. Constraint mining algorithms for extracting formal constraints from natural language
+3. Type inference models for predicting variable and return types
+4. Program sketching extraction to identify program structure from requirements
+5. Semantic parsing into intermediate logical forms
+6. Integration of theorem provers to verify extracted specifications
+
+Please analyze the provided system files and help me implement these techniques in a way that integrates with my existing architecture. I need production-ready, enterprise-level code following modern best practices.

@@ -1,0 +1,84 @@
+# DeepSeek 6.7B Model Configuration
+model:
+  name: "deepseek-coder-6.7b-base"
+  type: "causal_lm"
+  configuration:
+    # Model architecture settings
+    hidden_size: 4096
+    num_attention_heads: 16
+    head_dim: 64
+    intermediate_size: 11008
+    num_hidden_layers: 32
+    rms_norm_eps: 1e-6
+    attention_dropout: 0.1
+
+    # Generation settings
+    max_length: 8192
+    temperature: 0.2
+    top_p: 0.95
+    top_k: 50
+    repetition_penalty: 1.1
+
+# Advanced techniques
+techniques:
+  use_retrieval_augmentation: true
+  use_tree_transformers: true
+  use_hierarchical_generation: true
+  use_syntax_aware_search: true
+  use_hybrid_grammar_neural: true
+
+# Retrieval parameters
+retrieval:
+  top_k: 5
+  similarity_threshold: 0.75
+  embedding_model: "all-mpnet-base-v2"
+
+# Database configuration for read-only access to global DBs
+databases:
+  global:
+    read_only: true
+    connections:
+      postgres:
+        host: "postgres"
+        port: 5432
+        database: "program_synthesis"
+        user: "readonly"
+        password: "readonly_password"
+      redis:
+        host: "redis"
+        port: 6379
+        password: "readonly_password"
+        db: 0
+        user: "readonly"
+      qdrant:
+        host: "qdrant"
+        port: 6333
+        api_key: "readonly_qdrant_password"
+
+  # Container-specific database for private state
+  container:
+    postgres:
+      host: "postgres"
+      port: 5432
+      database: "program_synthesis"
+      user: "neural_interpreter"
+      password: "neural_interpreter_password"
+      schema: "neural_interpreter"
+    redis:
+      host: "redis"
+      port: 6379
+      password: "neural_interpreter_password"
+      db: 1
+      user: "neural_interpreter"
+      key_prefix: "neural_interpreter:"
+    local_storage:
+      path: "/app/container_state"
+
+# Neural model specifics
+neural_models:
+  attention_model:
+    type: "deepseek"
+    pretrained_name: "deepseek-coder-6.7b-base"
+    context_length: 8192
+    attention_type: "sparse_local_global"
+    quantization: "int8"

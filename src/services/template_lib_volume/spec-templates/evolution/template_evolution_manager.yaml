@@ -1,0 +1,123 @@
+id: template_evolution_manager
+name: Template Evolution Manager
+description: Configuration for template evolution tracking and suggestions
+version: 1.0.0
+category: evolution
+sections:
+  - name: evolution_config
+    description: Configuration for evolution analysis
+    fields:
+      - name: analysis_frequency
+        type: ENUM
+        description: How frequently to analyze templates for evolution
+        required: true
+        default_value: "WEEKLY"
+        validation_rules:
+          - rule_type: ENUM_VALUES
+            expression: "DAILY,WEEKLY,MONTHLY,ON_DEMAND"
+            error_message: "Analysis frequency must be one of the listed values"
+      - name: min_instances_for_analysis
+        type: INTEGER
+        description: Minimum number of template instances required for meaningful analysis
+        required: true
+        default_value: "10"
+        validation_rules:
+          - rule_type: RANGE
+            expression: "1,1000"
+            error_message: "Value must be between 1 and 1000"
+      - name: suggestion_confidence_threshold
+        type: FLOAT
+        description: Minimum confidence score required for suggestions
+        required: true
+        default_value: "0.7"
+        validation_rules:
+          - rule_type: RANGE
+            expression: "0.0,1.0"
+            error_message: "Confidence threshold must be between 0.0 and 1.0"
+  - name: field_evolution_metrics
+    description: Metrics tracked for field evolution
+    fields:
+      - name: track_usage_count
+        type: BOOLEAN
+        description: Track how many times a field is used
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: track_completion_rate
+        type: BOOLEAN
+        description: Track the rate at which fields are completed
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: track_error_rate
+        type: BOOLEAN
+        description: Track the rate of validation errors for fields
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: track_fill_time
+        type: BOOLEAN
+        description: Track the average time taken to fill a field
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: track_common_values
+        type: BOOLEAN
+        description: Track common values used for fields
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: common_values_threshold
+        type: INTEGER
+        description: Number of common values to track
+        required: true
+        default_value: "10"
+        validation_rules:
+          - rule_type: RANGE
+            expression: "1,100"
+            error_message: "Value must be between 1 and 100"
+  - name: suggestion_types
+    description: Types of suggestions to generate
+    fields:
+      - name: suggest_add_field
+        type: BOOLEAN
+        description: Suggest adding new fields
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_remove_field
+        type: BOOLEAN
+        description: Suggest removing rarely used fields
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_modify_field
+        type: BOOLEAN
+        description: Suggest modifying field properties
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_reorder_fields
+        type: BOOLEAN
+        description: Suggest reordering fields for better UX
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_add_validation
+        type: BOOLEAN
+        description: Suggest adding validation rules
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_split_template
+        type: BOOLEAN
+        description: Suggest splitting templates that are too large
+        required: true
+        default_value: "true"
+        validation_rules: []
+      - name: suggest_merge_templates
+        type: BOOLEAN
+        description: Suggest merging similar templates
+        required: true
+        default_value: "true"
+        validation_rules: []

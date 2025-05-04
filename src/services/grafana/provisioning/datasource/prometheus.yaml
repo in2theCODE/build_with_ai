@@ -1,0 +1,54 @@
+# ===============================================================================
+# Prometheus Main Configuration
+# ===============================================================================
+# Purpose: Main configuration file for Prometheus server
+#
+# Architectural Significance: This file establishes the core configuration for
+#                            Prometheus, including global settings, rule files,
+#                            alerts, and storage settings
+#
+# Responsibilities:
+# - Define global scrape and evaluation intervals
+# - Configure rule files for alerting
+# - Include scrape configurations from other files
+# - Set up storage retention
+# ===============================================================================
+
+global:
+  scrape_interval: 15s     # How frequently to scrape targets
+  evaluation_interval: 15s # How frequently to evaluate rules
+  external_labels:
+    cluster: 'pulsar-cluster'  # Add cluster label to all metrics
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "prometheus_rules.yml"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention:
+      time: 15d
+      size: 30GB
+
+# Import Pulsar component scrape configurations
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          cluster: 'pulsar-cluster'
+          component: 'monitoring'
+          instance: 'prometheus'
+
+# Include Pulsar-specific scrape configurations from separate file
+include_config_files:
+  - prometheus_prod.yaml

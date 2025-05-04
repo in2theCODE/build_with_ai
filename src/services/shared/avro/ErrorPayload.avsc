@@ -1,0 +1,38 @@
+{
+  "namespace": "com.programsynthesis.schema",
+  "type": "record",
+  "name": "ErrorPayload",
+  "fields": [
+    {
+      "name": "project_id",
+      "type": ["string", "null"]
+    },
+    {
+      "name": "error",
+      "type": {
+        "type": "record",
+        "name": "ErrorInfo",
+        "fields": [
+          { "name": "code", "type": "string" },
+          { "name": "message", "type": "string" },
+          {
+            "name": "details",
+            "type": {
+              "type": "map",
+              "values": ["null", "string", "int", "boolean", "double"]
+            },
+            "default": {}
+          }
+        ]
+      }
+    },
+    {
+      "name": "context",
+      "type": {
+        "type": "map",
+        "values": ["null", "string", "int", "boolean", "double"]
+      },
+      "default": {}
+    }
+  ]
+}

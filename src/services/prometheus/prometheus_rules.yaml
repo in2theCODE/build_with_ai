@@ -1,0 +1,88 @@
+# ===============================================================================
+# Prometheus Alert Rules
+# ===============================================================================
+# Purpose: Defines alerting rules for Pulsar services
+#
+# Architectural Significance: This file establishes the conditions that trigger
+#                           alerts for Pulsar service issues
+#
+# Responsibilities:
+# - Define alerting thresholds for Pulsar services
+# - Set severity levels for different alert conditions
+# - Provide detailed alert annotations
+# ===============================================================================
+
+groups:
+- name: pulsar_alerts
+  rules:
+  - alert: PulsarBrokerDown
+    expr: up{component="broker"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Pulsar broker down ({{ $labels.instance }})"
+      description: "Pulsar broker has been down for more than 1 minute."
+
+  - alert: PulsarBookieDown
+    expr: up{component="bookie"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Pulsar bookie down ({{ $labels.instance }})"
+      description: "Pulsar bookie has been down for more than 1 minute."
+
+  - alert: PulsarZooKeeperDown
+    expr: up{component="zookeeper"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Pulsar ZooKeeper down ({{ $labels.instance }})"
+      description: "ZooKeeper instance has been down for more than 1 minute."
+
+  - alert: PulsarHighCPUUsage
+    expr: rate(process_cpu_seconds_total{component=~"broker|bookie"}[5m]) * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage ({{ $labels.instance }})"
+      description: "{{ $labels.instance }} has had CPU usage > 80% for more than 5 minutes."
+
+  - alert: PulsarHighMemoryUsage
+    expr: process_resident_memory_bytes{component=~"broker|bookie"} / on(instance) node_memory_MemTotal_bytes * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage ({{ $labels.instance }})"
+      description: "{{ $labels.instance }} has had memory usage > 85% for more than 5 minutes."
+
+  - alert: PulsarHighTopicBacklog
+    expr: pulsar_topics_loadBalancer_msg_throughput_out / (pulsar_topics_loadBalancer_msg_throughput_in > 0) < 0.5
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High topic backlog"
+      description: "Consumer throughput is less than 50% of producer throughput for more than 10 minutes."
+
+  - alert: PulsarFunctionWorkerDown
+    expr: up{component="function-worker"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Pulsar function worker down ({{ $labels.instance }})"
+      description: "Pulsar function worker has been down for more than 1 minute."
+
+  - alert: PulsarProxyDown
+    expr: up{component="proxy"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Pulsar proxy down ({{ $labels.instance }})"
+      description: "Pulsar proxy has been down for more than 1 minute."

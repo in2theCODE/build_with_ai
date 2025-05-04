@@ -1,0 +1,121 @@
+# DeepSeek 8B Model Configuration for Neural Code Generator
+
+model:
+  name: "deepseek-coder-8b-instruct"
+  type: "causal_lm"
+  configuration:
+    # Model architecture settings
+    hidden_size: 4096
+    num_attention_heads: 32
+    intermediate_size: 11008
+    num_hidden_layers: 32
+    rms_norm_eps: 1e-6
+
+    # Tokenizer settings
+    tokenizer_type: "llama"
+    vocab_size: 32000
+    bos_token_id: 1
+    eos_token_id: 2
+    pad_token_id: 0
+
+    # Generation settings
+    max_length: 8192
+    temperature: 0.2
+    top_p: 0.95
+    top_k: 50
+    repetition_penalty: 1.1
+
+    # Optimization settings for DeepSeek
+    use_cache: true
+    flash_attention: true
+    flash_attn_cross_entropy: true
+    no_bias_final_norm: true
+    tie_word_embeddings: true
+
+optimization:
+  # Quantization options
+  quantization:
+    int8:
+      enabled: true
+      threshold: 6.0
+      skip_modules: ["lm_head"]
+
+    int4:
+      enabled: false
+      compute_dtype: "bfloat16"
+      quant_type: "nf4"
+
+  # Mixed precision options
+  mixed_precision:
+    enabled: true
+    dtype: "bfloat16"  # Options: float16, bfloat16
+
+  # Memory optimization
+  memory:
+    cpu_offloading: false
+    attention_sinking: true
+    gradient_checkpointing: false
+
+  # Performance optimizations
+  performance:
+    use_bettertransformer: true
+    compile_model: false  # PyTorch 2.0+ compilation
+    optimize_cuda_graphs: false
+
+# DeepSeek-specific prompt templates
+prompts:
+  python:
+    template: |-
+      <｜begin▁of▁sentence｜>
+      [INST] {instruction} [/INST]
+
+  code_generation:
+    template: |-
+      <｜begin▁of▁sentence｜>
+      [INST] Generate a {language} function with the following specification:
+      
+      {specification}
+      
+      The function should be production-ready with proper error handling and validation.
+      [/INST]
+
+  code_completion:
+    template: |-
+      <｜begin▁of▁sentence｜>
+      [INST] Complete the following {language} code:
+      
+      ```{language}
+      {code_prefix}
+      ```
+      [/INST]
+
+# Hardware resource requirements
+hardware:
+  min_gpu_memory: 16  # GB
+  recommended_gpu_memory: 24  # GB
+  min_vram_optimized: 8  # GB with quantization and offloading
+  cpu_memory: 16  # GB
+  disk_space: 16  # GB
+
+# Performance benchmarks
+benchmarks:
+  throughput:
+    tokens_per_second: 30  # with int8 quantization
+    batch_size_1: 30  # tokens/sec
+    batch_size_4: 55  # tokens/sec
+
+  latency:
+    first_token: 120  # ms
+    per_token: 33  # ms
+
+# Deployment options
+deployment:
+  container_image: "program-synthesis/neural-code-generator:deepseek-8b"
+  resource_limits:
+    cpu: "4"
+    memory: "24Gi"
+    nvidia.com/gpu: "1"
+  resource_requests:
+    cpu: "2"
+    memory: "16Gi"
+    nvidia.com/gpu: "1"

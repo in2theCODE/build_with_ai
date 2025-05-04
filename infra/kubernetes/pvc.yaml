@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neural-models-pvc
+  namespace: program-synthesis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: ssd
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: knowledge-base-pvc
+  namespace: program-synthesis
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard

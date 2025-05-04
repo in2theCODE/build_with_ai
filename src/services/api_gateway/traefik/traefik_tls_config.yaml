@@ -1,0 +1,157 @@
+# Static configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+log:
+  level: "INFO"
+  format: "common"
+
+# Provider configuration
+providers:
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+# TLS certificates resolver
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "${ACME_EMAIL}"
+      storage: "/etc/traefik/acme/acme.json"
+      tlsChallenge: {}
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: "letsencrypt"
+        options: "modern"
+
+# TLS options
+tls:
+  options:
+    modern:
+      minVersion: "VersionTLS12"
+      sniStrict: true
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+
+  # Fallback certificates - will be used until Let's Encrypt certs are issued
+  certificates:
+    - certFile: "/etc/traefik/certs/yourdomain.crt"
+      keyFile: "/etc/traefik/certs/yourdomain.key"
+
+# HTTP routing for API Gateway
+http:
+  routers:
+    # Workflow API router
+    workflow-api:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/workflow`)"
+      entryPoints: ["websecure"]
+      service: "neural-interpreter"
+      tls: {}
+      middlewares: ["jwt-auth", "rate-limit", "api-circuit-breaker"]
+
+    # One-off code generation API router
+    generate-api:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/generate`)"
+      entryPoints: ["websecure"]
+      service: "neural-interpreter"
+      tls: {}
+      middlewares: ["jwt-auth", "rate-limit", "api-circuit-breaker"]
+
+    # Brainstorming API router
+    brainstorm-api:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/brainstorm`)"
+      entryPoints: ["websecure"]
+      service: "neural-interpreter"
+      tls: {}
+      middlewares: ["jwt-auth", "rate-limit", "api-circuit-breaker"]
+
+    # Status API router
+    status-api:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/status`)"
+      entryPoints: ["websecure"]
+      service: "neural-interpreter"
+      tls: {}
+      middlewares: ["jwt-auth", "api-circuit-breaker"]
+
+    # WebSocket router for Pulsar
+    pulsar-ws:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/pulsar/ws`)"
+      entryPoints: ["websecure"]
+      service: "pulsar-websocket"
+      tls: {}
+      middlewares: ["jwt-auth"]
+
+    # Dashboard router
+    dashboard:
+      rule: "Host(`dashboard.yourdomain.com`)"
+      entryPoints: ["websecure"]
+      service: "dashboard-service"
+      tls: {}
+      middlewares: ["jwt-auth", "admin-role-check", "admin-network"]
+
+    # Admin API router with stricter security
+    admin-api:
+      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/admin`)"
+      entryPoints: ["websecure"]
+      service: "neural-interpreter"
+      tls: {}
+      middlewares: ["jwt-auth", "admin-role-check", "admin-network"]
+
+  middlewares:
+    # JWT authentication middleware - directly integrates with your auth sidecar
+    jwt-auth:
+      forwardAuth:
+        address: "http://auth-sidecar:3000/verify"
+        trustForwardHeader: true
+        authResponseHeaders: ["X-User-Id", "X-User-Role"]
+
+    # Role-based access control middlewares
+    admin-role-check:
+      forwardAuth:
+        address: "http://auth-sidecar:3000/authorize"
+        trustForwardHeader: true
+        authRequestHeaders: ["X-User-Role"]
+        authResponseHeaders: ["X-Authorized"]
+
+    # Rate limiting middleware
+    rate-limit:
+      rateLimit:
+        average: 60
+        burst: 20
+
+  services:
+    # Direct connection to neural-interpreter
+    neural-interpreter:
+      loadBalancer:
+        servers:
+          - url: "http://neural-interpreter:8080"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "3s"
+
+    pulsar-websocket:
+      loadBalancer:
+        servers:
+          - url: "http://pulsar:8080"
+
+    dashboard-service:
+      loadBalancer:
+        servers:
+          - url: "http://dashboard:3000"

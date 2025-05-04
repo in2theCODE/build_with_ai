@@ -1,0 +1,43 @@
+{
+  "namespace": "com.programsynthesis.schema",
+  "type": "record",
+  "name": "SpecSheet",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "project_id", "type": "string"},
+    {"name": "name", "type": ["string", "null"]},
+    {"name": "description", "type": ["string", "null"]},
+    {"name": "category", "type": ["string", "null"]},
+    {"name": "template_path", "type": ["string", "null"]},
+    {"name": "status", "type": "string"},
+    {"name": "created_at", "type": "string"},
+    {"name": "updated_at", "type": "string"},
+    {"name": "version", "type": "string", "default": "1.0"},
+    {"name": "fields", "type": {"type": "array", "items": {
+      "type": "record",
+      "name": "FieldDefinition",
+      "fields": [
+        {"name": "id", "type": "string"},
+        {"name": "name", "type": "string"},
+        {"name": "type", "type": "string"},
+        {"name": "description", "type": ["string", "null"]},
+        {"name": "required", "type": "boolean", "default": false},
+        {"name": "default_value", "type": ["null", "string", "int", "boolean", "double"], "default": null},
+        {"name": "validation_rules", "type": {"type": "array", "items": {
+          "type": "record",
+          "name": "ValidationRule",
+          "fields": [
+            {"name": "rule_type", "type": "string"},
+            {"name": "expression", "type": "string"},
+            {"name": "error_message", "type": ["string", "null"]}
+          ]
+        }}, "default": []}
+      ]
+    }}, "default": []},
+    {"name": "data", "type": {"type": "map", "values": ["null", "string", "int", "boolean", "double", {
+      "type": "array", "items": ["null", "string", "int", "boolean", "double"]
+    }]}, "default": {}},
+    {"name": "dependencies", "type": {"type": "array", "items": "string"}, "default": []},
+    {"name": "tags", "type": {"type": "array", "items": "string"}, "default": []}
+  ]
+}
