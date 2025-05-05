@@ -5,11 +5,14 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from src.services.shared.models.events import BaseEvent
-from src.services.shared.models.events import (
-    EventType, EventPriority,
-    CodeGenerationRequestedEvent, CodeGenerationCompletedEvent,
-    KnowledgeQueryRequestedEvent, KnowledgeQueryCompletedEvent
+from src.services.shared.models.events.events import BaseEvent
+from src.services.shared.models.events.events import (
+    EventType,
+    EventPriority,
+    CodeGenerationRequestedEvent,
+    CodeGenerationCompletedEvent,
+    KnowledgeQueryRequestedEvent,
+    KnowledgeQueryCompletedEvent,
 )
 from src.services.shared.models.event_avro import EventAvro
 
@@ -43,12 +46,15 @@ class EventConverter:
             event_type=event.event_type.value,
             source_container=event.source_container,
             payload=EventConverter._ensure_avro_compatible(event.payload),
-            timestamp=EventConverter._format_datetime(event.timestamp)
-            if isinstance(event.timestamp, datetime) else str(event.timestamp),
+            timestamp=(
+                EventConverter._format_datetime(event.timestamp)
+                if isinstance(event.timestamp, datetime)
+                else str(event.timestamp)
+            ),
             priority=event.priority.value,
             correlation_id=event.correlation_id,
             metadata=EventConverter._ensure_avro_compatible(event.metadata),
-            version=event.version
+            version=event.version,
         )
 
     @staticmethod
@@ -76,7 +82,7 @@ class EventConverter:
             priority=priority,
             correlation_id=avro_event.correlation_id,
             metadata=avro_event.metadata,
-            version=avro_event.version
+            version=avro_event.version,
         )
 
     @staticmethod
@@ -91,7 +97,9 @@ class EventConverter:
     def _ensure_avro_compatible(obj: Any) -> Any:
         """Recursively ensure all objects in a structure are Avro-compatible."""
         if isinstance(obj, dict):
-            return {k: EventConverter._ensure_avro_compatible(v) for k, v in obj.items()}
+            return {
+                k: EventConverter._ensure_avro_compatible(v) for k, v in obj.items()
+            }
         elif isinstance(obj, list):
             return [EventConverter._ensure_avro_compatible(item) for item in obj]
         elif isinstance(obj, (str, int, float, bool, type(None))):
@@ -107,7 +115,9 @@ class EventConverter:
             return str(obj)
 
     @staticmethod
-    def specialized_event_to_avro(event: BaseEvent, expected_event_type: EventType = None) -> EventAvro:
+    def specialized_event_to_avro(
+        event: BaseEvent, expected_event_type: EventType = None
+    ) -> EventAvro:
         """Convert any specialized event to Avro model.
 
         Args:
@@ -122,54 +132,72 @@ class EventConverter:
         """
         # Validate event type if specified
         if expected_event_type and event.event_type != expected_event_type:
-            raise ValueError(f"Expected event_type {expected_event_type}, got {event.event_type}")
+            raise ValueError(
+                f"Expected event_type {expected_event_type}, got {event.event_type}"
+            )
 
         # Convert payload if it's a Pydantic model
-        payload = event.payload.model_dump() if hasattr(event.payload, "model_dump") else event.payload
+        payload = (
+            event.payload.model_dump()
+            if hasattr(event.payload, "model_dump")
+            else event.payload
+        )
 
-        return EventConverter.to_avro(BaseEvent(
-            event_id=event.event_id,
-            event_type=event.event_type,
-            source_container=event.source_container,
-            payload=payload,
-            timestamp=event.timestamp,
-            priority=event.priority,
-            correlation_id=event.correlation_id,
-            metadata=event.metadata,
-            version=event.version
-        ))
+        return EventConverter.to_avro(
+            BaseEvent(
+                event_id=event.event_id,
+                event_type=event.event_type,
+                source_container=event.source_container,
+                payload=payload,
+                timestamp=event.timestamp,
+                priority=event.priority,
+                correlation_id=event.correlation_id,
+                metadata=event.metadata,
+                version=event.version,
+            )
+        )
 
     # Type-specific converters that utilize the specialized converter
     @staticmethod
-    def code_generation_requested_to_avro(event: CodeGenerationRequestedEvent) -> EventAvro:
+    def code_generation_requested_to_avro(
+        event: CodeGenerationRequestedEvent,
+    ) -> EventAvro:
         """Convert CodeGenerationRequestedEvent to Avro model."""
         return EventConverter.specialized_event_to_avro(
             event, expected_event_type=EventType.CODE_GENERATION_REQUESTED
         )
 
     @staticmethod
-    def code_generation_completed_to_avro(event: CodeGenerationCompletedEvent) -> EventAvro:
+    def code_generation_completed_to_avro(
+        event: CodeGenerationCompletedEvent,
+    ) -> EventAvro:
         """Convert CodeGenerationCompletedEvent to Avro model."""
         return EventConverter.specialized_event_to_avro(
             event, expected_event_type=EventType.CODE_GENERATION_COMPLETED
         )
 
     @staticmethod
-    def knowledge_query_requested_to_avro(event: KnowledgeQueryRequestedEvent) -> EventAvro:
+    def knowledge_query_requested_to_avro(
+        event: KnowledgeQueryRequestedEvent,
+    ) -> EventAvro:
         """Convert KnowledgeQueryRequestedEvent to Avro model."""
         return EventConverter.specialized_event_to_avro(
             event, expected_event_type=EventType.KNOWLEDGE_QUERY_REQUESTED
         )
 
     @staticmethod
-    def knowledge_query_completed_to_avro(event: KnowledgeQueryCompletedEvent) -> EventAvro:
+    def knowledge_query_completed_to_avro(
+        event: KnowledgeQueryCompletedEvent,
+    ) -> EventAvro:
         """Convert KnowledgeQueryCompletedEvent to Avro model."""
         return EventConverter.specialized_event_to_avro(
             event, expected_event_type=EventType.KNOWLEDGE_QUERY_COMPLETED
         )
 
     @staticmethod
-    def pydantic_to_avro_type(python_type: Type) -> Union[str, Dict[str, Any], List[Any]]:
+    def pydantic_to_avro_type(
+        python_type: Type,
+    ) -> Union[str, Dict[str, Any], List[Any]]:
         """Convert a Python type to an Avro type.
 
         Args:
@@ -196,7 +224,10 @@ class EventConverter:
                     return ["null", avro_type]
                 else:
                     # Complex union type with null
-                    return ["null"] + [EventConverter.pydantic_to_avro_type(arg) for arg in non_none_args]
+                    return ["null"] + [
+                        EventConverter.pydantic_to_avro_type(arg)
+                        for arg in non_none_args
+                    ]
             else:
                 # Union type without null
                 return [EventConverter.pydantic_to_avro_type(arg) for arg in args]
@@ -226,11 +257,13 @@ class EventConverter:
             # Dict[str, Any] case
             key_type, value_type = args
             if key_type != str:
-                raise ValueError(f"Avro only supports string keys in maps, got {key_type}")
+                raise ValueError(
+                    f"Avro only supports string keys in maps, got {key_type}"
+                )
 
             return {
                 "type": "map",
-                "values": EventConverter.pydantic_to_avro_type(value_type)
+                "values": EventConverter.pydantic_to_avro_type(value_type),
             }
         elif origin is list:
             # List[T] case
@@ -240,10 +273,7 @@ class EventConverter:
             item_avro_type = EventConverter.pydantic_to_avro_type(item_type)
 
             # Construct and return the array schema with explicit items field
-            array_schema = {
-                "type": "array",
-                "items": item_avro_type
-            }
+            array_schema = {"type": "array", "items": item_avro_type}
 
             return array_schema
         elif isinstance(python_type, type) and issubclass(python_type, Enum):
@@ -256,7 +286,9 @@ class EventConverter:
             return "string"  # Default to string for unknown types
 
     @staticmethod
-    def generate_avro_schema(model_class: Type[BaseModel], namespace: Optional[str] = None) -> Dict[str, Any]:
+    def generate_avro_schema(
+        model_class: Type[BaseModel], namespace: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Generate an Avro schema from a Pydantic model.
 
         Args:
@@ -277,27 +309,24 @@ class EventConverter:
             avro_type = EventConverter.pydantic_to_avro_type(field_type)
 
             # Determine if field has a default value
-            has_default = field_info.default is not None and field_info.default is not Ellipsis
+            has_default = (
+                field_info.default is not None and field_info.default is not Ellipsis
+            )
 
-            field_def = {
-                "name": field_name,
-                "type": avro_type
-            }
+            field_def = {"name": field_name, "type": avro_type}
 
             # Add default value if present with proper conversion
             if has_default:
                 default_value = field_info.default
                 # Convert default value to Avro-compatible format
-                field_def["default"] = EventConverter._ensure_avro_compatible(default_value)
+                field_def["default"] = EventConverter._ensure_avro_compatible(
+                    default_value
+                )
 
             fields.append(field_def)
 
         # Build schema
-        schema = {
-            "type": "record",
-            "name": model_name,
-            "fields": fields
-        }
+        schema = {"type": "record", "name": model_name, "fields": fields}
 
         if namespace:
             schema["namespace"] = namespace

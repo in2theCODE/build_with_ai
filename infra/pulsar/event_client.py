@@ -1,11 +1,10 @@
 """Apache Pulsar event client for the program synthesis system."""
 
-import os
-from typing import Dict, Any, Optional, Callable
+from typing import Optional, Callable
 import logging
 
 from src.services.shared.models import BaseEvent, load_avro_schema
-from src.services.shared.models.events import EventType
+from src.services.shared.models.events.events import EventType
 from infra.registration.schema_registry import SchemaRegistryClient
 
 logger = logging.getLogger(__name__)
@@ -15,19 +14,21 @@ class PulsarEventClient:
     """Client for producing and consuming events using Apache Pulsar."""
 
     def __init__(
-            self,
-            service_url: str,
-            tenant: str = "public",
-            namespace: str = "program-synthesis",
-            schema_registry_url: Optional[str] = None,
-            schema_registry_token: Optional[str] = None
+        self,
+        service_url: str,
+        tenant: str = "public",
+        namespace: str = "program-synthesis",
+        schema_registry_url: Optional[str] = None,
+        schema_registry_token: Optional[str] = None,
     ):
         """Initialize the Pulsar event client."""
         try:
             import pulsar
             from pulsar.schema import AvroSchema
         except ImportError:
-            raise ImportError("Pulsar client not installed. Install with: pip install pulsar-client")
+            raise ImportError(
+                "Pulsar client not installed. Install with: pip install pulsar-client"
+            )
 
         self.client = pulsar.Client(service_url)
         self.tenant = tenant
@@ -43,8 +44,7 @@ class PulsarEventClient:
         self.schema_registry = None
         if schema_registry_url:
             self.schema_registry = SchemaRegistryClient(
-                url=schema_registry_url,
-                auth_token=schema_registry_token
+                url=schema_registry_url, auth_token=schema_registry_token
             )
 
         logger.info(f"Initialized Pulsar client with service URL: {service_url}")
@@ -56,9 +56,16 @@ class PulsarEventClient:
             return "code-generator"
         elif event_type == EventType.CODE_GENERATION_COMPLETED:
             return "code-generator-results"
-        elif event_type in (EventType.KNOWLEDGE_QUERY_REQUESTED, EventType.KNOWLEDGE_QUERY_COMPLETED):
+        elif event_type in (
+            EventType.KNOWLEDGE_QUERY_REQUESTED,
+            EventType.KNOWLEDGE_QUERY_COMPLETED,
+        ):
             return "knowledge"
-        elif event_type in (EventType.SYSTEM_ERROR, EventType.SYSTEM_HEALTH_CHECK, EventType.SYSTEM_SHUTDOWN):
+        elif event_type in (
+            EventType.SYSTEM_ERROR,
+            EventType.SYSTEM_HEALTH_CHECK,
+            EventType.SYSTEM_SHUTDOWN,
+        ):
             return "system"
         else:
             # Default to event type value
@@ -69,8 +76,7 @@ class PulsarEventClient:
         if topic not in self.producers:
             full_topic = f"persistent://{self.tenant}/{self.namespace}/{topic}"
             self.producers[topic] = self.client.create_producer(
-                full_topic,
-                schema=self.event_schema
+                full_topic, schema=self.event_schema
             )
             logger.debug(f"Created producer for topic: {full_topic}")
         return self.producers[topic]
@@ -90,11 +96,11 @@ class PulsarEventClient:
         logger.debug(f"Sent event {event.event_id} to topic {topic}")
 
     def subscribe(
-            self,
-            topic: str,
-            subscription_name: str,
-            event_handler: Callable[[BaseEvent], None],
-            subscription_type: str = "Shared"
+        self,
+        topic: str,
+        subscription_name: str,
+        event_handler: Callable[[BaseEvent], None],
+        subscription_type: str = "Shared",
     ):
         """Subscribe to a topic."""
         try:
@@ -117,7 +123,7 @@ class PulsarEventClient:
                 full_topic,
                 subscription_name,
                 subscription_type=sub_type,
-                schema=self.event_schema
+                schema=self.event_schema,
             )
 
             self.consumers[(topic, subscription_name)] = consumer
@@ -125,14 +131,17 @@ class PulsarEventClient:
 
             # Start receive loop in background thread
             import threading
+
             thread = threading.Thread(
                 target=self._receive_loop,
                 args=(consumer, topic, subscription_name),
-                daemon=True
+                daemon=True,
             )
             thread.start()
 
-            logger.info(f"Subscribed to topic {full_topic} with subscription {subscription_name}")
+            logger.info(
+                f"Subscribed to topic {full_topic} with subscription {subscription_name}"
+            )
 
     def _receive_loop(self, consumer, topic, subscription_name):
         """Continuous loop to receive messages."""

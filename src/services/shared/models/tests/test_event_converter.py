@@ -2,8 +2,8 @@
 from datetime import datetime, timezone
 from enum import Enum
 
-from src.services.shared.models.events import BaseEvent
-from src.services.shared.models.events import EventType, EventPriority
+from src.services.shared.models.events.events import BaseEvent
+from src.services.shared.models.events.events import EventType, EventPriority
 from src.services.shared.models.event_avro import EventAvro
 from infra.registration.event_converter import EventConverter
 
@@ -21,7 +21,7 @@ def test_to_avro_basic():
         payload={"test": "value"},
         priority=EventPriority.NORMAL,
         correlation_id="test-correlation-id",
-        metadata={"meta": "data"}
+        metadata={"meta": "data"},
     )
 
     avro_event = EventConverter.to_avro(event)
@@ -41,7 +41,7 @@ def test_from_avro_basic():
         timestamp="2023-01-01T12:00:00Z",
         priority=EventPriority.NORMAL.value,
         correlation_id="test-correlation-id",
-        metadata={"meta": "data"}
+        metadata={"meta": "data"},
     )
 
     event = EventConverter.from_avro(avro_event)
@@ -58,7 +58,7 @@ def test_ensure_avro_compatible():
         "date": datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
         "nested": {
             "list": [TestEnum.VALUE2, datetime(2023, 1, 2, tzinfo=timezone.utc)]
-        }
+        },
     }
 
     avro_data = EventConverter._ensure_avro_compatible(complex_data)
@@ -77,7 +77,7 @@ def test_roundtrip():
         payload={"test": "value", "nested": {"value": 123}},
         priority=EventPriority.NORMAL,
         correlation_id="test-correlation-id",
-        metadata={"meta": "data"}
+        metadata={"meta": "data"},
     )
 
     avro_event = EventConverter.to_avro(original_event)

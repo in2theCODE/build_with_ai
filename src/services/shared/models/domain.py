@@ -1,15 +1,22 @@
-# event_models.py
+# src/services/shared/models/events/domain.py
+
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Literal,  ClassVar, Union
-from enum import Enum
-import uuid
-import json
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Dict, Any, Optional, List, Literal, Union, ClassVar
+from pydantic import Field, model_validator
 
-from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import EventType, EventPriority
+from .base import BaseEvent, EventPayload
 
-class CodeGenerationCompletedPayload(BaseModel):
+
+# ======================= Payload Models =======================
+
+class CodeGenerationRequestPayload(EventPayload):
+    """Payload model for code generation requests."""
+    spec_sheet: Dict[str, Any] = Field(..., description="Specification sheet")
+    target_language: str = Field("python", description="Target programming language")
+
+
+class CodeGenerationCompletedPayload(EventPayload):
     """Payload model for completed code generation."""
     generated_code: str = Field(..., description="The generated code")
     program_ast: Dict[str, Any] = Field(..., description="The AST of the generated program")
@@ -17,42 +24,34 @@ class CodeGenerationCompletedPayload(BaseModel):
     strategy_used: str = Field(..., description="Generation strategy used")
     time_taken: float = Field(..., description="Time taken to generate code in seconds")
 
-    model_config = ConfigDict(frozen=True)
 
-
-class CodeGenerationFailedPayload(BaseModel):
+class CodeGenerationFailedPayload(EventPayload):
     """Payload model for failed code generation."""
     error_message: str = Field(..., description="Error message")
     error_type: str = Field(..., description="Type of error")
     partial_result: Optional[Dict[str, Any]] = Field(None, description="Partial result if available")
 
-    model_config = ConfigDict(frozen=True)
 
-
-class KnowledgeQueryPayload(BaseModel):
+class KnowledgeQueryPayload(EventPayload):
     """Payload model for knowledge query requests."""
     query: str = Field(..., description="The search query string")
     limit: int = Field(5, description="Maximum number of results to return")
 
-    model_config = ConfigDict(frozen=True)
 
-
-class KnowledgeQueryCompletedPayload(BaseModel):
+class KnowledgeQueryCompletedPayload(EventPayload):
     """Payload model for completed knowledge queries."""
     results: List[Dict[str, Any]] = Field(..., description="Query results")
     query: str = Field(..., description="Original query")
     time_taken: float = Field(..., description="Time taken to execute query in seconds")
 
-    model_config = ConfigDict(frozen=True)
 
-
-class KnowledgeUpdatedPayload(BaseModel):
+class KnowledgeUpdatedPayload(EventPayload):
     """Payload model for knowledge update events."""
     key: str = Field(..., description="Key of the updated knowledge")
     update_type: str = Field(..., description="Type of update")
 
-    model_config = ConfigDict(frozen=True)
 
+# ======================= Base Event Classes =======================
 
 class SpecSheetEvent(BaseEvent):
     """Base class for spec sheet-related events"""
@@ -60,8 +59,6 @@ class SpecSheetEvent(BaseEvent):
     spec_sheet_version: Optional[str] = Field(None, description="Spec sheet version")
     spec_sheet_name: Optional[str] = Field(None, description="Spec sheet name")
     spec_sheet_category: Optional[str] = Field(None, description="Spec sheet category")
-
-    model_config = ConfigDict(frozen=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -90,8 +87,6 @@ class SpecInstanceEvent(BaseEvent):
     spec_sheet_version: str = Field(..., description="Spec sheet version")
     project_id: str = Field("", description="Project identifier")
 
-    model_config = ConfigDict(frozen=True)
-
     @model_validator(mode='before')
     @classmethod
     def ensure_payload_consistency(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -112,15 +107,16 @@ class SpecInstanceEvent(BaseEvent):
         return data
 
 
-# Event classes
+# ======================= Concrete Event Classes =======================
+
 class CodeGenerationRequestedEvent(BaseEvent):
     """Event for requesting code generation."""
     event_type: Literal[EventType.CODE_GENERATION_REQUESTED] = EventType.CODE_GENERATION_REQUESTED
-    payload: CodeGenerationRequestPayload = Field(
+    payload: Union[CodeGenerationRequestPayload, Dict[str, Any]] = Field(
         ..., description="Event payload containing spec sheet and target language"
     )
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -148,7 +144,7 @@ class CodeGenerationCompletedEvent(BaseEvent):
         ..., description="Event payload containing generated code and results"
     )
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -183,7 +179,7 @@ class CodeGenerationFailedEvent(BaseEvent):
     )
     priority: Literal[EventPriority.HIGH] = EventPriority.HIGH
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -213,7 +209,7 @@ class KnowledgeQueryRequestedEvent(BaseEvent):
         ..., description="Event payload containing query parameters"
     )
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -241,7 +237,7 @@ class KnowledgeQueryCompletedEvent(BaseEvent):
         ..., description="Event payload containing query results"
     )
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -271,7 +267,7 @@ class KnowledgeUpdatedEvent(BaseEvent):
         ..., description="Event payload containing update details"
     )
 
-    model_config = ConfigDict(frozen=True)
+    __schema_version__: ClassVar[str] = "1.0.0"
 
     @classmethod
     def create(cls,
@@ -290,17 +286,71 @@ class KnowledgeUpdatedEvent(BaseEvent):
         )
 
 
-# Specific spec sheet events
+# ======================= Spec Sheet Events =======================
+
 class SpecSheetCreatedEvent(SpecSheetEvent):
     """Event for spec sheet creation."""
     event_type: Literal[EventType.SPEC_SHEET_CREATED] = EventType.SPEC_SHEET_CREATED
+    __schema_version__: ClassVar[str] = "1.0.0"
 
 
 class SpecSheetUpdatedEvent(SpecSheetEvent):
     """Event for spec sheet updates."""
     event_type: Literal[EventType.SPEC_SHEET_UPDATED] = EventType.SPEC_SHEET_UPDATED
+    __schema_version__: ClassVar[str] = "1.0.0"
 
 
 class SpecSheetDeletedEvent(SpecSheetEvent):
     """Event for spec sheet deletion."""
     event_type: Literal[EventType.SPEC_SHEET_DELETED] = EventType.SPEC_SHEET_DELETED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecSheetPublishedEvent(SpecSheetEvent):
+    """Event for spec sheet publication."""
+    event_type: Literal[EventType.SPEC_SHEET_PUBLISHED] = EventType.SPEC_SHEET_PUBLISHED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecSheetDeprecatedEvent(SpecSheetEvent):
+    """Event for spec sheet deprecation."""
+    event_type: Literal[EventType.SPEC_SHEET_DEPRECATED] = EventType.SPEC_SHEET_DEPRECATED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecSheetArchivedEvent(SpecSheetEvent):
+    """Event for spec sheet archival."""
+    event_type: Literal[EventType.SPEC_SHEET_ARCHIVED] = EventType.SPEC_SHEET_ARCHIVED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+# ======================= Spec Instance Events =======================
+
+class SpecInstanceCreatedEvent(SpecInstanceEvent):
+    """Event for spec instance creation."""
+    event_type: Literal[EventType.SPEC_INSTANCE_CREATED] = EventType.SPEC_INSTANCE_CREATED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecInstanceUpdatedEvent(SpecInstanceEvent):
+    """Event for spec instance updates."""
+    event_type: Literal[EventType.SPEC_INSTANCE_UPDATED] = EventType.SPEC_INSTANCE_UPDATED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecInstanceCompletedEvent(SpecInstanceEvent):
+    """Event for spec instance completion."""
+    event_type: Literal[EventType.SPEC_INSTANCE_COMPLETED] = EventType.SPEC_INSTANCE_COMPLETED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecInstanceValidatedEvent(SpecInstanceEvent):
+    """Event for spec instance validation."""
+    event_type: Literal[EventType.SPEC_INSTANCE_VALIDATED] = EventType.SPEC_INSTANCE_VALIDATED
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+
+class SpecInstanceDeletedEvent(SpecInstanceEvent):
+    """Event for spec instance deletion."""
+    event_type: Literal[EventType.SPEC_INSTANCE_DELETED] = EventType.SPEC_INSTANCE_DELETED
+    __schema_version__: ClassVar[str] = "1.0.0"

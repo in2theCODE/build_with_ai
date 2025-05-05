@@ -1,6 +1,6 @@
 # Neural Code Generator
 
-Advanced neural code generation component for the Program Synthesis System. This component uses cutting-edge techniques and the DeepSeek 8B model to generate high-quality code from specifications.
+Advanced neural code generation component for the Program Synthesis System. This component uses cutting-edge techniques and the DeepSeek 6.7B model to generate high-quality code from specifications.
 
 ## Features
 

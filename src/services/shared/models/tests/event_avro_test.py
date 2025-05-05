@@ -3,9 +3,10 @@ from pydantic import ValidationError
 
 from src.services.shared.models.event_avro import EventAvro
 from src.services.shared.models.event_avro_converter import event_to_avro, avro_to_event
-from src.services.shared.models.events import BaseEvent as Event
+from src.services.shared.models.events.events import BaseEvent as Event
 
 # Import all your models
+
 
 def test_event_model_validation():
     """Test validation of Event model."""
@@ -13,7 +14,7 @@ def test_event_model_validation():
     event = Event(
         event_type="CODE_GENERATION_REQUESTED",
         source_container="test-container",
-        payload={"key": "value"}
+        payload={"key": "value"},
     )
     assert event.event_id is not None
 
@@ -22,7 +23,7 @@ def test_event_model_validation():
         Event(
             event_type="INVALID_TYPE",  # Invalid enum value
             source_container="test-container",
-            payload={"key": "value"}
+            payload={"key": "value"},
         )
 
 
@@ -31,7 +32,7 @@ def test_avro_serialization():
     original_event = Event(
         event_type="CODE_GENERATION_REQUESTED",
         source_container="test-container",
-        payload={"key": "value"}
+        payload={"key": "value"},
     )
 
     # Convert to Avro

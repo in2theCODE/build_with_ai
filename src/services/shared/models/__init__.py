@@ -1,7 +1,7 @@
 """Event models and schema registration for Apache Pulsar."""
 import os
 # Import existing models
-from src.services.shared.models.events import (
+from src.services.shared.models.events.events import (
     BaseEvent,
     CodeGenerationRequestedEvent,
     CodeGenerationCompletedEvent,

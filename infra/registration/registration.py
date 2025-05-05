@@ -29,7 +29,7 @@ project_root = current_dir.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.services.shared.models.enums import Components as ComponentType
-from src.services.shared.models.events import EventType, BaseEvent
+from src.services.shared.models.events.events import EventType, BaseEvent
 from infra.component_factory import ComponentFactory
 from src.services.shared.logging.logger import (
     get_logger, configure_logging, log_execution_time

@@ -112,7 +112,7 @@ services:
 
   # PostgreSQL - Relational Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-bookworm
     container_name: pulsar-postgres
     restart: unless-stopped
     networks:

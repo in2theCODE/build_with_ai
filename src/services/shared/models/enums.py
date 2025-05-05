@@ -26,7 +26,6 @@ class Components(str, Enum):
     VECTOR_SEARCH = "vector_search"
     CACHE = "cache"
 
-
     # Service services
     SERVICE_MODULE = "service_module"
     STANDALONE_MODULE = "standalone_module"
@@ -164,7 +163,7 @@ class DatabaseConfig(BaseModel):
     DEFAULT_DATABASE_NAME: str = Field("neural_code_generator", description="Default database name")
     DEFAULT_CACHE_TTL: int = Field(3600, description="Default cache TTL in seconds")
 
-
+    model_config = ConfigDict(frozen=True)
 class Paths(BaseModel):
     """Constants for file and directory paths"""
     BASE_PATH: str = Field("program_synthesis_system", description="Base path for the system")
@@ -216,6 +215,23 @@ class ModelConfig(BaseModel):
     DEFAULT_EMBEDDING_MODEL: str = Field("all-mpnet-base-v2", description="Default embedding model")
 
     model_config = ConfigDict(frozen=True)
+
+    class SynthesisStrategy(str, Enum):
+        """Types of synthesis strategies."""
+        BOTTOM_UP = "bottom_up"
+        TOP_DOWN = "top_down"
+        ENUMERATIVE = "enumerative"
+        DEDUCTIVE = "deductive"
+        INDUCTIVE = "inductive"
+        CONSTRAINT_BASED = "constraint_based"
+        EXAMPLE_GUIDED = "example_guided"
+        NEURAL_GUIDED = "neural_guided"
+
+    class DisclosureLevel(Enum):
+        """Progressive disclosure levels for code synthesis."""
+        HIGH_LEVEL = auto()  # Only signatures and high-level descriptions
+        MID_LEVEL = auto()  # Implementation with simplified details
+        DETAILED = auto()  # Complete implementation with all details
 
 
 class Metrics(str, Enum):

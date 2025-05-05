@@ -31,11 +31,3 @@ class ValidationResult(BaseModel):
             errors.extend(result.errors)
         return cls(valid=valid, errors=errors)
 
-
-class HealthStatus(str, Enum):
-    """Health status constants."""
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    UNHEALTHY = "unhealthy"
-    STARTING = "starting"
-    STOPPING = "stopping"

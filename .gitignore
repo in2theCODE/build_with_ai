@@ -74,7 +74,7 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
-.env
+infra/.env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -299,7 +299,7 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
-.env
+infra/.env
 # Environments
 .env *.env
 .env/*.local

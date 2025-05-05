@@ -10,48 +10,6 @@ from pydantic.generics import GenericModel
 from src.services.shared.models.base import BaseMessage, ProcessingMode, TaskStatus, TaskPriority
 
 
-class ProjectType(str, Enum):
-    """Project types."""
-    WEB_APP = "WEB_APP"
-    MOBILE_APP = "MOBILE_APP"
-    API_SERVICE = "API_SERVICE"
-    LIBRARY = "LIBRARY"
-    CLI_TOOL = "CLI_TOOL"
-
-
-class ProjectStatus(str, Enum):
-    """Project status."""
-    INITIALIZING = "INITIALIZING"
-    ANALYZING = "ANALYZING"
-    SPEC_SHEETS_GENERATED = "SPEC_SHEETS_GENERATED"
-    SPEC_SHEETS_COMPLETED = "SPEC_SHEETS_COMPLETED"
-    GENERATING_CODE = "GENERATING_CODE"
-    CODE_GENERATED = "CODE_GENERATED"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-
-
-class SynthesisStrategy(str, Enum):
-    """Types of synthesis strategies."""
-    BOTTOM_UP = "bottom_up"
-    TOP_DOWN = "top_down"
-    ENUMERATIVE = "enumerative"
-    DEDUCTIVE = "deductive"
-    INDUCTIVE = "inductive"
-    CONSTRAINT_BASED = "constraint_based"
-    EXAMPLE_GUIDED = "example_guided"
-    NEURAL_GUIDED = "neural_guided"
-
-
-class DisclosureLevel(Enum):
-    """Progressive disclosure levels for code synthesis."""
-    HIGH_LEVEL = auto()  # Only signatures and high-level descriptions
-    MID_LEVEL = auto()  # Implementation with simplified details
-    DETAILED = auto()  # Complete implementation with all details
-
-
 class Pattern(BaseModel):
     """Pattern match result"""
     id: str = Field(..., description="Pattern identifier")

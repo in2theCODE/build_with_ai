@@ -102,7 +102,7 @@ services:
 
   # Database - PostgreSQL for storing projects and completed specs
   database:
-    image: postgres:14
+    image: postgres:17.4-alpine3.20
     environment:
       - POSTGRES_DB=specdb
       - POSTGRES_USER=${DB_USER}
