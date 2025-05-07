@@ -1,8 +1,9 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 def generate_function_stub(synthesis_result):
     pass
+
 
 def optimize_ast(ast: Dict[str, Any], level: int) -> Dict[str, Any]:
     """Apply optimizations to the AST."""
@@ -29,21 +30,20 @@ def apply_style(code: str, style_guide: str) -> str:
             # Ensure consistent indentation (four spaces)
             indent_level = 0
             for char in line:
-                if char == ' ':
+                if char == " ":
                     indent_level += 1
                 else:
                     break
 
             # Normalize indentation to be a multiple of 4 spaces
             normalized_indent = (indent_level // 4) * 4
-            formatted_line = ' ' * normalized_indent + line.strip()
+            formatted_line = " " * normalized_indent + line.strip()
             formatted_lines.append(formatted_line)
         else:
             # Keep empty lines
             formatted_lines.append("")
 
     return "\n".join(formatted_lines) + "\n"
-
 
 
 def add_comments(code: str, ast: Dict[str, Any]) -> str:
@@ -72,4 +72,3 @@ def add_comments(code: str, ast: Dict[str, Any]) -> str:
             result.append(docstring)
 
     return "\n".join(result) + "\n"
-

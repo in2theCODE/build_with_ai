@@ -5,29 +5,30 @@ Utilities for working with Z3 solver.
 
 import logging
 from typing import Any, List, Optional, Set, Tuple
+
 import z3  # type: ignore
+
 
 # Import all Z3 functions with type ignore comments
 try:
     # First batch of imports
-    from z3 import Solver  # type: ignore
-    from z3 import sat  # type: ignore
+    # Second batch of imports
+    from z3 import And  # type: ignore
+    from z3 import Bool  # type: ignore
     from z3 import ExprRef  # type: ignore
-    from z3 import is_const  # type: ignore
+    from z3 import is_and  # type: ignore
+    from z3 import is_app  # type: ignore
+    from z3 import is_arith  # type: ignore
     from z3 import is_bool  # type: ignore
+    from z3 import is_const  # type: ignore
+    from z3 import is_eq  # type: ignore
     from z3 import is_int_value  # type: ignore
     from z3 import is_real  # type: ignore
-
-    # Second batch of imports
-    from z3 import Bool  # type: ignore
     from z3 import is_true  # type: ignore
-    from z3 import unsat  # type: ignore
     from z3 import Optimize  # type: ignore
-    from z3 import is_eq  # type: ignore
-    from z3 import is_arith  # type: ignore
-    from z3 import is_and  # type: ignore
-    from z3 import And  # type: ignore
-    from z3 import is_app  # type: ignore
+    from z3 import sat  # type: ignore
+    from z3 import Solver  # type: ignore
+    from z3 import unsat  # type: ignore
 except ImportError:
     logging.error("Z3 library not properly installed. Please install with 'pip install z3-solver'")
     raise
@@ -143,7 +144,12 @@ def extract_variables(expr: Any) -> Set[str]:  # type: ignore
         node = queue.pop(0)
 
         # Check if this is a variable
-        if _is_const(node) and not _is_bool(node) and not _is_int_value(node) and not _is_real(node):
+        if (
+            _is_const(node)
+            and not _is_bool(node)
+            and not _is_int_value(node)
+            and not _is_real(node)
+        ):
             variables.add(str(node))
 
         # Add all children to the queue
@@ -205,8 +211,9 @@ def get_unsat_core(constraints: List[Any]) -> List[int]:  # type: ignore
         return []
 
 
-def optimize_constraints(constraints: List[Any], weights: Optional[List[int]] = None) -> Tuple[  # type: ignore
-    List[int], Optional[Any]]:
+def optimize_constraints(
+    constraints: List[Any], weights: Optional[List[int]] = None
+) -> Tuple[List[int], Optional[Any]]:  # type: ignore
     """
     Use Z3 optimizer to find the maximum number of satisfiable constraints.
 
@@ -271,7 +278,7 @@ def relax_constraint(constraint: Any) -> Optional[Any]:  # type: ignore
     if _is_app(constraint):
         decl_name = constraint.decl().name()
 
-        if decl_name in ('>=', '>', '<', '<='):
+        if decl_name in (">=", ">", "<", "<="):
             left, right = constraint.children()
 
             # Only if right is a constant
@@ -282,19 +289,19 @@ def relax_constraint(constraint: Any) -> Optional[Any]:  # type: ignore
                 value = float(value)
 
                 # Apply relaxation
-                if decl_name == '>=':
+                if decl_name == ">=":
                     # Decrease lower bound by 20%
                     new_value = value * 0.8
                     return left >= new_value
-                elif decl_name == '>':
+                elif decl_name == ">":
                     # Decrease lower bound or convert to >=
                     new_value = value * 0.8
                     return left >= new_value
-                elif decl_name == '<=':
+                elif decl_name == "<=":
                     # Increase upper bound by 20%
                     new_value = value * 1.2
                     return left <= new_value
-                elif decl_name == '<':
+                elif decl_name == "<":
                     # Increase upper bound or convert to <=
                     new_value = value * 1.2
                     return left <= new_value

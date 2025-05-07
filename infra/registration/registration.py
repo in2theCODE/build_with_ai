@@ -1,538 +1,597 @@
 #!/usr/bin/env python3
 """
-Registration module for the Program Synthesis System.
+Service Registry for the Program Synthesis System.
 
-This script registers components from the project structure into the component factory
-and sets up the unified shared folder for communication between services.
-It implements a robust service discovery mechanism using Apache Pulsar for event-driven
-architecture following microservices best practices.
+This module implements a thread-safe ServiceRegistry component that provides
+centralized service discovery and management for the microservice's architecture.
+It incorporates fault tolerance patterns like Circuit Breaker to prevent
+cascading failures across the system.
 
 Design Patterns:
-- Factory Pattern: Dynamic component registration and instantiation
-- Service Registry Pattern: Central service discovery
-- Event-Driven Architecture: Async communication via Apache Pulsar
-- Circuit Breaker & Bulkhead Patterns: Fault tolerance and failure isolation
+- Singleton Pattern: Thread-safe singleton implementation for service registry
+- Service Registry Pattern: Central service discovery mechanism
+- Circuit Breaker Pattern: Fault tolerance for service calls
+- Event-Driven Architecture: Asynchronous event communication
 """
 
 import asyncio
 import logging
-import os
-import signal
-import sys
 import time
-from pathlib import Path
-from typing import Dict, List, Type, Any, Optional
+from threading import Lock
+from typing import Any, Dict, List, Optional, Type, TypeVar, cast, Coroutine, Tuple
 
-# Add parent directory to path for imports
-current_dir = Path(__file__).parent
-project_root = current_dir.parent.parent
-sys.path.insert(0, str(project_root))
-
+# Import shared modules
+from src.services.shared.logging.logger import configure_logging, get_logger, log_execution_time
+from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import Components as ComponentType
-from src.services.shared.models.events.events import EventType, BaseEvent
-from infra.component_factory import ComponentFactory
-from src.services.shared.logging.logger import (
-    get_logger, configure_logging, log_execution_time
-)
-from src.services.shared.pulsar.event_emitter import SecureEventEmitter
-from src.services.shared.monitoring.metrics import MetricsCollector
-from src.services.shared.monitoring.circuit_breaker import CircuitBreaker
+from src.services.shared.models.enums import EventType
+from src.services.shared.monitoring.circuit_breaker import CircuitBreaker, CircuitState
 from src.services.shared.monitoring.health_monitor import HealthMonitor
-from src.services.api_gateway.neural_interpretor.app.nueral_interpretor import NeuralInterpretor
+from src.services.shared.monitoring.metrics_collector import MetricsCollector
+from src.services.shared.pulsar.client_factory import create_pulsar_client
+from src.services.shared.pulsar.event_emitter import SecureEventEmitter
 
-# Import all component classes for registration
-# Core components based on the directory structure
-from src.services.neural_code_generator.app.enhanced_neural_code_generator import EnhancedNeuralCodeGenerator
-from src.services.constraint_relaxer.app.constraint_relaxer import ModelBasedConstraintRelaxer
-from src.services.feedback_collector.feedback_collector import FeedbackCollector
-from src.services.incremental_synthesis.incremental_synthesis import IncrementalSynthesis
-from src.services.language_interop.language_interop import LanguageInterop
-from src.services.meta_learner.meta_learner import MetaLearner
-from src.services.spec_inference.spec_inference import SpecInference
-from src.services.synthesis_engine.synthesis_engine import SpecBasedSynthesisEngine
-from src.services.version_manager.version_manager import VersionManager
-from src.services.knowledge_base.vector_knowledge_base import VectorKnowledgeBase
-from src.services.ast_code_generator.app.ast_code_generator import ASTCodeGenerator
-from src.services.project_manager.app.project_manager import ProjectManager
-
-# Define component mapping to simplify registration
-COMPONENT_MAPPING: Dict[ComponentType, Dict[str, Type[Any]]] = {
-    ComponentType.ENHANCED_NEURAL_CODE_GENERATOR: {
-        "enhanced_neural_code_generator": EnhancedNeuralCodeGenerator
-    },
-    ComponentType.CONSTRAINT_RELAXER: {
-        "constraint_relaxer": ModelBasedConstraintRelaxer
-    },
-    ComponentType.FEEDBACK_COLLECTOR: {
-        "feedback_collector": FeedbackCollector
-    },
-    ComponentType.INCREMENTAL_SYNTHESIS: {
-        "incremental_synthesis": IncrementalSynthesis
-    },
-    ComponentType.LANGUAGE_INTEROP: {
-        "language_interop": LanguageInterop
-    },
-    ComponentType.META_LEARNER: {
-        "meta_learner": MetaLearner
-    },
-    ComponentType.SPEC_INFERENCE: {
-        "spec_inference": SpecInference
-    },
-    ComponentType.SYNTHESIS_ENGINE: {
-        "synthesis_engine": SpecBasedSynthesisEngine
-    },
-    ComponentType.VERSION_MANAGER: {
-        "version_manager": VersionManager
-    },
-    ComponentType.KNOWLEDGE_BASE: {
-        "vector_knowledge_base": VectorKnowledgeBase
-    },
-    ComponentType.AST_CODE_GENERATOR: {
-        "ast_code_generator": ASTCodeGenerator
-    },
-    ComponentType.PROJECT_MANAGER: {
-        "project_manager": ProjectManager
-    }
-    ComponentType.NEURAL_INTERPRETOR: {
-        "neural_interpretor": NeuralInterpretor
-    }
-}
+# Type variable for components
+T = TypeVar("T")
 
 
-class SharedFolderManager:
+class SingletonMeta(type):
     """
-    Manages the unified shared folder for component communication.
+    Thread-safe implementation of the Singleton pattern using a metaclass.
 
-    This class handles the creation, mounting, and permissions management
-    for a unified shared folder accessible to all microservices in the system.
-    It enables efficient data sharing while maintaining isolation boundaries.
+    This ensures only one instance of ServiceRegistry exists across all threads.
     """
 
-    def __init__(self, base_path: str = "shared"):
-        """Initialize the shared folder manager.
+    _instances: Dict[type, Any] = {}
+    _lock: Lock = Lock()
 
-        Args:
-            base_path: The base path for the shared folder, relative to project root
-        """
-        self.logger = get_logger("shared_folder_manager")
-        self.base_path = Path(project_root) / base_path
-        self.shared_dirs = [
-            "models",
-            "pulsar",
-            "monitoring",
-            "logging",
-            "concurrency",
-            "validation"
-        ]
-        self._ensure_directories()
-
-    def _ensure_directories(self) -> None:
-        """Create all required directories if they don't exist."""
-        for directory in self.shared_dirs:
-            dir_path = self.base_path / directory
-            if not dir_path.exists():
-                self.logger.info(f"Creating shared directory: {dir_path}")
-                dir_path.mkdir(parents=True, exist_ok=True)
-
-    def create_symlinks(self, services_dir: Path) -> None:
-        """
-        Create symbolic links to the shared folder from all service directories.
-
-        Args:
-            services_dir: Path to the services directory
-        """
-        # Get all service directories (exclude shared)
-        service_paths = [
-            p for p in services_dir.iterdir()
-            if p.is_dir() and p.name != "shared"
-        ]
-
-        for service_path in service_paths:
-            target_shared = service_path / "shared"
-
-            # Skip if it's already a symlink to our shared folder
-            if target_shared.is_symlink() and os.path.realpath(target_shared) == str(self.base_path):
-                self.logger.debug(f"Symlink already exists for {service_path.name}")
-                continue
-
-            # Remove existing directory or symlink if it exists
-            if target_shared.exists():
-                if target_shared.is_symlink():
-                    target_shared.unlink()
-                else:
-                    import shutil
-                    shutil.rmtree(target_shared)
-
-            # Create the symlink
-            self.logger.info(f"Creating symlink for {service_path.name} to shared folder")
-            os.symlink(str(self.base_path), str(target_shared), target_is_directory=True)
-
-    def collect_shared_imports(self) -> None:
-        """
-        Collect and standardize imports across shared modules.
-        Creates __init__.py files with proper imports for shared modules.
-        """
-        # For each shared directory, create an __init__.py that imports all modules
-        for dir_name in self.shared_dirs:
-            dir_path = self.base_path / dir_name
-            init_file = dir_path / "__init__.py"
-
-            # Collect Python modules in this directory
-            modules = [
-                p.stem for p in dir_path.glob("*.py")
-                if p.is_file() and p.name != "__init__.py"
-            ]
-
-            # Create or update __init__.py
-            with open(init_file, "w") as f:
-                f.write(f'"""\n{dir_name.capitalize()} module shared across all services.\n"""\n\n')
-
-                # Import all modules with proper relative imports
-                for module in sorted(modules):
-                    f.write(f"from .{module} import *\n")
-
-            self.logger.info(f"Created unified imports for {dir_name}")
-
-    def setup(self, services_dir: Path) -> None:
-        """
-        Complete setup for the shared folder system.
-
-        Args:
-            services_dir: Path to the services directory
-        """
-        self._ensure_directories()
-        self.collect_shared_imports()
-        self.create_symlinks(services_dir)
-        self.logger.info("Shared folder system setup complete")
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
 
 
-class ServiceRegistry:
+class ServiceRegistry(metaclass=SingletonMeta):
     """
-    Registry for microservices implementing the Singleton pattern.
-    Tracks all active services and facilitates service discovery.
+    Registry for microservices implementing the thread-safe Singleton pattern.
+
+    This class provides a centralized repository of all running services,
+    with support for service discovery, health monitoring, and fault tolerance.
+
+    Note: This class uses asyncio for several operations. When using these methods,
+    you must call them from an asyncio event loop.
     """
-    _instance = None
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(ServiceRegistry, cls).__new__(cls)
-            cls._instance.services = {}
-            cls._instance.event_emitter = "secure_event_emmiter"
-            cls._instance.metrics_collector = None
-            cls._instance.logger = get_logger("service_registry")
-            cls._instance.health_monitors: Dict[str, HealthMonitor] = {}
-            cls._instance.circuit_breakers: Dict[str, CircuitBreaker] = {}
-        return cls._instance
+    def __init__(self) -> None:
+        """Initialize the service registry."""
+        # Set up logging first for proper traceability
+        self._setup_logging()
 
-    def initialize(self, pulsar_url: str, metrics_port: int = 8081):
-        """Initialize the service registry with required dependencies."""
-        self.pulsar_url = pulsar_url
+        self.services: Dict[str, Dict[str, Any]] = {}
+        self.event_emitter: Optional[SecureEventEmitter] = None
+        self.metrics_collector: Optional[MetricsCollector] = None
+        self.health_monitors: Dict[str, HealthMonitor] = {}
+        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self.pulsar_client: Any = None
+        self.pulsar_url: Optional[str] = None
+        self.initialized: bool = False
 
-        # Set up metrics collector (Metrics Pattern)
-        self.metrics_collector = MetricsCollector(
-            component_name="service_registry",
-            metrics_port=metrics_port
-        )
+        # Asyncio loop related attributes
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
-        # Set up event emitter (Observer Pattern)
-        self.event_emitter = SecureEventEmitter(
-            service_url=pulsar_url,
-            tenant="public",
-            namespace="program-synthesis"
-        )
+        self.logger.info("Service registry instance created")
 
-        self.logger.info("Service registry initialized")
-        return self
+    def _setup_logging(self) -> None:
+        """
+        Set up logging for the service registry.
 
-    async def register_service(self, service_name: str, service_instance: Any,
-                               service_type: ComponentType, endpoints: List[str] = None):
-        """Register a service with the registry."""
-        if service_name in self.services:
-            self.logger.warning(f"Service {service_name} already registered. Updating...")
+        This method configures comprehensive logging with proper formatting,
+        handlers, and fallback mechanisms.
+        """
+        try:
+            # Configure logging with default settings if not already configured
+            log_config = {
+                "level": logging.INFO,
+                "console": True,
+                "file": True,
+                "use_colors": True,
+                "directory": "logs",
+                "collect_performance": True,
+                "log_format": "%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+                "file_rotation": True,
+                "max_size_mb": 10,
+                "backup_count": 5,
+                "multi_tenant": True,
+            }
 
-        service_info = {
-            "instance": service_instance,
-            "type": service_type,
-            "endpoints": endpoints or [],
-            "registered_at": time.time(),
-            "health_status": "starting"
-        }
-
-        self.services[service_name] = service_info
-
-        # Set up health monitoring for this service (Health Check Pattern)
-        health_monitor = HealthMonitor(service_name, self.metrics_collector)
-        self.health_monitors[service_name] = health_monitor
-
-        # Set up circuit breaker for this service (Circuit Breaker Pattern)
-        circuit_breaker = CircuitBreaker(
-            name=service_name,
-            failure_threshold=5,
-            reset_timeout=30,
-            metrics_collector=self.metrics_collector
-        )
-        self.circuit_breakers[service_name] = circuit_breaker
-
-        # Emit event for service registration (Observer Pattern)
-        if self.event_emitter:
-            await self.event_emitter.emit_async(
-                BaseEvent(
-                    event_type=EventType.SYSTEM_INFO,
-                    source_container="service_registry",
-                    payload={
-                        "action": "service_registered",
-                        "service_name": service_name,
-                        "service_type": service_type.value
-                    }
+            # Use the configure_logging from shared module if available
+            try:
+                configure_logging(log_config)
+            except Exception as e:
+                # Fallback to basic logging if the shared module fails
+                logging.basicConfig(
+                    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
                 )
+                logging.warning(
+                    f"Failed to configure logging using shared module: {e}. Using basic logging."
+                )
+
+            # Get the logger for this class
+            self.logger = get_logger("service_registry")
+            self.logger.info("Logging configured for service registry")
+        except Exception as e:
+            # Last resort fallback
+            logging.basicConfig(level=logging.INFO)
+            self.logger = logging.getLogger("service_registry")
+            self.logger.error(f"Failed to set up logging properly: {e}")
+
+    async def initialize(self, pulsar_url: str, metrics_port: int = 8081) -> "ServiceRegistry":
+        """
+        Initialize the service registry with required dependencies.
+
+        This is an asynchronous method and must be awaited.
+
+        Args:
+            pulsar_url: URL for the Pulsar service
+            metrics_port: Port for the metrics HTTP server
+
+        Returns:
+            The initialized service registry instance
+
+        Raises:
+            RuntimeError: If initialization fails
+        """
+        if self.initialized:
+            self.logger.info("Service registry already initialized")
+            return self
+
+        self.pulsar_url = pulsar_url
+        self.logger.info(f"Initializing service registry with Pulsar URL: {pulsar_url}")
+
+        # Store the current event loop
+        self._loop = asyncio.get_running_loop()
+
+        try:
+            # Set up metrics collector
+            self.logger.debug("Setting up metrics collector")
+            self.metrics_collector = MetricsCollector(
+                component_name="service_registry", metrics_port=metrics_port
             )
 
-        self.logger.info(f"Service {service_name} registered successfully")
-        return True
+            # Create Pulsar client
+            self.logger.debug("Creating Pulsar client")
+            self.pulsar_client = create_pulsar_client(service_url=pulsar_url)
+
+            # Set up event emitter
+            self.logger.debug("Setting up event emitter")
+            self.event_emitter = SecureEventEmitter(
+                service_url=pulsar_url, namespace="program-synthesis"
+            )
+
+            self.initialized = True
+            self.logger.info("Service registry initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize service registry: {e}", exc_info=True)
+            raise RuntimeError(f"Service registry initialization failed: {e}") from e
+
+        return self
+
+    @log_execution_time
+    async def register_service(
+        self,
+        service_name: str,
+        service_instance: Any,
+        service_type: ComponentType,
+        endpoints: Optional[List[str]] = None,
+    ) -> bool:
+        """
+        Register a service with the registry.
+
+        This is an asynchronous method and must be awaited.
+
+        Args:
+            service_name: Unique name of the service
+            service_instance: Instance of the service
+            service_type: Type of the service component
+            endpoints: Optional list of service endpoints
+
+        Returns:
+            True if registration succeeded, False otherwise
+        """
+        if not self.initialized:
+            self.logger.error("Cannot register service: registry not initialized")
+            return False
+
+        try:
+            self.logger.info(f"Registering service: {service_name} of type {service_type}")
+
+            if service_name in self.services:
+                self.logger.warning(f"Service {service_name} already registered. Updating...")
+
+            service_info = {
+                "instance": service_instance,
+                "type": service_type,
+                "endpoints": endpoints or [],
+                "registered_at": time.time(),
+                "health_status": "starting",
+            }
+
+            self.services[service_name] = service_info
+
+            # Set up health monitoring for this service
+            try:
+                self.logger.debug(f"Setting up health monitor for {service_name}")
+                health_monitor = HealthMonitor(
+                    service_name=service_name, metrics_collector=self.metrics_collector
+                )
+                self.health_monitors[service_name] = health_monitor
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to create health monitor for {service_name}: {e}", exc_info=True
+                )
+
+            # Set up circuit breaker for this service
+            try:
+                self.logger.debug(f"Setting up circuit breaker for {service_name}")
+                circuit_breaker = CircuitBreaker(
+                    name=service_name, metrics_collector=self.metrics_collector
+                )
+                self.circuit_breakers[service_name] = circuit_breaker
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to create circuit breaker for {service_name}: {e}", exc_info=True
+                )
+
+            # Emit event for service registration
+            if self.event_emitter:
+                try:
+                    self.logger.debug(f"Emitting registration event for {service_name}")
+                    event = BaseEvent(
+                        event_type=EventType.SYSTEM_INFO,
+                        source_container="service_registry",
+                        payload={
+                            "action": "service_registered",
+                            "service_name": service_name,
+                            "service_type": service_type.value,
+                        },
+                    )
+
+                    # Use the async version
+                    await self.event_emitter.emit_async(event)
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to emit service registration event: {e}", exc_info=True
+                    )
+
+            self.logger.info(f"Service {service_name} registered successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to register service {service_name}: {e}", exc_info=True)
+            return False
 
     def get_service(self, service_name: str) -> Optional[Any]:
-        """Get a service by name with circuit breaker pattern applied."""
+        """
+        Get a service by name with circuit breaker pattern applied.
+
+        This is a synchronous method that can be called from any context.
+
+        Args:
+            service_name: Name of the service to retrieve
+
+        Returns:
+            Service instance if available, None otherwise
+        """
+        if not self.initialized:
+            self.logger.error("Cannot get service: registry not initialized")
+            return None
+
         if service_name not in self.services:
             self.logger.warning(f"Service {service_name} not found in registry")
             return None
 
-        # Apply circuit breaker pattern
+        # Apply circuit breaker pattern - synchronous check
         circuit_breaker = self.circuit_breakers.get(service_name)
         if circuit_breaker and circuit_breaker.is_open():
             self.logger.warning(f"Circuit breaker open for {service_name}, service unavailable")
             return None
 
+        self.logger.debug(f"Retrieved service: {service_name}")
         return self.services[service_name]["instance"]
 
+    def get_service_with_type(self, service_name: str, expected_type: Type[T]) -> Optional[T]:
+        """
+        Get a service by name with expected type.
+
+        This is a synchronous method that can be called from any context.
+
+        Args:
+            service_name: Name of the service to retrieve
+            expected_type: Expected type of the service
+
+        Returns:
+            Service instance cast to expected type if available, None otherwise
+        """
+        service = self.get_service(service_name)
+        if service is None:
+            return None
+
+        if not isinstance(service, expected_type):
+            self.logger.warning(
+                f"Service {service_name} is not of expected type {expected_type.__name__}"
+            )
+            return None
+
+        return cast(T, service)
+
     def get_services_by_type(self, service_type: ComponentType) -> Dict[str, Any]:
-        """Get all services of a specific type."""
-        return {
+        """
+        Get all services of a specific type.
+
+        This is a synchronous method that can be called from any context.
+
+        Args:
+            service_type: Type of services to retrieve
+
+        Returns:
+            Dictionary mapping service names to instances
+        """
+        if not self.initialized:
+            self.logger.error("Cannot get services: registry not initialized")
+            return {}
+
+        result = {
             name: info["instance"]
             for name, info in self.services.items()
             if info["type"] == service_type
         }
 
-    async def health_check(self) -> Dict[str, str]:
-        """Perform health check on all registered services."""
-        results = {}
-        for name, monitor in self.health_monitors.items():
-            status = await monitor.check_health()
-            results[name] = status
+        self.logger.debug(f"Found {len(result)} services of type {service_type}")
+        return result
 
-            # Update service status
-            if name in self.services:
-                self.services[name]["health_status"] = status
+    async def health_check(self) -> Dict[str, str]:
+        """
+        Perform health check on all registered services.
+
+        This is an asynchronous method and must be awaited.
+
+        Returns:
+            Dictionary mapping service names to health status
+        """
+        if not self.initialized:
+            self.logger.error("Cannot perform health check: registry not initialized")
+            return {}
+
+        self.logger.info(f"Performing health check on {len(self.health_monitors)} services")
+        results = {}
+
+        # Create tasks for all health checks to run in parallel
+        health_check_tasks = []
+        for name, monitor in self.health_monitors.items():
+            task = self._check_service_health(name, monitor)
+            health_check_tasks.append(task)
+
+        # Wait for all health checks to complete
+        if health_check_tasks:
+            completed_results = await asyncio.gather(*health_check_tasks, return_exceptions=True)
+
+            # Process results
+            for result in completed_results:
+                if isinstance(result, Exception):
+                    self.logger.error(f"Health check task failed: {result}", exc_info=True)
+                    continue
+
+                name, status = result
+                results[name] = status
+                if name in self.services:
+                    self.services[name]["health_status"] = status
 
         return results
 
+    async def _check_service_health(
+        self, service_name: str, monitor: HealthMonitor
+    ) -> Tuple[str, str]:
+        """
+        Check health for a single service.
 
-@log_execution_time
-async def register_services(
-        pulsar_url: str = "pulsar://localhost:6650",
-        setup_shared_folder: bool = True
-) -> ServiceRegistry:
-    """
-    Register all services based on the project folder structure.
+        Args:
+            service_name: Name of the service
+            monitor: Health monitor for the service
 
-    Args:
-        pulsar_url: URL for the Pulsar service
-        setup_shared_folder: Whether to set up the unified shared folder
-
-    Returns:
-        The initialized service registry
-    """
-    logger = get_logger("service_registration")
-    logger.info("Starting service registration")
-
-    # Initialize service registry
-    registry = ServiceRegistry().initialize(pulsar_url=pulsar_url)
-
-    # Set up the shared folder if requested
-    services_dir = Path(project_root) / "src" / "services"
-    if setup_shared_folder:
-        shared_manager = SharedFolderManager(base_path="src/services/shared")
-        shared_manager.setup(services_dir)
-        logger.info("Shared folder setup complete")
-
-    # Initialize metrics for the registration process
-    metrics = MetricsCollector(
-        component_name="service_registration",
-        metrics_port=8082
-    )
-
-    # Create component factory
-    factory = ComponentFactory()
-
-    # Register services from component mapping
-    registered_count = 0
-    for component_type, implementations in COMPONENT_MAPPING.items():
-        for name, implementation_class in implementations.items():
-            # Register with component factory
-            factory.register_component(component_type, name, implementation_class)
-
-            try:
-                # Apply bulkhead pattern by isolating component initialization
-                with metrics.start_request_timer(f"instantiate_{name}"):
-                    component_instance = implementation_class(
-                        component_name=name,
-                        metrics_collector=metrics,  # Removed create_child method call
-                        event_emitter=registry.event_emitter
-                    )
-
-                    # Register with service registry
-                    await registry.register_service(
-                        service_name=name,
-                        service_instance=component_instance,
-                        service_type=component_type
-                    )
-
-                    registered_count += 1  # Fixed 'a' to '1'
-                    logger.info(f"Registered and initialized {name} as {component_type.value}")
-            except Exception as e:
-                logger.error(f"Failed to initialize {name}: {str(e)}")
-                metrics.record_error(f"{name}_initialization_error")
-
-    # Set up Template Registry Adapter
-    try:
-        spec_registry_adapter = SpecRegistryEventAdapter(
-            pulsar_service_url=pulsar_url,
-            enable_events=True
-        )
-        await spec_registry_adapter.start()
-        await registry.register_service(
-            "spec_registry_adapter",
-            spec_registry_adapter,
-            ComponentType.SYNTHESIS_ENGINE
-        )
-        logger.info("Template Registry Adapter initialized and registered")
-    except Exception as e:
-        logger.error(f"Failed to initialize Template Registry Adapter: {str(e)}")
-
-    # Register the additional API gateway services visible in your screenshots
-    try:
-        # These would be properly imported and instantiated in a real implementation
-        from src.services.api_gateway.neural_interpretor.app.nueral_interpretor import NeuralInterpreter
-        neural_interpreter = NeuralInterpreter(
-        )
-        await registry.register_service(
-            "neural_interpreter",
-            neural_interpreter,
-            ComponentType.NEURAL_INTERPRETOR
-        )
-        logger.info("Neural Interpreter gateway registered")
-    except Exception as e:
-        logger.error(f"Failed to initialize Neural Interpreter: {str(e)}")
-
-    logger.info(f"Successfully registered {registered_count} services")
-    return registry
-
-
-@log_execution_time
-def register_components(pulsar_url: str = "pulsar://localhost:6650"):
-    """Register all components and set up the shared folder for the program synthesis system."""
-    # Configure logging
-    configure_logging({
-        "level": logging.INFO,
-        "console": True,
-        "file": True,
-        "use_colors": True,
-        "directory": "logs",
-        "collect_performance": True,
-        "multi_tenant": True
-    })
-
-    logger = get_logger("component_registration")
-    logger.info("Starting component registration")
-
-    # Create event loop
-    event_loop = asyncio.get_event_loop()
-
-    # Set up signal handlers for graceful shutdown
-    registry = None
-
-    def shutdown_handler():
-        nonlocal registry
-        if registry:
-            asyncio.create_task(shutdown(registry, event_loop))
-
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        event_loop.add_signal_handler(sig, shutdown_handler)
-
-    # Register services
-    registry = event_loop.run_until_complete(register_services(pulsar_url=pulsar_url))
-
-    # Start health check HTTP server
-    start_health_check_server(registry)
-
-    return registry
-
-
-def start_health_check_server(registry: ServiceRegistry):
-    """Start the health check HTTP server for Kubernetes probes."""
-    from src.services.neural_code_generator.app.healthcheck import start_server
-    # Start in a separate thread to not block the main thread
-    import threading
-    health_thread = threading.Thread(
-        target=start_server,
-        args=(registry,),
-        daemon=True
-    )
-    health_thread.start()
-
-
-async def shutdown(registry: ServiceRegistry, loop: asyncio.AbstractEventLoop):
-    """Gracefully shut down all components."""
-    logger = get_logger("component_registration")
-    logger.info("Shutting down all components")
-
-    # Emit shutdown event
-    if registry.event_emitter:
+        Returns:
+            Tuple of (service_name, status)
+        """
         try:
-            await registry.event_emitter.emit_async(
-                BaseEvent(
-                    event_type=EventType.SYSTEM_SHUTDOWN,
-                    source_container="service_registry",
-                    payload={
-                        "reason": "graceful_shutdown"
-                    }
-                )
+            self.logger.debug(f"Checking health for service: {service_name}")
+            status = await monitor.check_health()
+            self.logger.debug(f"Health status for {service_name}: {status}")
+            return service_name, status
+        except Exception as e:
+            self.logger.error(f"Health check failed for {service_name}: {e}", exc_info=True)
+            return service_name, "error"
+
+    def get_service_health(self, service_name: str) -> Optional[str]:
+        """
+        Get the current health status of a specific service.
+
+        This is a synchronous method that returns the last known health status.
+        For a real-time health check, use health_check() instead.
+
+        Args:
+            service_name: Name of the service
+
+        Returns:
+            Health status string if available, None otherwise
+        """
+        if not self.initialized or service_name not in self.services:
+            return None
+
+        status = self.services[service_name].get("health_status")
+        self.logger.debug(f"Retrieved health status for {service_name}: {status}")
+        return status
+
+    def get_service_metadata(self, service_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get metadata about a registered service.
+
+        This is a synchronous method that can be called from any context.
+
+        Args:
+            service_name: Name of the service
+
+        Returns:
+            Dictionary with service metadata if available, None otherwise
+        """
+        if not self.initialized or service_name not in self.services:
+            return None
+
+        service_info = self.services[service_name].copy()
+        # Don't expose the actual instance
+        service_info.pop("instance", None)
+
+        # Add circuit breaker status if available
+        if service_name in self.circuit_breakers:
+            circuit_breaker = self.circuit_breakers[service_name]
+            service_info["circuit_breaker"] = circuit_breaker.get_metrics()
+
+        self.logger.debug(f"Retrieved metadata for service: {service_name}")
+        return service_info
+
+    async def reset_circuit_breaker(self, service_name: str) -> bool:
+        """
+        Manually reset a service's circuit breaker.
+
+        This is an asynchronous method and must be awaited.
+
+        Args:
+            service_name: Name of the service
+
+        Returns:
+            True if reset was successful, False otherwise
+        """
+        if not self.initialized or service_name not in self.circuit_breakers:
+            return False
+
+        try:
+            self.logger.info(f"Manually resetting circuit breaker for {service_name}")
+            breaker = self.circuit_breakers[service_name]
+
+            if breaker.get_state() == CircuitState.OPEN:
+                # Access the state transition method properly
+                # We need to call the breaker's internal method for this
+                if hasattr(breaker, "_state_transition"):
+                    # The proper way to access a protected method when necessary
+                    await getattr(breaker, "_state_transition")(CircuitState.HALF_OPEN)
+                    # Reset the counter for half-open requests
+                    if hasattr(breaker, "half_open_requests"):
+                        setattr(breaker, "half_open_requests", 0)
+
+                    self.logger.info(f"Successfully reset circuit breaker for {service_name}")
+                    return True
+        except Exception as e:
+            self.logger.error(
+                f"Failed to reset circuit breaker for {service_name}: {e}", exc_info=True
             )
-        except Exception as e:
-            logger.error(f"Error emitting shutdown event: {str(e)}")
 
-    # Shut down all services
-    for name, service_info in registry.services.items():
+        return False
+
+    def list_services(self) -> List[Dict[str, Any]]:
+        """
+        Get a list of all registered services with their status.
+
+        This is a synchronous method that can be called from any context.
+
+        Returns:
+            List of service information dictionaries
+        """
+        if not self.initialized:
+            return []
+
+        self.logger.debug(f"Listing {len(self.services)} registered services")
+        services_list = []
+        for name, info in self.services.items():
+            service_info = {
+                "name": name,
+                "type": (
+                    str(info["type"].value) if hasattr(info["type"], "value") else str(info["type"])
+                ),
+                "health_status": info.get("health_status", "unknown"),
+                "registered_at": info.get("registered_at", 0),
+                "circuit_state": "unknown",
+            }
+
+            # Add circuit breaker status if available
+            if name in self.circuit_breakers:
+                circuit_breaker = self.circuit_breakers.get(name)
+                if circuit_breaker:
+                    service_info["circuit_state"] = circuit_breaker.get_state().value
+
+            services_list.append(service_info)
+
+        return services_list
+
+    async def cleanup(self) -> None:
+        """
+        Clean up resources associated with the service registry.
+
+        This is an asynchronous method and should be awaited.
+        """
+        if not self.initialized:
+            return
+
+        self.logger.info("Cleaning up service registry resources")
+
+        # Close Pulsar client
+        if self.pulsar_client:
+            try:
+                self.logger.debug("Closing Pulsar client")
+                self.pulsar_client.close()
+            except Exception as e:
+                self.logger.error(f"Error closing Pulsar client: {e}", exc_info=True)
+
+        # Close event emitter
+        if self.event_emitter:
+            try:
+                self.logger.debug("Closing event emitter")
+                self.event_emitter.close()
+            except Exception as e:
+                self.logger.error(f"Error closing event emitter: {e}", exc_info=True)
+
+        # Clean up metrics collector
+        if self.metrics_collector and hasattr(self.metrics_collector, "shutdown"):
+            try:
+                self.logger.debug("Shutting down metrics collector")
+                self.metrics_collector.shutdown()
+            except Exception as e:
+                self.logger.error(f"Error shutting down metrics collector: {e}", exc_info=True)
+
+        # Mark as uninitialized
+        self.initialized = False
+        self.logger.info("Service registry cleaned up successfully")
+
+    @classmethod
+    def run_async(cls, coro: Coroutine) -> Any:
+        """
+        Run an asynchronous coroutine in a synchronous context.
+
+        This is a helper method to bridge between sync and async code.
+
+        Args:
+            coro: Coroutine to run
+
+        Returns:
+            Result of the coroutine
+
+        Raises:
+            Exception: If the coroutine raises an exception
+        """
         try:
-            if hasattr(service_info["instance"], "stop"):
-                logger.info(f"Stopping service {name}")
-                if asyncio.iscoroutinefunction(service_info["instance"].stop):
-                    await service_info["instance"].stop()
-                else:
-                    service_info["instance"].stop()
-        except Exception as e:
-            logger.error(f"Error stopping service {name}: {str(e)}")
+            # Try to get the current event loop
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # Create a new event loop if none exists
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-    # Close event emitter
-    if registry.event_emitter:
-        try:
-            registry.event_emitter.close()
-        except Exception as e:
-            logger.error(f"Error closing event emitter: {str(e)}")
-
-    # Stop the event loop
-    loop.stop()
-
-
-if __name__ == "__main__":
-    registry = register_components()
-
-    # Keep the script running to maintain services
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        # Ensure we shut down gracefully
-        asyncio.get_event_loop().run_until_complete(
-            shutdown(registry, asyncio.get_event_loop())
-        )
+        return loop.run_until_complete(coro)

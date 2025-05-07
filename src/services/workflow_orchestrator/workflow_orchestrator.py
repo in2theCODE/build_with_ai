@@ -7,22 +7,30 @@ Workflow Orchestrator Service - Manages the workflow phases for the spec-driven 
 This service tracks project progress through different phases and coordinates the overall workflow.
 """
 
-import os
-import logging
 import asyncio
-import json
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from datetime import datetime
+from datetime import timezone
 from enum import Enum
+import json
+import logging
+import os
+from typing import Any, Dict, List, Optional
 
 import pulsar
+from src.services.shared.constants.models import (
+    SpecSheetCompletionRequestMessage,
+)
+from src.services.shared.constants.models import (
+    SpecSheetGenerationRequestMessage,
+)
 
 # Import shared schemas
-from src.services.shared.constants.models import (
-    ProjectStatus, ProjectCreatedMessage, ProjectAnalysisRequestMessage,
-    SpecSheetGenerationRequestMessage, SpecSheetCompletionRequestMessage,
-    CodeGenerationRequestMessage, SystemEventMessage
-)
+from src.services.shared.constants.models import CodeGenerationRequestMessage
+from src.services.shared.constants.models import ProjectAnalysisRequestMessage
+from src.services.shared.constants.models import ProjectCreatedMessage
+from src.services.shared.constants.models import ProjectStatus
+from src.services.shared.constants.models import SystemEventMessage
+
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 class WorkflowPhase(str, Enum):
     """Workflow phases for the spec-driven code generation system"""
+
     INITIALIZATION = "initialization"
     REQUIREMENTS_ANALYSIS = "requirements_analysis"
     SPEC_SHEET_GENERATION = "spec_sheet_generation"
@@ -50,6 +59,7 @@ class WorkflowPhase(str, Enum):
 
 class WorkflowEventType(str, Enum):
     """Event types for the workflow orchestrator"""
+
     # Phase 1: Spec Sheet Generation
     PROJECT_CREATED = "project.created"
     PROJECT_ANALYSIS_STARTED = "project.analysis.started"
@@ -96,16 +106,16 @@ class WorkflowOrchestrator:
     """
 
     def __init__(
-            self,
-            pulsar_url: str = "pulsar://pulsar:6650",
-            storage_dir: str = "/app/storage",
-            project_events_topic: str = "persistent://public/default/project_events",
-            spec_sheet_events_topic: str = "persistent://public/default/spec_sheet_events",
-            code_gen_events_topic: str = "persistent://public/default/code_generation_events",
-            integration_events_topic: str = "persistent://public/default/integration_events",
-            test_events_topic: str = "persistent://public/default/test_events",
-            workflow_commands_topic: str = "persistent://public/default/workflow_commands",
-            assistance_events_topic: str = "persistent://public/default/assistance_events"
+        self,
+        pulsar_url: str = "pulsar://pulsar:6650",
+        storage_dir: str = "/app/storage",
+        project_events_topic: str = "persistent://public/default/project_events",
+        spec_sheet_events_topic: str = "persistent://public/default/spec_sheet_events",
+        code_gen_events_topic: str = "persistent://public/default/code_generation_events",
+        integration_events_topic: str = "persistent://public/default/integration_events",
+        test_events_topic: str = "persistent://public/default/test_events",
+        workflow_commands_topic: str = "persistent://public/default/workflow_commands",
+        assistance_events_topic: str = "persistent://public/default/assistance_events",
     ):
         """
         Initialize the workflow orchestrator.
@@ -150,7 +160,7 @@ class WorkflowOrchestrator:
         """Load project states from disk if available."""
         if os.path.exists(self.project_state_file):
             try:
-                with open(self.project_state_file, 'r') as f:
+                with open(self.project_state_file, "r") as f:
                     self.project_states = json.load(f)
                 logger.info(f"Loaded state for {len(self.project_states)} projects")
             except Exception as e:
@@ -159,7 +169,7 @@ class WorkflowOrchestrator:
     def _save_project_states(self):
         """Save project states to disk."""
         try:
-            with open(self.project_state_file, 'w') as f:
+            with open(self.project_state_file, "w") as f:
                 json.dump(self.project_states, f, indent=2)
             logger.info(f"Saved state for {len(self.project_states)} projects")
         except Exception as e:
@@ -176,85 +186,71 @@ class WorkflowOrchestrator:
                 topic="persistent://public/default/project_commands",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             self.producers["spec_sheet_commands"] = self.client.create_producer(
                 topic="persistent://public/default/spec_sheet_commands",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             self.producers["code_gen_commands"] = self.client.create_producer(
                 topic="persistent://public/default/code_gen_commands",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             self.producers["integration_commands"] = self.client.create_producer(
                 topic="persistent://public/default/integration_commands",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             self.producers["test_commands"] = self.client.create_producer(
                 topic="persistent://public/default/test_commands",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             self.producers["system_events"] = self.client.create_producer(
                 topic="persistent://public/default/system_events",
                 block_if_queue_full=True,
                 batching_enabled=True,
-                batching_max_publish_delay_ms=10
+                batching_max_publish_delay_ms=10,
             )
 
             # Create consumers
             await self.create_consumer(
-                "project_events",
-                self.project_events_topic,
-                self.handle_project_event
+                "project_events", self.project_events_topic, self.handle_project_event
             )
 
             await self.create_consumer(
-                "spec_sheet_events",
-                self.spec_sheet_events_topic,
-                self.handle_spec_sheet_event
+                "spec_sheet_events", self.spec_sheet_events_topic, self.handle_spec_sheet_event
             )
 
             await self.create_consumer(
-                "code_gen_events",
-                self.code_gen_events_topic,
-                self.handle_code_gen_event
+                "code_gen_events", self.code_gen_events_topic, self.handle_code_gen_event
             )
 
             await self.create_consumer(
-                "integration_events",
-                self.integration_events_topic,
-                self.handle_integration_event
+                "integration_events", self.integration_events_topic, self.handle_integration_event
             )
 
             await self.create_consumer(
-                "test_events",
-                self.test_events_topic,
-                self.handle_test_event
+                "test_events", self.test_events_topic, self.handle_test_event
             )
 
             await self.create_consumer(
-                "workflow_commands",
-                self.workflow_commands_topic,
-                self.handle_workflow_command
+                "workflow_commands", self.workflow_commands_topic, self.handle_workflow_command
             )
 
             await self.create_consumer(
-                "assistance_events",
-                self.assistance_events_topic,
-                self.handle_assistance_event
+                "assistance_events", self.assistance_events_topic, self.handle_assistance_event
             )
 
             logger.info(f"Initialized Pulsar connections to {self.pulsar_url}")
@@ -268,7 +264,7 @@ class WorkflowOrchestrator:
         self.consumers[name] = self.client.subscribe(
             topic=topic,
             subscription_name=f"workflow-orchestrator-{name}",
-            consumer_type=pulsar.ConsumerType.Shared
+            consumer_type=pulsar.ConsumerType.Shared,
         )
 
         # Start consumer task
@@ -332,7 +328,7 @@ class WorkflowOrchestrator:
         """Handle project-related events."""
         try:
             # Parse message data
-            data = msg.data().decode('utf-8')
+            data = msg.data().decode("utf-8")
             payload = json.loads(data)
             event_type = payload.get("event_type")
 
@@ -362,7 +358,7 @@ class WorkflowOrchestrator:
         """Handle spec sheet-related events."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             event_type = payload.get("event_type")
             project_id = payload.get("project_id")
 
@@ -394,7 +390,7 @@ class WorkflowOrchestrator:
         """Handle code generation events."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             event_type = payload.get("event_type")
             project_id = payload.get("project_id")
 
@@ -428,7 +424,7 @@ class WorkflowOrchestrator:
         """Handle integration events."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             event_type = payload.get("event_type")
             project_id = payload.get("project_id")
 
@@ -450,7 +446,7 @@ class WorkflowOrchestrator:
         """Handle test events."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             event_type = payload.get("event_type")
             project_id = payload.get("project_id")
 
@@ -482,7 +478,7 @@ class WorkflowOrchestrator:
         """Handle assistance events."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             event_type = payload.get("event_type")
             project_id = payload.get("project_id")
 
@@ -504,7 +500,7 @@ class WorkflowOrchestrator:
         """Handle workflow commands."""
         try:
             # Parse message data
-            payload = json.loads(msg.data().decode('utf-8'))
+            payload = json.loads(msg.data().decode("utf-8"))
             command = payload.get("command")
             project_id = payload.get("project_id")
 
@@ -516,9 +512,13 @@ class WorkflowOrchestrator:
             elif command == "GENERATE_SPEC_SHEETS":
                 await self.start_spec_sheet_generation(project_id)
             elif command == "COMPLETE_SPEC_SHEETS":
-                await self.start_spec_sheet_completion(project_id, payload.get("spec_sheet_ids", []))
+                await self.start_spec_sheet_completion(
+                    project_id, payload.get("spec_sheet_ids", [])
+                )
             elif command == "VALIDATE_SPEC_SHEETS":
-                await self.start_spec_sheet_validation(project_id, payload.get("spec_sheet_ids", []))
+                await self.start_spec_sheet_validation(
+                    project_id, payload.get("spec_sheet_ids", [])
+                )
             elif command == "GENERATE_CODE":
                 await self.start_code_generation(project_id, payload.get("spec_sheet_ids", []))
             elif command == "VERIFY_CODE":
@@ -553,7 +553,7 @@ class WorkflowOrchestrator:
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "spec_sheet_ids": [],
             "code_generation_ids": [],
-            "current_phase": WorkflowPhase.INITIALIZATION.value
+            "current_phase": WorkflowPhase.INITIALIZATION.value,
         }
 
         # Save state
@@ -574,11 +574,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.ANALYZING.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.ANALYZING.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -595,12 +597,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.ANALYZING.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value,
-            "analysis_results": payload.get("analysis_results", {})
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.ANALYZING.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value,
+                "analysis_results": payload.get("analysis_results", {}),
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -620,10 +624,12 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "status": payload.get("status", self.project_states[project_id]["status"])
-        })
+        self.project_states[project_id].update(
+            {
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "status": payload.get("status", self.project_states[project_id]["status"]),
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -653,15 +659,19 @@ class WorkflowOrchestrator:
         project_id = payload.get("project_id")
 
         if project_id not in self.project_states:
-            logger.warning(f"Received spec sheets generation start for unknown project: {project_id}")
+            logger.warning(
+                f"Received spec sheets generation start for unknown project: {project_id}"
+            )
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.INITIALIZING.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.INITIALIZING.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -679,12 +689,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value,
-            "spec_sheet_ids": spec_sheet_ids
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value,
+                "spec_sheet_ids": spec_sheet_ids,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -701,16 +713,20 @@ class WorkflowOrchestrator:
         spec_sheet_id = payload.get("spec_sheet_id")
 
         if project_id not in self.project_states:
-            logger.warning(f"Received spec sheet completion start for unknown project: {project_id}")
+            logger.warning(
+                f"Received spec sheet completion start for unknown project: {project_id}"
+            )
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value,
-            "current_spec_sheet": spec_sheet_id
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value,
+                "current_spec_sheet": spec_sheet_id,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -750,7 +766,9 @@ class WorkflowOrchestrator:
         if all_sheets and completed_sheets and set(completed_sheets) == set(all_sheets):
             # All spec sheets completed, update project status
             self.project_states[project_id]["status"] = ProjectStatus.SPEC_SHEETS_COMPLETED.value
-            self.project_states[project_id]["current_phase"] = WorkflowPhase.SPEC_SHEET_COMPLETION.value
+            self.project_states[project_id][
+                "current_phase"
+            ] = WorkflowPhase.SPEC_SHEET_COMPLETION.value
             self._save_project_states()
 
             # Publish event
@@ -758,7 +776,7 @@ class WorkflowOrchestrator:
                 WorkflowEventType.ALL_SPEC_SHEETS_COMPLETED.value,
                 "workflow_orchestrator",
                 f"All spec sheets completed for project {project_id}",
-                {"project_id": project_id, "spec_sheet_ids": all_sheets}
+                {"project_id": project_id, "spec_sheet_ids": all_sheets},
             )
 
             logger.info(f"All spec sheets completed for project {project_id}")
@@ -775,11 +793,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -796,11 +816,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_VALIDATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_VALIDATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -819,12 +841,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_VALIDATION.value,
-            "validation_result": validation_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_VALIDATION.value,
+                "validation_result": validation_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -847,12 +871,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_GENERATION.value,
-            "current_generation_id": generation_id
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_GENERATION.value,
+                "current_generation_id": generation_id,
+            }
+        )
 
         # Add to code generation IDs
         if "code_generation_ids" not in self.project_states[project_id]:
@@ -874,7 +900,9 @@ class WorkflowOrchestrator:
         component_id = payload.get("component_id")
 
         if project_id not in self.project_states:
-            logger.warning(f"Received component generation completion for unknown project: {project_id}")
+            logger.warning(
+                f"Received component generation completion for unknown project: {project_id}"
+            )
             return
 
         # Add completed component
@@ -901,11 +929,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_VERIFICATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_VERIFICATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -920,16 +950,20 @@ class WorkflowOrchestrator:
         is_valid = verification_result.get("is_valid", True)
 
         if project_id not in self.project_states:
-            logger.warning(f"Received code verification completion for unknown project: {project_id}")
+            logger.warning(
+                f"Received code verification completion for unknown project: {project_id}"
+            )
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_VERIFICATION.value,
-            "verification_result": verification_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_VERIFICATION.value,
+                "verification_result": verification_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -950,11 +984,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -968,16 +1004,20 @@ class WorkflowOrchestrator:
         optimization_result = payload.get("optimization_result", {})
 
         if project_id not in self.project_states:
-            logger.warning(f"Received code optimization completion for unknown project: {project_id}")
+            logger.warning(
+                f"Received code optimization completion for unknown project: {project_id}"
+            )
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value,
-            "optimization_result": optimization_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value,
+                "optimization_result": optimization_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -995,12 +1035,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_GENERATION.value,
-            "last_completed_generation_id": generation_id
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_GENERATION.value,
+                "last_completed_generation_id": generation_id,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1022,11 +1064,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.FAILED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "error": error
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.FAILED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "error": error,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1043,11 +1087,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.INTEGRATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.INTEGRATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1065,12 +1111,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.INTEGRATION.value,
-            "integration_result": integration_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.INTEGRATION.value,
+                "integration_result": integration_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1090,11 +1138,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1112,12 +1162,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value,
-            "test_result": test_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+                "test_result": test_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1137,11 +1189,13 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1160,18 +1214,22 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value,
-            "execution_result": execution_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+                "execution_result": execution_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
 
         # Log event
-        logger.info(f"Project {project_id} test execution completed, all_passed: {all_tests_passed}")
+        logger.info(
+            f"Project {project_id} test execution completed, all_passed: {all_tests_passed}"
+        )
 
         # If all tests passed, finalize the application
         if all_tests_passed:
@@ -1192,12 +1250,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.DEBUGGING.value,
-            "issue_description": issue_description
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.DEBUGGING.value,
+                "issue_description": issue_description,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1216,12 +1276,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.DEBUGGING.value,
-            "debugging_result": debugging_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.DEBUGGING.value,
+                "debugging_result": debugging_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1246,12 +1308,14 @@ class WorkflowOrchestrator:
             return
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.FINALIZATION.value,
-            "finalization_result": finalization_result
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.FINALIZATION.value,
+                "finalization_result": finalization_result,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1272,10 +1336,9 @@ class WorkflowOrchestrator:
         if "assistance_requests" not in self.project_states[project_id]:
             self.project_states[project_id]["assistance_requests"] = []
 
-        self.project_states[project_id]["assistance_requests"].append({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "query": query
-        })
+        self.project_states[project_id]["assistance_requests"].append(
+            {"timestamp": datetime.now(timezone.utc).isoformat(), "query": query}
+        )
 
         # Update timestamp
         self.project_states[project_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -1299,10 +1362,9 @@ class WorkflowOrchestrator:
         if "assistance_responses" not in self.project_states[project_id]:
             self.project_states[project_id]["assistance_responses"] = []
 
-        self.project_states[project_id]["assistance_responses"].append({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "response": response
-        })
+        self.project_states[project_id]["assistance_responses"].append(
+            {"timestamp": datetime.now(timezone.utc).isoformat(), "response": response}
+        )
 
         # Update timestamp
         self.project_states[project_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -1326,27 +1388,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.PROJECT_ANALYSIS_STARTED.value,
             "workflow_orchestrator",
             f"Starting analysis for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create analysis request
-        request = ProjectAnalysisRequestMessage(
-            project_id=project_id
-        )
+        request = ProjectAnalysisRequestMessage(project_id=project_id)
 
         # Publish to project commands topic
         await self.publish_message(
             "project_commands",
             json.loads(request.to_json()),
-            {"action": "analyze", "project_id": project_id}
+            {"action": "analyze", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.ANALYZING.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.ANALYZING.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.REQUIREMENTS_ANALYSIS.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1364,27 +1426,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.SPEC_SHEETS_GENERATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting spec sheet generation for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create spec sheet generation request
-        request = SpecSheetGenerationRequestMessage(
-            project_id=project_id
-        )
+        request = SpecSheetGenerationRequestMessage(project_id=project_id)
 
         # Publish to spec sheet commands topic
         await self.publish_message(
             "spec_sheet_commands",
             json.loads(request.to_json()),
-            {"action": "generate", "project_id": project_id}
+            {"action": "generate", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.INITIALIZING.value,  # Will be updated when generation completes
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.INITIALIZING.value,  # Will be updated when generation completes
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_GENERATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1403,35 +1465,37 @@ class WorkflowOrchestrator:
             logger.warning(f"No spec sheets found for project {project_id}")
             return
 
-        logger.info(f"Starting spec sheet completion for project {project_id}, sheets: {spec_sheet_ids}")
+        logger.info(
+            f"Starting spec sheet completion for project {project_id}, sheets: {spec_sheet_ids}"
+        )
 
         # Publish spec sheet completion started event
         await self.publish_system_event(
             WorkflowEventType.SPEC_SHEET_COMPLETION_STARTED.value,
             "workflow_orchestrator",
             f"Starting spec sheet completion for project {project_id}",
-            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids}
+            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids},
         )
 
         # For each spec sheet, create a completion request
         for spec_sheet_id in spec_sheet_ids:
-            request = SpecSheetCompletionRequestMessage(
-                spec_sheet_id=spec_sheet_id
-            )
+            request = SpecSheetCompletionRequestMessage(spec_sheet_id=spec_sheet_id)
 
             # Publish to spec sheet commands topic
             await self.publish_message(
                 "spec_sheet_commands",
                 json.loads(request.to_json()),
-                {"action": "complete", "project_id": project_id, "spec_sheet_id": spec_sheet_id}
+                {"action": "complete", "project_id": project_id, "spec_sheet_id": spec_sheet_id},
             )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,  # Will be updated as sheets complete
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_GENERATED.value,  # Will be updated as sheets complete
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_SHEET_COMPLETION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1450,14 +1514,16 @@ class WorkflowOrchestrator:
             logger.warning(f"No completed spec sheets found for project {project_id}")
             return
 
-        logger.info(f"Starting spec sheet validation for project {project_id}, sheets: {spec_sheet_ids}")
+        logger.info(
+            f"Starting spec sheet validation for project {project_id}, sheets: {spec_sheet_ids}"
+        )
 
         # Publish spec validation started event
         await self.publish_system_event(
             WorkflowEventType.SPEC_VALIDATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting spec validation for project {project_id}",
-            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids}
+            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids},
         )
 
         # Create spec validation request
@@ -1465,22 +1531,24 @@ class WorkflowOrchestrator:
         validation_request = {
             "project_id": project_id,
             "spec_sheet_ids": spec_sheet_ids,
-            "validation_type": "comprehensive"
+            "validation_type": "comprehensive",
         }
 
         # Publish to spec sheet commands topic
         await self.publish_message(
             "spec_sheet_commands",
             validation_request,
-            {"action": "validate", "project_id": project_id}
+            {"action": "validate", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.SPEC_VALIDATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.SPEC_SHEETS_COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.SPEC_VALIDATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1506,28 +1574,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.CODE_GENERATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting code generation for project {project_id}",
-            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids}
+            {"project_id": project_id, "spec_sheet_ids": spec_sheet_ids},
         )
 
         # Create code generation request
-        request = CodeGenerationRequestMessage(
-            project_id=project_id,
-            spec_sheet_ids=spec_sheet_ids
-        )
+        request = CodeGenerationRequestMessage(project_id=project_id, spec_sheet_ids=spec_sheet_ids)
 
         # Publish to code gen commands topic
         await self.publish_message(
             "code_gen_commands",
             json.loads(request.to_json()),
-            {"action": "generate", "project_id": project_id}
+            {"action": "generate", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_GENERATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_GENERATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1545,28 +1612,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.CODE_VERIFICATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting code verification for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create verification request
-        verification_request = {
-            "project_id": project_id,
-            "verification_type": "static_analysis"
-        }
+        verification_request = {"project_id": project_id, "verification_type": "static_analysis"}
 
         # Publish to code gen commands topic
         await self.publish_message(
             "code_gen_commands",
             verification_request,
-            {"action": "verify", "project_id": project_id}
+            {"action": "verify", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_VERIFICATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_VERIFICATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1584,28 +1650,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.CODE_OPTIMIZATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting code optimization for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create optimization request
-        optimization_request = {
-            "project_id": project_id,
-            "optimization_level": "medium"
-        }
+        optimization_request = {"project_id": project_id, "optimization_level": "medium"}
 
         # Publish to code gen commands topic
         await self.publish_message(
             "code_gen_commands",
             optimization_request,
-            {"action": "optimize", "project_id": project_id}
+            {"action": "optimize", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.GENERATING_CODE.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.GENERATING_CODE.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.CODE_OPTIMIZATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1629,28 +1694,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.INTEGRATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting integration for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create integration request
-        integration_request = {
-            "project_id": project_id,
-            "integration_type": "component_assembly"
-        }
+        integration_request = {"project_id": project_id, "integration_type": "component_assembly"}
 
         # Publish to integration commands topic
         await self.publish_message(
             "integration_commands",
             integration_request,
-            {"action": "integrate", "project_id": project_id}
+            {"action": "integrate", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.INTEGRATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.INTEGRATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1668,28 +1732,28 @@ class WorkflowOrchestrator:
             WorkflowEventType.TEST_GENERATION_STARTED.value,
             "workflow_orchestrator",
             f"Starting test generation for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create test generation request
         test_request = {
             "project_id": project_id,
-            "test_types": ["unit", "integration", "functional"]
+            "test_types": ["unit", "integration", "functional"],
         }
 
         # Publish to test commands topic
         await self.publish_message(
-            "test_commands",
-            test_request,
-            {"action": "generate_tests", "project_id": project_id}
+            "test_commands", test_request, {"action": "generate_tests", "project_id": project_id}
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1707,28 +1771,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.TEST_EXECUTION_STARTED.value,
             "workflow_orchestrator",
             f"Starting test execution for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create test execution request
-        execution_request = {
-            "project_id": project_id,
-            "execution_mode": "all"
-        }
+        execution_request = {"project_id": project_id, "execution_mode": "all"}
 
         # Publish to test commands topic
         await self.publish_message(
             "test_commands",
             execution_request,
-            {"action": "execute_tests", "project_id": project_id}
+            {"action": "execute_tests", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.TESTING.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.TESTING.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1746,32 +1809,26 @@ class WorkflowOrchestrator:
             WorkflowEventType.DEBUGGING_REQUESTED.value,
             "workflow_orchestrator",
             f"Requesting debugging for project {project_id}",
-            {
-                "project_id": project_id,
-                "issue_description": issue_description
-            }
+            {"project_id": project_id, "issue_description": issue_description},
         )
 
         # Create debugging request
-        debugging_request = {
-            "project_id": project_id,
-            "issue_description": issue_description
-        }
+        debugging_request = {"project_id": project_id, "issue_description": issue_description}
 
         # Publish to test commands topic (or could be a dedicated debugging topic)
         await self.publish_message(
-            "test_commands",
-            debugging_request,
-            {"action": "debug", "project_id": project_id}
+            "test_commands", debugging_request, {"action": "debug", "project_id": project_id}
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.CODE_GENERATED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.DEBUGGING.value,
-            "issue_description": issue_description
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.CODE_GENERATED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.DEBUGGING.value,
+                "issue_description": issue_description,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1789,28 +1846,27 @@ class WorkflowOrchestrator:
             WorkflowEventType.APPLICATION_FINALIZED.value,
             "workflow_orchestrator",
             f"Finalizing application for project {project_id}",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         # Create finalization request
-        finalization_request = {
-            "project_id": project_id,
-            "package_type": "production"
-        }
+        finalization_request = {"project_id": project_id, "package_type": "production"}
 
         # Publish to integration commands topic
         await self.publish_message(
             "integration_commands",
             finalization_request,
-            {"action": "finalize", "project_id": project_id}
+            {"action": "finalize", "project_id": project_id},
         )
 
         # Update project state
-        self.project_states[project_id].update({
-            "status": ProjectStatus.COMPLETED.value,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "current_phase": WorkflowPhase.FINALIZATION.value
-        })
+        self.project_states[project_id].update(
+            {
+                "status": ProjectStatus.COMPLETED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "current_phase": WorkflowPhase.FINALIZATION.value,
+            }
+        )
 
         # Save state
         self._save_project_states()
@@ -1825,10 +1881,7 @@ class WorkflowOrchestrator:
             payload = json.dumps(payload)
 
         # Publish to topic
-        self.producers[producer_name].send(
-            payload.encode('utf-8'),
-            properties=properties or {}
-        )
+        self.producers[producer_name].send(payload.encode("utf-8"), properties=properties or {})
 
         logger.info(f"Published message to {producer_name}")
 
@@ -1836,17 +1889,14 @@ class WorkflowOrchestrator:
         """Publish a system event."""
         # Create system event message
         event = SystemEventMessage(
-            event_type=event_type,
-            component=component,
-            message=message,
-            details=details or {}
+            event_type=event_type, component=component, message=message, details=details or {}
         )
 
         # Publish to system events topic
         await self.publish_message(
             "system_events",
             json.loads(event.to_json()),
-            {"event_type": event_type, "component": component}
+            {"event_type": event_type, "component": component},
         )
 
     async def run_service():
@@ -1854,18 +1904,27 @@ class WorkflowOrchestrator:
         orchestrator = WorkflowOrchestrator(
             pulsar_url=os.environ.get("PULSAR_URL", "pulsar://pulsar:6650"),
             storage_dir=os.environ.get("STORAGE_DIR", "/app/storage"),
-            project_events_topic=os.environ.get("PROJECT_EVENTS_TOPIC", "persistent://public/default/project_events"),
-            spec_sheet_events_topic=os.environ.get("SPEC_SHEET_EVENTS_TOPIC",
-                                                   "persistent://public/default/spec_sheet_events"),
-            code_gen_events_topic=os.environ.get("CODE_GEN_EVENTS_TOPIC",
-                                                 "persistent://public/default/code_generation_events"),
-            integration_events_topic=os.environ.get("INTEGRATION_EVENTS_TOPIC",
-                                                    "persistent://public/default/integration_events"),
-            test_events_topic=os.environ.get("TEST_EVENTS_TOPIC", "persistent://public/default/test_events"),
-            workflow_commands_topic=os.environ.get("WORKFLOW_COMMANDS_TOPIC",
-                                                   "persistent://public/default/workflow_commands"),
-            assistance_events_topic=os.environ.get("ASSISTANCE_EVENTS_TOPIC",
-                                                   "persistent://public/default/assistance_events")
+            project_events_topic=os.environ.get(
+                "PROJECT_EVENTS_TOPIC", "persistent://public/default/project_events"
+            ),
+            spec_sheet_events_topic=os.environ.get(
+                "SPEC_SHEET_EVENTS_TOPIC", "persistent://public/default/spec_sheet_events"
+            ),
+            code_gen_events_topic=os.environ.get(
+                "CODE_GEN_EVENTS_TOPIC", "persistent://public/default/code_generation_events"
+            ),
+            integration_events_topic=os.environ.get(
+                "INTEGRATION_EVENTS_TOPIC", "persistent://public/default/integration_events"
+            ),
+            test_events_topic=os.environ.get(
+                "TEST_EVENTS_TOPIC", "persistent://public/default/test_events"
+            ),
+            workflow_commands_topic=os.environ.get(
+                "WORKFLOW_COMMANDS_TOPIC", "persistent://public/default/workflow_commands"
+            ),
+            assistance_events_topic=os.environ.get(
+                "ASSISTANCE_EVENTS_TOPIC", "persistent://public/default/assistance_events"
+            ),
         )
 
         try:

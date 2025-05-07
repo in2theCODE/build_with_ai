@@ -1,38 +1,50 @@
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, ConfigDict
+"""
+Avro-compatible event model for Apache Pulsar integration.
+
+This module provides a simplified event model that is fully
+compatible with Apache Pulsar's Avro schema registry. It is designed
+to ensure reliable serialization and deserialization of event data
+across system boundaries.
+
+Classes:
+    EventAvro: Avro-compatible event model for Apache Pulsar
+"""
+
+# refactored_event_avro.py
+
+from datetime import datetime
+from datetime import timezone
+from typing import Any, Dict, Optional
+from uuid import uuid4
+
+from pydantic import Field
+
+from .base import PulsarAvroBaseModel
+from .enums import EventPriority
 
 
-class EventAvro(BaseModel):
-    event_id: str
-    event_type: str  # String, not enum for Avro compatibility
-    source_container: str
-    payload: Dict[str, Any]  # Simplified, conversion handled in EventConverter
-    timestamp: str  # String for ISO format
-    priority: int = 1
-    correlation_id: Optional[str] = None
-    metadata: Dict[str, Any] = {}
-    version: str = "1.0"
+class EventAvro(PulsarAvroBaseModel):
+    """Avro-compatible event model for Apache Pulsar."""
 
-    model_config = ConfigDict(frozen=True)
+    event_id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique identifier for the event"
+    )
+    event_type: str = Field(..., description="The type of event")
+    source_container: str = Field(..., description="The container that emitted the event")
+    payload: Dict[str, Any] = Field(..., description="The event data payload")
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        description="UTC timestamp in ISO format",
+    )
+    priority: int = Field(default=EventPriority.NORMAL.value, description="Event priority level")
+    correlation_id: Optional[str] = Field(default=None, description="Correlation ID for tracing")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Optional metadata for the event"
+    )
+    version: str = Field(default="1.0", description="Version of the event format")
 
-    def to_avro(self) -> Dict[str, Any]:
-        """Convert to Avro-compatible dict."""
-        # Make sure all values are Avro compatible
-        return {k: self._make_avro_compatible(v) for k, v in self.model_dump().items()}
+    class Meta:
+        """Avro schema metadata."""
 
-    @staticmethod
-    def _make_avro_compatible(value):
-        """Convert Python values to Avro-compatible values."""
-        if isinstance(value, dict):
-            return {k: EventAvro._make_avro_compatible(v) for k, v in value.items()}
-        elif isinstance(value, list):
-            return [EventAvro._make_avro_compatible(v) for v in value]
-        elif isinstance(value, (str, int, float, bool, type(None))):
-            return value
-        else:
-            return str(value)  # Convert other types to string
-
-    @classmethod
-    def from_avro(cls, data: Dict) -> "EventAvro":
-        """Create from Avro record."""
-        return cls.model_validate(data)
+        namespace = "events"
+        schema_name = "EventAvro"

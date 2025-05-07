@@ -1,8 +1,11 @@
 # Download to a specific path with MPS support
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 import os
+
 from dotenv import load_dotenv
+import torch
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
+
 
 load_dotenv(verbose=True)
 
@@ -21,7 +24,7 @@ tokenizer = AutoTokenizer.from_pretrained(
     "TheBloke/Mistral-7B-v0.1-GGUF",  # Non-gated alternative
     cache_dir=download_path,
     token=api_key,  # Pass the token for authentication
-    trust_remote_code=True
+    trust_remote_code=True,
 )
 
 # Check if MPS is available
@@ -34,7 +37,7 @@ model = AutoModelForCausalLM.from_pretrained(
     cache_dir=download_path,
     token=api_key,  # Pass the token here too
     torch_dtype=torch.float16,  # Use half precision for better performance
-    trust_remote_code=True
+    trust_remote_code=True,
 )
 
 # Move model to MPS device

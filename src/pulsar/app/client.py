@@ -9,15 +9,17 @@ serialization/deserialization, and error handling to provide a robust and reliab
 event bus for production environments.
 """
 
-import json
 import asyncio
+import json
 import logging
-from typing import Dict, List, Any, Callable, Optional
-import pulsar
+from typing import Any, Callable, Dict, List, Optional
 
+import pulsar
 from src.services.shared.pulsar.event_bus import EventBus
 
+
 logger = logging.getLogger(__name__)
+
 
 class PulsarEventBus(EventBus):
     """
@@ -35,7 +37,7 @@ class PulsarEventBus(EventBus):
         namespace: str = "events",
         auth_token: Optional[str] = None,
         operation_timeout: int = 30,
-        connection_timeout: int = 30
+        connection_timeout: int = 30,
     ):
         """
         Initialize the Pulsar event bus.
@@ -73,7 +75,7 @@ class PulsarEventBus(EventBus):
             client_args = {
                 "service_url": self.client_url,
                 "operation_timeout_seconds": self.operation_timeout,
-                "connection_timeout_seconds": self.connection_timeout
+                "connection_timeout_seconds": self.connection_timeout,
             }
 
             # Add authentication if provided
@@ -169,18 +171,14 @@ class PulsarEventBus(EventBus):
                     topic=topic,
                     send_timeout_millis=self.operation_timeout * 1000,
                     block_if_queue_full=True,
-                    batching_enabled=True
+                    batching_enabled=True,
                 )
 
             # Prepare event data
-            event_data = {
-                "event_type": event_type,
-                "payload": payload,
-                "metadata": kwargs
-            }
+            event_data = {"event_type": event_type, "payload": payload, "metadata": kwargs}
 
             # Serialize to JSON
-            serialized_data = json.dumps(event_data).encode('utf-8')
+            serialized_data = json.dumps(event_data).encode("utf-8")
 
             # Send message
             self.producers[topic].send(serialized_data)
@@ -197,7 +195,7 @@ class PulsarEventBus(EventBus):
         handler: Callable,
         subscription_name: str,
         subscription_type: str = "exclusive",
-        **kwargs
+        **kwargs,
     ) -> bool:
         """
         Subscribe to events from specified topics.
@@ -236,8 +234,12 @@ class PulsarEventBus(EventBus):
                     topic=topic,
                     subscription_name=subscription_name,
                     subscription_type=sub_type,
-                    consumer_type=pulsar.ConsumerType.Shared if subscription_type.lower() == "shared" else pulsar.ConsumerType.Exclusive,
-                    unacked_messages_timeout_ms=kwargs.get("ack_timeout_seconds", 60) * 1000
+                    consumer_type=(
+                        pulsar.ConsumerType.Shared
+                        if subscription_type.lower() == "shared"
+                        else pulsar.ConsumerType.Exclusive
+                    ),
+                    unacked_messages_timeout_ms=kwargs.get("ack_timeout_seconds", 60) * 1000,
                 )
 
                 self.consumers[consumer_key] = consumer
@@ -277,13 +279,13 @@ class PulsarEventBus(EventBus):
 
                 # Parse message data
                 try:
-                    data = json.loads(message.data().decode('utf-8'))
+                    data = json.loads(message.data().decode("utf-8"))
 
                     # Create event object
                     event = self._create_event_object(
                         data.get("event_type", "unknown"),
                         data.get("payload", {}),
-                        data.get("metadata", {})
+                        data.get("metadata", {}),
                     )
 
                     # Process the event
@@ -327,8 +329,12 @@ class PulsarEventBus(EventBus):
             Event object
         """
         # Create a simple object with the expected interface
-        return type('Event', (), {
-            'event_type': event_type,
-            'payload': payload,
-            'metadata': type('Metadata', (), metadata)
-        })
+        return type(
+            "Event",
+            (),
+            {
+                "event_type": event_type,
+                "payload": payload,
+                "metadata": type("Metadata", (), metadata),
+            },
+        )

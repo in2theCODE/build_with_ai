@@ -6,18 +6,19 @@ This module runs the neural code generator as a service that listens to
 requests via Apache Pulsar and sends responses back to specified topics.
 """
 
-import os
-import sys
-import json
 import asyncio
+import json
 import logging
+import os
 import signal
-from typing import Dict, Any, Optional
+import sys
+from typing import Any, Dict, Optional
+
 
 # Setup logging
 logging.basicConfig(
     level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("neural_code_generator_service")
 
@@ -26,7 +27,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 # Import the enhanced neural code generator
 try:
-    from program_synthesis_system.components.neural_code_generator.enhanced_neural_code_generator import EnhancedNeuralCodeGenerator
+    from program_synthesis_system.components.neural_code_generator.enhanced_neural_code_generator import (
+        EnhancedNeuralCodeGenerator,
+    )
 except ImportError:
     logger.error("Failed to import EnhancedNeuralCodeGenerator")
     sys.exit(1)
@@ -49,26 +52,22 @@ async def main():
         "output_topic": output_topic,
         "subscription_name": subscription_name,
         "pulsar_enabled": True,
-
         # Model configuration
         "model_path": os.environ.get("MODEL_PATH", "~/.models/deepseek-coder-6.7b"),
         "target_language": os.environ.get("TARGET_LANGUAGE", "python"),
         "max_context_length": int(os.environ.get("MAX_CONTEXT_LENGTH", "8192")),
         "quantization": os.environ.get("QUANTIZATION", "int8"),
         "use_flash_attention": os.environ.get("USE_FLASH_ATTENTION", "true").lower() == "true",
-
         # Technique configuration
         "use_retrieval_augmentation": os.environ.get("USE_RETRIEVAL", "true").lower() == "true",
         "use_tree_transformers": os.environ.get("USE_TREE_TRANSFORMERS", "true").lower() == "true",
         "use_hierarchical_generation": os.environ.get("USE_HIERARCHICAL", "true").lower() == "true",
         "use_syntax_aware_search": os.environ.get("USE_SYNTAX_AWARE", "true").lower() == "true",
         "use_hybrid_grammar_neural": os.environ.get("USE_HYBRID", "true").lower() == "true",
-
         # Performance configuration
         "batch_size": int(os.environ.get("BATCH_SIZE", "1")),
         "mixed_precision": os.environ.get("MIXED_PRECISION", "true").lower() == "true",
         "low_cpu_mem_usage": os.environ.get("LOW_CPU_MEM", "true").lower() == "true",
-
         # Monitoring configuration
         "enable_tracing": os.environ.get("ENABLE_TRACING", "true").lower() == "true",
         "trace_sample_rate": float(os.environ.get("TRACE_SAMPLE_RATE", "0.1")),

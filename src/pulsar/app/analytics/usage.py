@@ -9,13 +9,16 @@ This module defines models for spec sheet definition usage analytics.
 
 import json
 import time
-from typing import Dict, List, Any, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class FieldUsageStats(BaseModel):
     """Usage statistics for a field"""
+
     field_path: str  # Format: "section_name.field_name"
     section_name: str
     field_name: str
@@ -32,7 +35,7 @@ class FieldUsageStats(BaseModel):
         return self.model_dump()
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'FieldUsageStats':
+    def from_dict(cls, data: Dict[str, Any]) -> "FieldUsageStats":
         """Create from dictionary"""
         return cls(
             field_path=data["field_path"],
@@ -42,12 +45,13 @@ class FieldUsageStats(BaseModel):
             error_rate=data.get("error_rate", 0.0),
             avg_fill_time=data.get("avg_fill_time", 0.0),
             common_values=data.get("common_values", []),
-            common_errors=data.get("common_errors", [])
+            common_errors=data.get("common_errors", []),
         )
 
 
 class SectionUsageStats(BaseModel):
     """Usage statistics for a section"""
+
     section_name: str
     completion_rate: float = 0.0  # Percentage of instances where section is filled
     error_rate: float = 0.0  # Percentage of instances where section has validation errors
@@ -63,7 +67,7 @@ class SectionUsageStats(BaseModel):
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SectionUsageStats':
+    def from_dict(cls, data: Dict[str, Any]) -> "SectionUsageStats":
         """Create from dictionary"""
         field_stats = {}
         for k, v in data.get("field_stats", {}).items():
@@ -74,12 +78,13 @@ class SectionUsageStats(BaseModel):
             completion_rate=data.get("completion_rate", 0.0),
             error_rate=data.get("error_rate", 0.0),
             avg_fill_time=data.get("avg_fill_time", 0.0),
-            field_stats=field_stats
+            field_stats=field_stats,
         )
 
 
 class CompletionPathStats(BaseModel):
     """Statistics about the path users take to complete a spec sheet definition"""
+
     total_instances: int = 0
     avg_completion_time: float = 0.0
     section_order: List[str] = Field(default_factory=list)  # Most common section fill order
@@ -94,7 +99,7 @@ class CompletionPathStats(BaseModel):
         return self.model_dump()
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CompletionPathStats':
+    def from_dict(cls, data: Dict[str, Any]) -> "CompletionPathStats":
         """Create from dictionary"""
         return cls(
             total_instances=data.get("total_instances", 0),
@@ -102,12 +107,13 @@ class CompletionPathStats(BaseModel):
             section_order=data.get("section_order", []),
             field_order=data.get("field_order", []),
             common_start_sections=data.get("common_start_sections", []),
-            common_end_sections=data.get("common_end_sections", [])
+            common_end_sections=data.get("common_end_sections", []),
         )
 
 
 class SpecSheetDefinitionUsageAnalytics(BaseModel):
     """Comprehensive usage analytics for a spec sheet definition"""
+
     spec_sheet_definition_id: str
     spec_sheet_definition_version: str
     analysis_timestamp: int = Field(default_factory=lambda: int(time.time()))
@@ -137,7 +143,7 @@ class SpecSheetDefinitionUsageAnalytics(BaseModel):
             "section_stats": {k: v.to_dict() for k, v in self.section_stats.items()},
             "completion_path": self.completion_path.to_dict(),
             "user_segments": self.user_segments,
-            "generation_stats": self.generation_stats
+            "generation_stats": self.generation_stats,
         }
         return result
 
@@ -146,7 +152,7 @@ class SpecSheetDefinitionUsageAnalytics(BaseModel):
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SpecSheetDefinitionUsageAnalytics':
+    def from_dict(cls, data: Dict[str, Any]) -> "SpecSheetDefinitionUsageAnalytics":
         """Create from dictionary"""
         # Handle legacy field names for backward compatibility
         if "template_id" in data and "spec_sheet_definition_id" not in data:
@@ -158,9 +164,7 @@ class SpecSheetDefinitionUsageAnalytics(BaseModel):
         for k, v in data.get("section_stats", {}).items():
             section_stats[k] = SectionUsageStats.from_dict(v)
 
-        completion_path = CompletionPathStats.from_dict(
-            data.get("completion_path", {})
-        )
+        completion_path = CompletionPathStats.from_dict(data.get("completion_path", {}))
 
         return cls(
             spec_sheet_definition_id=data["spec_sheet_definition_id"],
@@ -174,10 +178,10 @@ class SpecSheetDefinitionUsageAnalytics(BaseModel):
             section_stats=section_stats,
             completion_path=completion_path,
             user_segments=data.get("user_segments", {}),
-            generation_stats=data.get("generation_stats", {})
+            generation_stats=data.get("generation_stats", {}),
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'SpecSheetDefinitionUsageAnalytics':
+    def from_json(cls, json_str: str) -> "SpecSheetDefinitionUsageAnalytics":
         """Create from JSON string"""
         return cls.from_dict(json.loads(json_str))

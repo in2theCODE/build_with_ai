@@ -4,22 +4,24 @@ This module provides a secure event emitter that signs and emits events
 to Apache Pulsar, implementing the zero-trust security model.
 """
 
-import os
-import json
-import time
-import logging
-import hmac
-import hashlib
-import base64
 import asyncio
-from typing import Dict, Any, Optional, Union, List
+import base64
+import hashlib
+import hmac
+import json
+import logging
+import os
+import time
+from typing import Any, Dict, List, Optional, Union
 
 import pulsar
 from pulsar.schema import *
 
-from src.services.shared.events.base_event import BaseEvent
+from ..models import BaseEvent
+
 
 logger = logging.getLogger(__name__)
+
 
 class SecureEventEmitter:
     """
@@ -29,12 +31,14 @@ class SecureEventEmitter:
     with support for HMAC-based message signing for the zero-trust security model.
     """
 
-    def __init__(self,
-                 service_url: str,
-                 secret_key: Optional[str] = None,
-                 tenant: str = "public",
-                 namespace: str = "code-generator",
-                 ssl_cert_path: Optional[str] = None):
+    def __init__(
+        self,
+        service_url: str,
+        secret_key: Optional[str] = None,
+        tenant: str = "public",
+        namespace: str = "code-generator",
+        ssl_cert_path: Optional[str] = None,
+    ):
         """
         Initialize the secure event emitter.
 
@@ -56,9 +60,7 @@ class SecureEventEmitter:
             logger.warning("Using default secret key for HMAC signing. This is insecure!")
 
         # Create Pulsar client
-        client_config = {
-            "service_url": service_url
-        }
+        client_config = {"service_url": service_url}
 
         # Add SSL configuration if specified
         if self.ssl_cert_path:
@@ -83,7 +85,7 @@ class SecureEventEmitter:
         Returns:
             The full topic name
         """
-        event_category = event_type.split('.')[0]
+        event_category = event_type.split(".")[0]
         return f"persistent://{self.tenant}/{self.namespace}/{event_category}-events"
 
     def _get_producer(self, topic: str) -> pulsar.Producer:
@@ -102,7 +104,7 @@ class SecureEventEmitter:
                 block_if_queue_full=True,
                 batching_enabled=True,
                 batching_max_publish_delay_ms=10,
-                send_timeout_ms=30000  # 30 seconds
+                send_timeout_ms=30000,  # 30 seconds
             )
         return self.producers[topic]
 
@@ -117,9 +119,7 @@ class SecureEventEmitter:
             Base64-encoded signature
         """
         signature = hmac.new(
-            key=self.secret_key.encode(),
-            msg=message.encode(),
-            digestmod=hashlib.sha256
+            key=self.secret_key.encode(), msg=message.encode(), digestmod=hashlib.sha256
         ).digest()
         return base64.b64encode(signature).decode()
 

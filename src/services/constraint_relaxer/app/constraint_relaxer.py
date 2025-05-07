@@ -8,13 +8,13 @@ relax constraints when synthesis or verification fails.
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
-
-import z3
+from typing import Any, Dict, List, Optional
 
 from src.services.shared.models.base import BaseMessage
 from src.services.shared.models.messages import VerificationResult
 from src.services.shared.models.types import FormalSpecification
+import z3
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +38,9 @@ class ModelBasedConstraintRelaxer:
         self.min_constraints_to_keep = params.get("min_constraints_to_keep", 1)
 
         # Strategy weights for different relaxation techniques
-        self.strategy_weights = params.get("strategy_weights", {
-            "unsat_core": 0.5,
-            "model_guided": 0.3,
-            "maxsat": 0.2
-        })
+        self.strategy_weights = params.get(
+            "strategy_weights", {"unsat_core": 0.5, "model_guided": 0.3, "maxsat": 0.2}
+        )
 
         # Normalize weights
         total = sum(self.strategy_weights.values())
@@ -51,12 +49,14 @@ class ModelBasedConstraintRelaxer:
                 self.strategy_weights[key] /= total
 
         self.logger.info(
-            f"Model-based constraint relaxer initialized with {self.max_relaxation_iterations} max iterations")
+            f"Model-based constraint relaxer initialized with {self.max_relaxation_iterations} max iterations"
+        )
 
     verification_result = VerificationResult
 
-    async def relax_constraints(self, formal_spec: FormalSpecification,
-                                verification_result: Optional[Dict[str, Any]] = None) -> Optional[FormalSpecification]:
+    async def relax_constraints(
+        self, formal_spec: FormalSpecification, verification_result: Optional[Dict[str, Any]] = None
+    ) -> Optional[FormalSpecification]:
         """
         Relax constraints in the specification using advanced model-guided techniques.
 
@@ -103,15 +103,18 @@ class ModelBasedConstraintRelaxer:
             final_constraint_count = len(result.constraints)
 
             self.logger.info(f"Constraint relaxation completed in {time_taken:.2f} seconds")
-            self.logger.info(f"Original constraint count: {constraint_count}, "
-                             f"Relaxed constraint count: {final_constraint_count}")
+            self.logger.info(
+                f"Original constraint count: {constraint_count}, "
+                f"Relaxed constraint count: {final_constraint_count}"
+            )
             return result
         else:
             self.logger.warning(f"Constraint relaxation failed after {time_taken:.2f} seconds")
             return None
 
-    def _select_relaxation_strategy(self, formal_spec: FormalSpecification,
-                                    verification_result: Optional[Dict[str, Any]] = None) -> str:
+    def _select_relaxation_strategy(
+        self, formal_spec: FormalSpecification, verification_result: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         Select the most appropriate relaxation strategy based on the specification.
 
@@ -123,7 +126,7 @@ class ModelBasedConstraintRelaxer:
             Name of the selected strategy
         """
         # If we have verification results with counterexamples, prefer model-guided
-        if verification_result and verification_result.get('counterexamples'):
+        if verification_result and verification_result.get("counterexamples"):
             return "model_guided"
 
         # If we have many constraints, UNSAT core approach is often more efficient
@@ -151,9 +154,9 @@ class ModelBasedConstraintRelaxer:
         # Use the types dictionary to count variables
         return len(formal_spec.types)
 
-    async def _relax_using_unsat_core(self, formal_spec: FormalSpecification,
-                                      verification_result: Optional[Dict[str, Any]] = None) -> Optional[
-        FormalSpecification]:
+    async def _relax_using_unsat_core(
+        self, formal_spec: FormalSpecification, verification_result: Optional[Dict[str, Any]] = None
+    ) -> Optional[FormalSpecification]:
         """
         Relax constraints using the UNSAT core technique.
 
@@ -168,8 +171,8 @@ class ModelBasedConstraintRelaxer:
 
         # Check if we already have UNSAT core information from verification
         unsat_core_ids = []
-        if verification_result and 'unsat_core' in verification_result:
-            unsat_core_ids = verification_result['unsat_core']
+        if verification_result and "unsat_core" in verification_result:
+            unsat_core_ids = verification_result["unsat_core"]
 
         if not unsat_core_ids:
             # We need to compute the UNSAT core using Z3
@@ -188,13 +191,13 @@ class ModelBasedConstraintRelaxer:
         # Process constraints based on unsat core
         for i, constraint in enumerate(relaxed_spec.constraints):
             # Create constraint identifier if not available
-            constraint_id = getattr(constraint, 'id', f"constraint_{i}")
+            constraint_id = getattr(constraint, "id", f"constraint_{i}")
 
             # Check if this constraint is in the unsat core
             if constraint_id in unsat_core_ids:
                 # This constraint is part of the problem
                 # Check if it's a hard constraint that must be kept
-                is_hard = getattr(constraint, 'is_hard', False)
+                is_hard = getattr(constraint, "is_hard", False)
 
                 if is_hard:
                     constraints_to_keep.append(constraint)
@@ -204,7 +207,9 @@ class ModelBasedConstraintRelaxer:
 
         # Check if we've kept enough constraints
         if len(constraints_to_keep) < self.min_constraints_to_keep:
-            self.logger.warning(f"Too few constraints remaining ({len(constraints_to_keep)}), relaxation failed")
+            self.logger.warning(
+                f"Too few constraints remaining ({len(constraints_to_keep)}), relaxation failed"
+            )
             return None
 
         # Update the specification with the kept constraints
@@ -213,13 +218,14 @@ class ModelBasedConstraintRelaxer:
             ast=relaxed_spec.ast,
             constraints=constraints_to_keep,
             types=relaxed_spec.types,
-            examples=relaxed_spec.examples
+            examples=relaxed_spec.examples,
         )
 
         # Verify that the relaxed specification is satisfiable
         if await self._is_satisfiable(relaxed_spec):
             self.logger.info(
-                f"Successfully relaxed specification, removed {len(formal_spec.constraints) - len(constraints_to_keep)} constraints")
+                f"Successfully relaxed specification, removed {len(formal_spec.constraints) - len(constraints_to_keep)} constraints"
+            )
             return relaxed_spec
         else:
             self.logger.warning("Relaxed specification is still unsatisfiable")
@@ -245,7 +251,7 @@ class ModelBasedConstraintRelaxer:
             # Convert constraints to Z3 format and add them as tracked assertions
             for i, constraint in enumerate(formal_spec.constraints):
                 # Get or generate constraint ID
-                constraint_id = getattr(constraint, 'id', f"constraint_{i}")
+                constraint_id = getattr(constraint, "id", f"constraint_{i}")
 
                 # Convert to Z3 formula
                 z3_constraint = self._constraint_to_z3(constraint, formal_spec.types)
@@ -282,7 +288,7 @@ class ModelBasedConstraintRelaxer:
         """
         try:
             # Handle different constraint representations
-            if hasattr(constraint, 'to_z3'):
+            if hasattr(constraint, "to_z3"):
                 # If the constraint has a to_z3 method, use it
                 return constraint.to_z3()
 
@@ -291,8 +297,8 @@ class ModelBasedConstraintRelaxer:
                 return self._parse_constraint_string(constraint, type_info)
 
             # Handle constraints represented as dictionaries
-            if isinstance(constraint, dict) and 'expression' in constraint:
-                expr = constraint['expression']
+            if isinstance(constraint, dict) and "expression" in constraint:
+                expr = constraint["expression"]
                 if isinstance(expr, str):
                     return self._parse_constraint_string(expr, type_info)
                 return expr  # Assume it's already a Z3 expression
@@ -302,7 +308,7 @@ class ModelBasedConstraintRelaxer:
                 return constraint
 
             # Use __str__ method if available and nothing else works
-            if hasattr(constraint, '__str__'):
+            if hasattr(constraint, "__str__"):
                 return self._parse_constraint_string(str(constraint), type_info)
 
             self.logger.warning(f"Unsupported constraint type: {type(constraint)}")
@@ -312,7 +318,9 @@ class ModelBasedConstraintRelaxer:
             self.logger.error(f"Error converting constraint to Z3: {str(e)}")
             return None
 
-    def _parse_constraint_string(self, constraint_str: str, type_info: Dict[str, str]) -> Optional[z3.BoolRef]:
+    def _parse_constraint_string(
+        self, constraint_str: str, type_info: Dict[str, str]
+    ) -> Optional[z3.BoolRef]:
         """
         Parse a constraint string into a Z3 formula.
 
@@ -327,11 +335,11 @@ class ModelBasedConstraintRelaxer:
             # Create Z3 variables based on type information
             z3_vars = {}
             for var_name, var_type in type_info.items():
-                if var_type.lower() == 'int':
+                if var_type.lower() == "int":
                     z3_vars[var_name] = z3.Int(var_name)
-                elif var_type.lower() in ('real', 'float'):
+                elif var_type.lower() in ("real", "float"):
                     z3_vars[var_name] = z3.Real(var_name)
-                elif var_type.lower() == 'bool':
+                elif var_type.lower() == "bool":
                     z3_vars[var_name] = z3.Bool(var_name)
                 else:
                     # Default to Int for unknown types
@@ -341,19 +349,21 @@ class ModelBasedConstraintRelaxer:
             context = dict(z3_vars)
 
             # Add Z3 functions to context
-            context.update({
-                'And': z3.And,
-                'Or': z3.Or,
-                'Not': z3.Not,
-                'Implies': z3.Implies,
-                'If': z3.If,
-                '==': lambda x, y: x == y,
-                '!=': lambda x, y: x != y,
-                '<': lambda x, y: x < y,
-                '<=': lambda x, y: x <= y,
-                '>': lambda x, y: x > y,
-                '>=': lambda x, y: x >= y,
-            })
+            context.update(
+                {
+                    "And": z3.And,
+                    "Or": z3.Or,
+                    "Not": z3.Not,
+                    "Implies": z3.Implies,
+                    "If": z3.If,
+                    "==": lambda x, y: x == y,
+                    "!=": lambda x, y: x != y,
+                    "<": lambda x, y: x < y,
+                    "<=": lambda x, y: x <= y,
+                    ">": lambda x, y: x > y,
+                    ">=": lambda x, y: x >= y,
+                }
+            )
 
             # WARNING: This uses eval and is not safe for untrusted input
             # In a production system, use a proper parser
@@ -398,9 +408,9 @@ class ModelBasedConstraintRelaxer:
             self.logger.error(f"Error checking satisfiability: {str(e)}")
             return False
 
-    async def _relax_using_maxsat(self, formal_spec: FormalSpecification,
-                                  verification_result: Optional[Dict[str, Any]] = None) -> Optional[
-        FormalSpecification]:
+    async def _relax_using_maxsat(
+        self, formal_spec: FormalSpecification, verification_result: Optional[Dict[str, Any]] = None
+    ) -> Optional[FormalSpecification]:
         """
         Relax constraints using MaxSAT optimization.
 
@@ -425,7 +435,7 @@ class ModelBasedConstraintRelaxer:
             # Process each constraint
             for i, constraint in enumerate(formal_spec.constraints):
                 # Get constraint ID
-                constraint_id = getattr(constraint, 'id', f"constraint_{i}")
+                constraint_id = getattr(constraint, "id", f"constraint_{i}")
 
                 # Convert to Z3 formula
                 z3_constraint = self._constraint_to_z3(constraint, formal_spec.types)
@@ -433,13 +443,13 @@ class ModelBasedConstraintRelaxer:
                     continue
 
                 # Check if this is a hard constraint
-                is_hard = getattr(constraint, 'is_hard', False)
+                is_hard = getattr(constraint, "is_hard", False)
 
                 if is_hard:
                     hard_constraints.append((z3_constraint, constraint))
                 else:
                     # Get weight (importance) of this constraint
-                    weight = getattr(constraint, 'weight', 1.0)
+                    weight = getattr(constraint, "weight", 1.0)
                     soft_constraints.append((z3_constraint, weight, constraint))
 
             # Add hard constraints directly (must be satisfied)
@@ -482,7 +492,8 @@ class ModelBasedConstraintRelaxer:
                 # Check if we've kept enough constraints
                 if len(constraints_to_keep) < self.min_constraints_to_keep:
                     self.logger.warning(
-                        f"Too few constraints remaining ({len(constraints_to_keep)}), relaxation failed")
+                        f"Too few constraints remaining ({len(constraints_to_keep)}), relaxation failed"
+                    )
                     return None
 
                 # Create new specification with kept constraints
@@ -490,11 +501,12 @@ class ModelBasedConstraintRelaxer:
                     ast=formal_spec.ast,
                     constraints=constraints_to_keep,
                     types=formal_spec.types,
-                    examples=formal_spec.examples
+                    examples=formal_spec.examples,
                 )
 
                 self.logger.info(
-                    f"Successfully relaxed specification using MaxSAT, kept {len(constraints_to_keep)} constraints")
+                    f"Successfully relaxed specification using MaxSAT, kept {len(constraints_to_keep)} constraints"
+                )
                 return relaxed_spec
             else:
                 self.logger.warning(f"MaxSAT solver returned {result}, relaxation failed")
@@ -504,9 +516,9 @@ class ModelBasedConstraintRelaxer:
             self.logger.error(f"Error in MaxSAT relaxation: {str(e)}")
             return None
 
-    async def _relax_using_model_guided(self, formal_spec: FormalSpecification,
-                                        verification_result: Optional[Dict[str, Any]] = None) -> Optional[
-        FormalSpecification]:
+    async def _relax_using_model_guided(
+        self, formal_spec: FormalSpecification, verification_result: Optional[Dict[str, Any]] = None
+    ) -> Optional[FormalSpecification]:
         """
         Relax constraints using model-guided approach with counterexamples.
 
@@ -521,8 +533,8 @@ class ModelBasedConstraintRelaxer:
 
         # Extract counterexamples from verification result
         counterexamples = []
-        if verification_result and 'counterexamples' in verification_result:
-            counterexamples = verification_result['counterexamples']
+        if verification_result and "counterexamples" in verification_result:
+            counterexamples = verification_result["counterexamples"]
 
         # If no counterexamples available, try to generate some
         if not counterexamples:
@@ -536,31 +548,29 @@ class ModelBasedConstraintRelaxer:
         # Track constraint violations
         violation_counts = {}
         for i, constraint in enumerate(formal_spec.constraints):
-            constraint_id = getattr(constraint, 'id', f"constraint_{i}")
+            constraint_id = getattr(constraint, "id", f"constraint_{i}")
             violation_counts[constraint_id] = {
-                'count': 0,
-                'constraint': constraint,
-                'is_hard': getattr(constraint, 'is_hard', False)
+                "count": 0,
+                "constraint": constraint,
+                "is_hard": getattr(constraint, "is_hard", False),
             }
 
         # Evaluate each constraint against each counterexample
         for example in counterexamples:
             for i, constraint in enumerate(formal_spec.constraints):
-                constraint_id = getattr(constraint, 'id', f"constraint_{i}")
+                constraint_id = getattr(constraint, "id", f"constraint_{i}")
 
                 # Skip if this is a hard constraint
-                if violation_counts[constraint_id]['is_hard']:
+                if violation_counts[constraint_id]["is_hard"]:
                     continue
 
                 # Check if this constraint is satisfied by the example
                 if not await self._evaluate_constraint(constraint, example, formal_spec.types):
-                    violation_counts[constraint_id]['count'] += 1
+                    violation_counts[constraint_id]["count"] += 1
 
         # Sort constraints by violation count (most violated first)
         sorted_violations = sorted(
-            violation_counts.items(),
-            key=lambda x: x[1]['count'],
-            reverse=True
+            violation_counts.items(), key=lambda x: x[1]["count"], reverse=True
         )
 
         # Start with all constraints
@@ -569,13 +579,16 @@ class ModelBasedConstraintRelaxer:
         # Try removing constraints one by one, starting with most violated
         for constraint_id, info in sorted_violations:
             # Skip hard constraints
-            if info['is_hard']:
+            if info["is_hard"]:
                 continue
 
             # Try removing this constraint
-            candidate_constraints = [c for c in constraints_to_keep if
-                                     getattr(c, 'id',
-                                             f"constraint_{formal_spec.constraints.index(c)}") != constraint_id]
+            candidate_constraints = [
+                c
+                for c in constraints_to_keep
+                if getattr(c, "id", f"constraint_{formal_spec.constraints.index(c)}")
+                != constraint_id
+            ]
 
             # Check if we would have enough constraints left
             if len(candidate_constraints) < self.min_constraints_to_keep:
@@ -586,18 +599,22 @@ class ModelBasedConstraintRelaxer:
                 ast=formal_spec.ast,
                 constraints=candidate_constraints,
                 types=formal_spec.types,
-                examples=formal_spec.examples
+                examples=formal_spec.examples,
             )
 
             # Check if this specification is satisfiable
             if await self._is_satisfiable(test_spec):
                 # Update the constraints to keep
                 constraints_to_keep = candidate_constraints
-                self.logger.info(f"Removed constraint {constraint_id} (violated {info['count']} times)")
+                self.logger.info(
+                    f"Removed constraint {constraint_id} (violated {info['count']} times)"
+                )
 
                 # If we've fixed the unsatisfiability, we can stop
                 # Otherwise, continue removing constraints
-                if len(counterexamples) > 0 and await self._check_examples(test_spec, counterexamples):
+                if len(counterexamples) > 0 and await self._check_examples(
+                    test_spec, counterexamples
+                ):
                     self.logger.info("Specification now satisfies all counterexamples")
                     break
 
@@ -607,18 +624,20 @@ class ModelBasedConstraintRelaxer:
                 ast=formal_spec.ast,
                 constraints=constraints_to_keep,
                 types=formal_spec.types,
-                examples=formal_spec.examples
+                examples=formal_spec.examples,
             )
 
             self.logger.info(
-                f"Successfully relaxed specification using model-guided approach, removed {len(formal_spec.constraints) - len(constraints_to_keep)} constraints")
+                f"Successfully relaxed specification using model-guided approach, removed {len(formal_spec.constraints) - len(constraints_to_keep)} constraints"
+            )
             return relaxed_spec
         else:
             self.logger.warning("Could not relax specification using model-guided approach")
             return None
 
-    async def _evaluate_constraint(self, constraint: Any, example: Dict[str, Any],
-                                   type_info: Dict[str, str]) -> bool:
+    async def _evaluate_constraint(
+        self, constraint: Any, example: Dict[str, Any], type_info: Dict[str, str]
+    ) -> bool:
         """
         Evaluate a constraint against a specific example.
 
@@ -632,7 +651,7 @@ class ModelBasedConstraintRelaxer:
         """
         try:
             # If constraint has an evaluate method, use it
-            if hasattr(constraint, 'evaluate'):
+            if hasattr(constraint, "evaluate"):
                 return constraint.evaluate(example)
 
             # Convert to Z3 formula
@@ -651,13 +670,13 @@ class ModelBasedConstraintRelaxer:
                 if var_name in type_info:
                     var_type = type_info[var_name].lower()
 
-                    if var_type == 'int':
+                    if var_type == "int":
                         z3_var = z3.Int(var_name)
                         solver.add(z3_var == value)
-                    elif var_type in ('real', 'float'):
+                    elif var_type in ("real", "float"):
                         z3_var = z3.Real(var_name)
                         solver.add(z3_var == value)
-                    elif var_type == 'bool':
+                    elif var_type == "bool":
                         z3_var = z3.Bool(var_name)
                         solver.add(z3_var == value)
 
@@ -669,7 +688,9 @@ class ModelBasedConstraintRelaxer:
             self.logger.error(f"Error evaluating constraint: {str(e)}")
             return False
 
-    async def _check_examples(self, spec: FormalSpecification, examples: List[Dict[str, Any]]) -> bool:
+    async def _check_examples(
+        self, spec: FormalSpecification, examples: List[Dict[str, Any]]
+    ) -> bool:
         """
         Check if a specification satisfies all examples.
 
@@ -689,7 +710,6 @@ class ModelBasedConstraintRelaxer:
                 z3_constraint = self._constraint_to_z3(constraint, spec.types)
                 if z3_constraint is not None:
                     solver.add(z3_constraint)
-
 
             # Check satisfiability
             result = solver.check()
@@ -719,11 +739,11 @@ class ModelBasedConstraintRelaxer:
             for var_name, var_type in formal_spec.types.items():
                 var_type = var_type.lower()
 
-                if var_type == 'int':
+                if var_type == "int":
                     z3_vars[var_name] = z3.Int(var_name)
-                elif var_type in ('real', 'float'):
+                elif var_type in ("real", "float"):
                     z3_vars[var_name] = z3.Real(var_name)
-                elif var_type == 'bool':
+                elif var_type == "bool":
                     z3_vars[var_name] = z3.Bool(var_name)
                 else:
                     # Default to Int for unknown types
@@ -772,7 +792,9 @@ class ModelBasedConstraintRelaxer:
                             if value.denominator_as_long() == 1:
                                 sample[var_name] = value.numerator_as_long()
                             else:
-                                sample[var_name] = float(value.numerator_as_long()) / float(value.denominator_as_long())
+                                sample[var_name] = float(value.numerator_as_long()) / float(
+                                    value.denominator_as_long()
+                                )
                         else:
                             sample[var_name] = str(value)
 

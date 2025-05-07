@@ -1,20 +1,24 @@
 # src/models/embedding_client.py
 
-import logging
-import numpy as np
-from typing import List, Dict, Any, Optional
 import asyncio
+import logging
 import time
+from typing import Any, Dict, List, Optional
 
 # You might need to adjust this import path based on your project structure
 from metrics_collector import MetricsCollector
+import numpy as np
+
 
 logger = logging.getLogger(__name__)
+
 
 class EmbeddingClient:
     """Client for generating text embeddings for semantic analysis."""
 
-    def __init__(self, config: Dict[str, Any], metrics_collector: Optional[MetricsCollector] = None):
+    def __init__(
+        self, config: Dict[str, Any], metrics_collector: Optional[MetricsCollector] = None
+    ):
         """
         Initialize the embedding client.
 
@@ -25,7 +29,9 @@ class EmbeddingClient:
         self.config = config
         self.metrics_collector = metrics_collector
         self.model_name = config.get("embedding_model", "default-embedding-model")
-        self.dimension = config.get("embedding_dimension", 1536)  # Default for many embedding models
+        self.dimension = config.get(
+            "embedding_dimension", 1536
+        )  # Default for many embedding models
         self.batch_size = config.get("batch_size", 32)
         self.logger = logging.getLogger(__name__)
 
@@ -58,7 +64,6 @@ class EmbeddingClient:
                 # If timer hasn't been stopped, return current duration
                 return time.time() - self.start_time
             return self.end_time - self.start_time
-
 
     def _initialize_models(self):
         """Initialize embedding models based on configuration."""
@@ -181,7 +186,7 @@ class EmbeddingClient:
         results = []
         # Process in batches to avoid overloading the API or model
         for i in range(0, len(texts), self.batch_size):
-            batch = texts[i:i + self.batch_size]
+            batch = texts[i : i + self.batch_size]
             batch_embeddings = await asyncio.gather(*[self.embed_text(text) for text in batch])
             results.extend(batch_embeddings)
         return results

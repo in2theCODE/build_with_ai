@@ -1,21 +1,121 @@
-from __future__ import annotations  # This must be the first import
-import json
+"""
+Base models for Apache Pulsar integration with Avro schema serialization.
+
+This module provides the foundation for all models in the system, with full
+support for Pydantic v2, Fast Avro serialization, and Apache Pulsar schema
+registry integration. The models in this module serve as base classes that
+other models should inherit from to ensure consistent serialization and
+schema generation.
+
+Classes:
+    AvroBaseModel: Base model with Avro schema support
+    PulsarAvroBaseModel: Enhanced model with Pulsar integration
+    EventPayload: Base class for all event payloads
+    BaseEvent: Base class for all system events
+    BaseMessage: Base class for all message schemas
+    BaseComponent: Base class for all system components
+    ConfigurableComponent: Component that can be dynamically configured
+"""
+
+# refactored_base.py
+
+from __future__ import annotations
+
+from datetime import datetime
+from datetime import timezone
 from enum import Enum
-from typing import Any, ClassVar, Dict, List, Optional, Union, TypeVar, Generic
+import io
+import json
+from typing import (
+    Any,
+    ClassVar,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 from uuid import uuid4
-from datetime import datetime, timezone
-from pydantic import BaseModel, Field, ConfigDict, model_validator, PrivateAttr
-from .enums import EventType, EventPriority
 
-T = TypeVar('T')
+from dataclasses_avroschema.pydantic import AvroBaseModel
+import fastavro
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
+from pydantic import PrivateAttr
+
+from .enums import EventPriority
+from .enums import EventType
 
 
-class EventPayload(BaseModel):
+T = TypeVar("T")
+
+
+class PulsarAvroBaseModel(AvroBaseModel):
+    """Base model with Avro and Pulsar support for all models in the system.
+
+    This model inherits from AvroBaseModel which provides Avro schema generation,
+    serialization, and deserialization functionality from dataclasses-avroschema.
+    It adds additional methods for Pulsar integration and schema registry support.
+    """
+
+    # Schema versioning and tracking
+    __avro_schema_id__: ClassVar[Optional[int]] = None
+    __avro_schema_subject__: ClassVar[Optional[str]] = None
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+    model_config = ConfigDict(
+        frozen=True, json_encoders={datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")}
+    )
+
+    @classmethod
+    def get_schema_subject(cls) -> str:
+        """Get the schema subject for Avro registry."""
+        if cls.__avro_schema_subject__ is None:
+            return f"{cls.__module__}.{cls.__name__}"
+        return cls.__avro_schema_subject__
+
+    @property
+    def schema_version(self) -> str:
+        """Return schema version for compatibility checks."""
+        return self.__class__.__schema_version__
+
+    def to_avro_dict(self) -> Dict[str, Any]:
+        """Convert to a dictionary with Avro-compatible format."""
+        # This internally handles enum and datetime conversion
+        return self.model_dump()
+
+    def serialize(self) -> bytes:
+        """Serialize to binary using Fast Avro."""
+        schema = self.__class__.avro_schema_to_python()
+        buffer = io.BytesIO()
+        fastavro.schemaless_writer(buffer, schema, self.to_avro_dict())
+        return buffer.getvalue()
+
+    @classmethod
+    def deserialize(cls, data: bytes) -> "PulsarAvroBaseModel":
+        """Deserialize from binary using Fast Avro."""
+        schema = cls.avro_schema_to_python()
+        buffer = io.BytesIO(data)
+        record = fastavro.schemaless_reader(buffer, schema)
+        return cls.model_validate(record)
+
+    @classmethod
+    def from_avro_dict(cls, data: Dict[str, Any]) -> "PulsarAvroBaseModel":
+        """Create an instance from an Avro dictionary."""
+        return cls.model_validate(data)
+
+
+class EventPayload(PulsarAvroBaseModel):
     """Base class for all event payloads."""
-    model_config = ConfigDict(frozen=True)
+
+    pass
 
 
-class BaseEvent(BaseModel):
+class BaseEvent(PulsarAvroBaseModel):
     """Base event class for all events in the system."""
 
     # Required fields
@@ -26,30 +126,31 @@ class BaseEvent(BaseModel):
     )
 
     # Fields with defaults
-    event_id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the event")
-    priority: EventPriority = Field(default=EventPriority.NORMAL, description="Event priority level")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="UTC timestamp")
+    event_id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Unique identifier for the event"
+    )
+    priority: EventPriority = Field(
+        default=EventPriority.NORMAL, description="Event priority level"
+    )
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), description="UTC timestamp"
+    )
     correlation_id: Optional[str] = Field(default=None, description="Correlation ID for tracing")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Optional metadata for the event")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Optional metadata for the event"
+    )
 
     # Version tracking
     version: str = Field(default="1.0", description="Version of the event format")
 
-    # Avro schema identifiers to be filled by subclasses
-    __avro_schema_id__: ClassVar[Optional[int]] = None
-    __avro_schema_subject__: ClassVar[Optional[str]] = None
-    __schema_version__: ClassVar[str] = "1.0.0"
+    class Meta:
+        """Avro schema metadata"""
 
-    model_config = ConfigDict(
-        frozen=True,
-        json_encoders={
-            datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")
-        }
-    )
+        namespace = "events"
 
     # ---------------------- Validators ----------------------
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_event_type(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("event_type"), str):
@@ -59,7 +160,7 @@ class BaseEvent(BaseModel):
                 raise ValueError(f"Invalid event_type: {data['event_type']}")
         return data
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_priority(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("priority"), int):
@@ -69,176 +170,21 @@ class BaseEvent(BaseModel):
                 data["priority"] = EventPriority.NORMAL
         return data
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_timestamp(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("timestamp"), str):
             try:
-                data["timestamp"] = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00'))
+                data["timestamp"] = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
             except ValueError:
                 pass  # Let Pydantic raise if it fails
         return data
 
-    # ---------------------- Schema Methods ----------------------
 
-
-
-    @classmethod
-    def get_schema_subject(cls) -> str:
-        """Get the schema subject for Avro registry."""
-        if cls.__avro_schema_subject__ is None:
-            return f"{cls.__module__}.{cls.__name__}"
-        return cls.__avro_schema_subject__
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to a dictionary with Avro-compatible format."""
-        data = self.model_dump()
-        # Convert enums to their string values
-        if isinstance(data.get("event_type"), EventType):
-            data["event_type"] = data["event_type"].value
-        if isinstance(data.get("priority"), EventPriority):
-            data["priority"] = data["priority"].value
-        # Format datetime
-        if isinstance(data.get("timestamp"), datetime):
-            data["timestamp"] = data["timestamp"].isoformat().replace("+00:00", "Z")
-        return data
-
-    def to_json(self) -> str:
-        """Convert to a JSON string."""
-        from json import dumps
-        return dumps(self.to_dict())
-
-    def to_avro(self) -> Dict[str, Any]:
-        """Convert to Avro-compatible dict."""
-        return self._make_avro_compatible(self.to_dict())
-
-    @staticmethod
-    def _make_avro_compatible(value: Any) -> Any:
-        """Convert Python values to Avro-compatible values."""
-        if isinstance(value, dict):
-            return {k: BaseEvent._make_avro_compatible(v) for k, v in value.items()}
-        elif isinstance(value, list):
-            return [BaseEvent._make_avro_compatible(v) for v in value]
-        elif isinstance(value, (str, int, float, bool, type(None))):
-            return value
-        elif isinstance(value, datetime):
-            return value.isoformat().replace("+00:00", "Z")
-        elif isinstance(value, Enum):
-            return value.value
-        else:
-            return str(value)  # Convert other types to string
-
-    # ---------------------- Legacy Support ----------------------
-
-class BaseMessage(BaseModel):
+class BaseMessage(PulsarAvroBaseModel):
     """Base class for all message schemas."""
 
-    # Avro schema metadata (to be populated by subclasses)
-    __avro_schema_id__: ClassVar[Optional[int]] = None
-    __avro_schema_subject__: ClassVar[Optional[str]] = None
-    __schema_version__: ClassVar[str] = "1.0.0"
-
-    model_config = ConfigDict(
-        frozen=True,
-        json_encoders={
-            datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")
-        }
-    )
-
-    @classmethod
-    def get_schema_subject(cls) -> str:
-        """Get the schema subject for Avro registry."""
-        if cls.__avro_schema_subject__ is None:
-            return f"{cls.__module__}.{cls.__name__}"
-        return cls.__avro_schema_subject__
-
-    @property
-    def schema_version(self) -> str:
-        """Return schema version for compatibility checks."""
-        return self.__class__.__schema_version__
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to a dictionary with Avro-compatible format."""
-        return self.model_dump()
-
-    def to_json(self) -> str:
-        """Convert to a JSON string."""
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BaseMessage":
-        """Create an instance from a dictionary."""
-        return cls.model_validate(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "BaseMessage":
-        """Create an instance from a JSON string."""
-        data = json.loads(json_str)
-        return cls.from_dict(data)
-
-    def serialize(self) -> bytes:
-        """Serialize for Pulsar message."""
-        return self.to_json().encode("utf-8")
-
-    @classmethod
-    def deserialize(cls, data: bytes) -> "BaseMessage":
-        """Deserialize from Pulsar message."""
-        return cls.from_json(data.decode("utf-8"))
-
-class AvroBaseModel(BaseModel):
-    """Base model with Avro schema support for all models in the system."""
-
-    # Avro schema metadata (to be populated by subclasses)
-    __avro_schema_id__: ClassVar[Optional[int]] = None
-    __avro_schema_subject__: ClassVar[Optional[str]] = None
-    __schema_version__: ClassVar[str] = "1.0.0"
-
-    model_config = ConfigDict(
-        frozen=True,
-        json_encoders={
-            datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")
-        }
-    )
-
-    @classmethod
-    def get_schema_subject(cls) -> str:
-        """Get the schema subject for Avro registry."""
-        if cls.__avro_schema_subject__ is None:
-            return f"{cls.__module__}.{cls.__name__}"
-        return cls.__avro_schema_subject__
-
-    @property
-    def schema_version(self) -> str:
-        """Return schema version for compatibility checks."""
-        return self.__class__.__schema_version__
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to a dictionary with Avro-compatible format."""
-        return self.model_dump()
-
-    def to_json(self) -> str:
-        """Convert to a JSON string."""
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AvroBaseModel":
-        """Create an instance from a dictionary."""
-        return cls.model_validate(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "AvroBaseModel":
-        """Create an instance from a JSON string."""
-        data = json.loads(json_str)
-        return cls.from_dict(data)
-
-    def serialize(self) -> bytes:
-        """Serialize for Pulsar message."""
-        return self.to_json().encode("utf-8")
-
-    @classmethod
-    def deserialize(cls, data: bytes) -> "AvroBaseModel":
-        """Deserialize from Pulsar message."""
-        return cls.from_json(data.decode("utf-8"))
+    pass
 
 
 class BaseComponent(BaseModel):
@@ -247,6 +193,7 @@ class BaseComponent(BaseModel):
     This class provides a foundation for component configuration using Pydantic's
     validation while maintaining compatibility with component-based architecture.
     """
+
     # Version tracking for schema evolution
     __schema_version__: ClassVar[str] = "1.0.0"
 
@@ -254,11 +201,7 @@ class BaseComponent(BaseModel):
     _params: Dict[str, Any] = PrivateAttr(default_factory=dict)
 
     # Allow extra parameters that aren't defined as fields
-    model_config = ConfigDict(
-        extra="allow",
-        arbitrary_types_allowed=True,
-        validate_assignment=True
-    )
+    model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True, validate_assignment=True)
 
     def __init__(self, **data):
         """Initialize the component with parameters.
@@ -307,8 +250,10 @@ class BaseComponent(BaseModel):
         data.update(self._params)
         return data
 
+
 class ConfigurableComponent(BaseComponent):
     """A component that can be configured dynamically."""
+
     # Inherit schema version or override with specific version
     __schema_version__: ClassVar[str] = "1.0.0"
 

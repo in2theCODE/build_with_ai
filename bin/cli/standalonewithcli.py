@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Standalone module for the Neural Code Generator.
@@ -7,18 +6,20 @@ This module allows running the neural code generator directly for a single
 specification without requiring Apache Pulsar for messaging.
 """
 
-import os
-import sys
-import json
 import argparse
+import json
 import logging
-import torch
+import os
 from pathlib import Path
+import sys
+
+import torch
+
 
 # Setup logging
 logging.basicConfig(
     level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("neural_code_generator_standalone")
 
@@ -26,7 +27,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 # Import the enhanced neural code generator
 try:
-    from src.services.neural_code_generator.app.enhanced_neural_code_generator import EnhancedNeuralCodeGenerator
+    from src.services.neural_code_generator.app.enhanced_neural_code_generator import (
+        EnhancedNeuralCodeGenerator,
+    )
 except ImportError:
     logger.error("Failed to import EnhancedNeuralCodeGenerator")
     sys.exit(1)
@@ -35,36 +38,38 @@ except ImportError:
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Neural Code Generator - Standalone Mode")
-    parser.add_argument("--spec", "-s", required=True,
-                        help="Path to specification file or specification string")
-    parser.add_argument("--output", "-o",
-                        help="Output file for generated code (default: stdout)")
-    parser.add_argument("--language", "-l", default="python",
-                        help="Target programming language")
-    parser.add_argument("--technique", "-t",
-                        choices=["attention", "tree", "hierarchical", "hybrid", "all"],
-                        default="all",
-                        help="Neural generation technique to use")
-    parser.add_argument("--beam-width", "-b", type=int, default=5,
-                        help="Beam width for syntax-aware search")
-    parser.add_argument("--kb-path", "-k",
-                        help="Path to knowledge base for retrieval-augmented generation")
-    parser.add_argument("--model-path", "-m",
-                        help="Path to pre-trained models")
-    parser.add_argument("--quantization", "-q",
-                        choices=["none", "int8", "int4"],
-                        default="int8",
-                        help="Model quantization level")
-    parser.add_argument("--no-flash-attention", action="store_true",
-                        help="Disable Flash Attention")
-    parser.add_argument("--no-mixed-precision", action="store_true",
-                        help="Disable mixed precision")
-    parser.add_argument("--format", "-f",
-                        choices=["json", "code", "ast"],
-                        default="code",
-                        help="Output format")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                        help="Enable verbose output")
+    parser.add_argument(
+        "--spec", "-s", required=True, help="Path to specification file or specification string"
+    )
+    parser.add_argument("--output", "-o", help="Output file for generated code (default: stdout)")
+    parser.add_argument("--language", "-l", default="python", help="Target programming language")
+    parser.add_argument(
+        "--technique",
+        "-t",
+        choices=["attention", "tree", "hierarchical", "hybrid", "all"],
+        default="all",
+        help="Neural generation technique to use",
+    )
+    parser.add_argument(
+        "--beam-width", "-b", type=int, default=5, help="Beam width for syntax-aware search"
+    )
+    parser.add_argument(
+        "--kb-path", "-k", help="Path to knowledge base for retrieval-augmented generation"
+    )
+    parser.add_argument("--model-path", "-m", help="Path to pre-trained models")
+    parser.add_argument(
+        "--quantization",
+        "-q",
+        choices=["none", "int8", "int4"],
+        default="int8",
+        help="Model quantization level",
+    )
+    parser.add_argument("--no-flash-attention", action="store_true", help="Disable Flash Attention")
+    parser.add_argument("--no-mixed-precision", action="store_true", help="Disable mixed precision")
+    parser.add_argument(
+        "--format", "-f", choices=["json", "code", "ast"], default="code", help="Output format"
+    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
 
     return parser.parse_args()
 
@@ -75,11 +80,11 @@ def load_specification(spec_path_or_string):
         # Check if it's a path to a file
         path = Path(spec_path_or_string)
         if path.exists() and path.is_file():
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 content = f.read()
 
             # Try to parse as JSON if the file has a .json extension
-            if path.suffix.lower() == '.json':
+            if path.suffix.lower() == ".json":
                 try:
                     return json.loads(content)
                 except json.JSONDecodeError:
@@ -105,17 +110,14 @@ def setup_neural_code_generator(args):
         "quantization": args.quantization if args.quantization != "none" else None,
         "use_flash_attention": not args.no_flash_attention,
         "mixed_precision": not args.no_mixed_precision,
-
         # Advanced technique parameters based on selected technique
         "use_retrieval_augmentation": args.kb_path is not None and (args.technique in ["all"]),
         "use_tree_transformers": args.technique in ["tree", "all"],
         "use_hierarchical_generation": args.technique in ["hierarchical", "all"],
         "use_syntax_aware_search": True,
         "use_hybrid_grammar_neural": args.technique in ["hybrid", "all"],
-
         # Beam search parameters
         "beam_width": args.beam_width,
-
         # Pulsar parameters (disabled in standalone mode)
         "pulsar_enabled": False,
     }
@@ -142,22 +144,24 @@ def save_output(result, args):
     """Save or print the generation result."""
     if args.format == "json":
         # Convert result to JSON
-        if hasattr(result, 'to_dict'):
+        if hasattr(result, "to_dict"):
             output = json.dumps(result.to_dict(), indent=2)
         else:
             output = json.dumps(result, indent=2)
     elif args.format == "ast":
         # Output the AST
-        if hasattr(result, 'program_ast'):
+        if hasattr(result, "program_ast"):
             output = json.dumps(result.program_ast, indent=2)
         else:
-            output = json.dumps(result.get('program_ast', {}), indent=2)
+            output = json.dumps(result.get("program_ast", {}), indent=2)
     else:
         # Output the code
-        if hasattr(result, 'program_ast') and 'code' in result.program_ast:
-            output = result.program_ast['code']
-        elif isinstance(result, dict) and 'program_ast' in result and 'code' in result['program_ast']:
-            output = result['program_ast']['code']
+        if hasattr(result, "program_ast") and "code" in result.program_ast:
+            output = result.program_ast["code"]
+        elif (
+            isinstance(result, dict) and "program_ast" in result and "code" in result["program_ast"]
+        ):
+            output = result["program_ast"]["code"]
         else:
             logger.error("No code found in generation result")
             output = json.dumps(result, indent=2)
@@ -165,7 +169,7 @@ def save_output(result, args):
     # Save to file or print to stdout
     if args.output:
         try:
-            with open(args.output, 'w') as f:
+            with open(args.output, "w") as f:
                 f.write(output)
             logger.info(f"Output saved to {args.output}")
         except Exception as e:
@@ -194,7 +198,11 @@ def main():
         logger.info(f"Code generation complete")
 
         # Show generation stats
-        if hasattr(result, 'confidence_score') and hasattr(result, 'time_taken') and hasattr(result, 'strategy'):
+        if (
+            hasattr(result, "confidence_score")
+            and hasattr(result, "time_taken")
+            and hasattr(result, "strategy")
+        ):
             logger.info(f"Strategy: {result.strategy}")
             logger.info(f"Confidence: {result.confidence_score:.2f}")
             logger.info(f"Time taken: {result.time_taken:.2f} seconds")

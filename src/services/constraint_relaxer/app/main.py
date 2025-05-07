@@ -10,16 +10,18 @@ synthesis or verification fails.
 import asyncio
 import logging
 import signal
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from src.services.constraint_relaxer.app.config import AppConfig
-from src.services.constraint_relaxer.app.constraint_relaxer import ModelBasedConstraintRelaxer
 from src.services.constraint_relaxer.app.client import EventBusClient
+from src.services.constraint_relaxer.app.config import AppConfig
+from src.services.constraint_relaxer.app.constraint_relaxer import (
+    ModelBasedConstraintRelaxer,
+)
+
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("constraint_relaxer_service")
 
@@ -41,7 +43,7 @@ class ConstraintRelaxerService:
             use_optimization=self.config.USE_OPTIMIZATION,
             use_unsat_core=self.config.USE_UNSAT_CORE,
             use_maxsat=self.config.USE_MAXSAT,
-            min_constraints_to_keep=self.config.MIN_CONSTRAINTS_TO_KEEP
+            min_constraints_to_keep=self.config.MIN_CONSTRAINTS_TO_KEEP,
         )
 
         # Set up signal handlers
@@ -60,8 +62,7 @@ class ConstraintRelaxerService:
 
         # Subscribe to relevant topics
         await self.event_bus.subscribe(
-            self.config.RELAXATION_REQUEST_TOPIC,
-            self._handle_relaxation_request
+            self.config.RELAXATION_REQUEST_TOPIC, self._handle_relaxation_request
         )
 
         # Keep the service running
@@ -101,8 +102,11 @@ class ConstraintRelaxerService:
 
             # Convert to objects
             formal_spec = self._deserialize_spec(spec_data)
-            verification_result = self._deserialize_verification_result(
-                verification_data) if verification_data else None
+            verification_result = (
+                self._deserialize_verification_result(verification_data)
+                if verification_data
+                else None
+            )
 
             # Process the relaxation
             self.logger.info(f"Processing relaxation for request {request_id}")
@@ -127,13 +131,10 @@ class ConstraintRelaxerService:
         response = {
             "request_id": request_id,
             "success": result is not None,
-            "relaxed_spec": self._serialize_spec(result) if result else None
+            "relaxed_spec": self._serialize_spec(result) if result else None,
         }
 
-        await self.event_bus.publish(
-            self.config.RELAXATION_RESPONSE_TOPIC,
-            response
-        )
+        await self.event_bus.publish(self.config.RELAXATION_RESPONSE_TOPIC, response)
 
         self.logger.info(f"Published relaxation result for request {request_id}")
 
@@ -145,16 +146,9 @@ class ConstraintRelaxerService:
             request_id: The original request ID
             error_message: The error message
         """
-        response = {
-            "request_id": request_id,
-            "success": False,
-            "error": error_message
-        }
+        response = {"request_id": request_id, "success": False, "error": error_message}
 
-        await self.event_bus.publish(
-            self.config.RELAXATION_RESPONSE_TOPIC,
-            response
-        )
+        await self.event_bus.publish(self.config.RELAXATION_RESPONSE_TOPIC, response)
 
         self.logger.info(f"Published error response for request {request_id}")
 
@@ -202,7 +196,7 @@ class ConstraintRelaxerService:
             "ast": spec.ast,
             "constraints": [str(c) for c in spec.constraints],
             "types": spec.types,
-            "examples": spec.examples
+            "examples": spec.examples,
         }
 
 

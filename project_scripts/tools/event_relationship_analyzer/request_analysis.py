@@ -3,12 +3,13 @@
 Relationship Analysis Request Client
 Send relationship analysis requests to Pulsar
 """
-import json
-import uuid
 import argparse
 from datetime import datetime
-import time
+import json
 import sys
+import time
+import uuid
+
 
 # Import Pulsar client
 try:

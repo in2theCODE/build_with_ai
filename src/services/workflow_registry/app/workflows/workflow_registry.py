@@ -7,12 +7,13 @@ customization and extension of workflows without modifying core components.
 """
 
 import asyncio
-import aiofiles
-import logging
-import uuid
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from datetime import datetime
+from enum import Enum
+import logging
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+import uuid
+
+import aiofiles
 
 
 # Set up logging
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class WorkflowPhase(str, Enum):
     """Workflow phases that represent the high-level stages of a workflow."""
+
     INITIALIZING = "initializing"
     SPEC_SHEETS_GENERATED = "spec_sheets_generated"
     SPEC_SHEETS_COMPLETING = "spec_sheets_completing"
@@ -35,6 +37,7 @@ class WorkflowPhase(str, Enum):
 
 class WorkflowEventType(str, Enum):
     """Event types used within workflows."""
+
     PROJECT_CREATED = "project_created"
     SPEC_SHEETS_GENERATED = "spec_sheets_generated"
     SPEC_SHEET_COMPLETED = "spec_sheet_completed"
@@ -55,6 +58,7 @@ class WorkflowEventType(str, Enum):
 
 class ExtensionPoint(str, Enum):
     """Standard extension points within workflows."""
+
     BEFORE_WORKFLOW = "before_workflow"
     AFTER_WORKFLOW = "after_workflow"
     BEFORE_STEP = "before_step"
@@ -67,15 +71,15 @@ class WorkflowStep:
     """Represents a step in a workflow."""
 
     def __init__(
-            self,
-            step_id: str,
-            name: str,
-            handler: Callable,
-            next_steps: Optional[List[str]] = None,
-            condition: Optional[Callable] = None,
-            retry_policy: Optional[Dict[str, Any]] = None,
-            extension_points: Optional[List[str]] = None,
-            metadata: Optional[Dict[str, Any]] = None
+        self,
+        step_id: str,
+        name: str,
+        handler: Callable,
+        next_steps: Optional[List[str]] = None,
+        condition: Optional[Callable] = None,
+        retry_policy: Optional[Dict[str, Any]] = None,
+        extension_points: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize a workflow step.
@@ -99,12 +103,14 @@ class WorkflowStep:
             "max_retries": 3,
             "retry_delay": 1.0,
             "backoff_factor": 2.0,
-            "max_delay": 60.0
+            "max_delay": 60.0,
         }
         self.extension_points = extension_points or []
         self.metadata = metadata or {}
 
-    async def execute(self, context: Dict[str, Any], workflow_registry: "WorkflowRegistry") -> Dict[str, Any]:
+    async def execute(
+        self, context: Dict[str, Any], workflow_registry: "WorkflowRegistry"
+    ) -> Dict[str, Any]:
         """
         Execute the step with the given context.
 
@@ -127,19 +133,13 @@ class WorkflowStep:
 
         # Execute before_step extensions
         step_context = await workflow_registry.execute_extensions(
-            workflow_id,
-            ExtensionPoint.BEFORE_STEP,
-            step_context,
-            step_id=self.step_id
+            workflow_id, ExtensionPoint.BEFORE_STEP, step_context, step_id=self.step_id
         )
 
         # Execute custom extensions for this step
         for ext_point in self.extension_points:
             step_context = await workflow_registry.execute_extensions(
-                workflow_id,
-                ext_point,
-                step_context,
-                step_id=self.step_id
+                workflow_id, ext_point, step_context, step_id=self.step_id
             )
 
         # Execute the step handler with retries
@@ -158,8 +158,8 @@ class WorkflowStep:
                         "workflow_id": workflow_id,
                         "step_id": self.step_id,
                         "step_name": self.name,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
 
                 # Execute the step handler
@@ -177,15 +177,17 @@ class WorkflowStep:
                         "workflow_id": workflow_id,
                         "step_id": self.step_id,
                         "step_name": self.name,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
 
                 break
 
             except Exception as e:
                 retry_count += 1
-                logger.error(f"Error executing step {self.step_id} in workflow {workflow_id}: {str(e)}")
+                logger.error(
+                    f"Error executing step {self.step_id} in workflow {workflow_id}: {str(e)}"
+                )
 
                 # Publish step failed event
                 await workflow_registry.event_bus.publish_event(
@@ -195,25 +197,23 @@ class WorkflowStep:
                         "step_id": self.step_id,
                         "step_name": self.name,
                         "error": str(e),
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
 
                 # Check if we can retry
                 if retry_count <= max_retries:
                     delay = min(retry_delay * (backoff_factor ** (retry_count - 1)), max_delay)
                     logger.info(
-                        f"Retrying step {self.step_id} in {delay} seconds (attempt {retry_count}/{max_retries})")
+                        f"Retrying step {self.step_id} in {delay} seconds (attempt {retry_count}/{max_retries})"
+                    )
                     await asyncio.sleep(delay)
                 else:
                     # Execute on_error extensions
                     error_context = step_context.copy()
                     error_context["error"] = str(e)
                     error_context = await workflow_registry.execute_extensions(
-                        workflow_id,
-                        ExtensionPoint.ON_ERROR,
-                        error_context,
-                        step_id=self.step_id
+                        workflow_id, ExtensionPoint.ON_ERROR, error_context, step_id=self.step_id
                     )
 
                     # Re-raise the exception if we've exhausted retries
@@ -221,10 +221,7 @@ class WorkflowStep:
 
         # Execute after_step extensions
         step_context = await workflow_registry.execute_extensions(
-            workflow_id,
-            ExtensionPoint.AFTER_STEP,
-            step_context,
-            step_id=self.step_id
+            workflow_id, ExtensionPoint.AFTER_STEP, step_context, step_id=self.step_id
         )
 
         return step_context
@@ -252,16 +249,16 @@ class WorkflowDefinition:
     """Defines a workflow with steps, transitions, and extension points."""
 
     def __init__(
-            self,
-            workflow_id: str,
-            name: str,
-            description: Optional[str] = None,
-            version: str = "1.0.0",
-            steps: Optional[Dict[str, WorkflowStep]] = None,
-            initial_step_id: Optional[str] = None,
-            extension_points: Optional[List[str]] = None,
-            metadata: Optional[Dict[str, Any]] = None,
-            parent_workflow_id: Optional[str] = None
+        self,
+        workflow_id: str,
+        name: str,
+        description: Optional[str] = None,
+        version: str = "1.0.0",
+        steps: Optional[Dict[str, WorkflowStep]] = None,
+        initial_step_id: Optional[str] = None,
+        extension_points: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        parent_workflow_id: Optional[str] = None,
     ):
         """
         Initialize a workflow definition.
@@ -338,11 +335,13 @@ class WorkflowDefinition:
             "initial_step_id": self.initial_step_id,
             "extension_points": self.extension_points,
             "metadata": self.metadata,
-            "parent_workflow_id": self.parent_workflow_id
+            "parent_workflow_id": self.parent_workflow_id,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], steps: Dict[str, WorkflowStep]) -> "WorkflowDefinition":
+    def from_dict(
+        cls, data: Dict[str, Any], steps: Dict[str, WorkflowStep]
+    ) -> "WorkflowDefinition":
         """
         Create a workflow definition from a dictionary.
 
@@ -362,7 +361,7 @@ class WorkflowDefinition:
             initial_step_id=data.get("initial_step_id"),
             extension_points=data.get("extension_points", []),
             metadata=data.get("metadata", {}),
-            parent_workflow_id=data.get("parent_workflow_id")
+            parent_workflow_id=data.get("parent_workflow_id"),
         )
 
         # Add steps
@@ -377,15 +376,15 @@ class WorkflowExtension:
     """Defines an extension to a workflow at a specific extension point."""
 
     def __init__(
-            self,
-            extension_id: str,
-            name: str,
-            handler: Callable,
-            workflow_id: str,
-            extension_point: str,
-            condition: Optional[Callable] = None,
-            priority: int = 0,
-            metadata: Optional[Dict[str, Any]] = None
+        self,
+        extension_id: str,
+        name: str,
+        handler: Callable,
+        workflow_id: str,
+        extension_point: str,
+        condition: Optional[Callable] = None,
+        priority: int = 0,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize a workflow extension.
@@ -425,7 +424,8 @@ class WorkflowExtension:
             return context
 
         logger.info(
-            f"Executing extension {self.extension_id} at {self.extension_point} for workflow {self.workflow_id}")
+            f"Executing extension {self.extension_id} at {self.extension_point} for workflow {self.workflow_id}"
+        )
         result = await self._call_async(self.handler, context)
 
         # Update context with result
@@ -457,14 +457,14 @@ class WorkflowInstance:
     """Represents a running instance of a workflow."""
 
     def __init__(
-            self,
-            instance_id: str,
-            workflow_id: str,
-            context: Dict[str, Any],
-            created_at: Optional[datetime] = None,
-            current_step_id: Optional[str] = None,
-            status: str = "created",
-            error: Optional[str] = None
+        self,
+        instance_id: str,
+        workflow_id: str,
+        context: Dict[str, Any],
+        created_at: Optional[datetime] = None,
+        current_step_id: Optional[str] = None,
+        status: str = "created",
+        error: Optional[str] = None,
     ):
         """
         Initialize a workflow instance.
@@ -506,7 +506,7 @@ class WorkflowInstance:
             "error": self.error,
             "completed_steps": self.completed_steps,
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
     @classmethod
@@ -527,7 +527,7 @@ class WorkflowInstance:
             created_at=datetime.fromisoformat(data["created_at"]),
             current_step_id=data.get("current_step_id"),
             status=data.get("status", "created"),
-            error=data.get("error")
+            error=data.get("error"),
         )
 
         instance.completed_steps = data.get("completed_steps", [])
@@ -595,7 +595,9 @@ class WorkflowPersistenceProvider:
         """
         raise NotImplementedError
 
-    async def list_workflow_instances(self, workflow_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_workflow_instances(
+        self, workflow_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         List workflow instances.
 
@@ -619,6 +621,7 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
             data_dir: Directory to store workflow data
         """
         import os
+
         self.data_dir = data_dir
         self.definitions_dir = os.path.join(data_dir, "definitions")
         self.instances_dir = os.path.join(data_dir, "instances")
@@ -634,8 +637,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Args:
             workflow: The workflow definition to save
         """
-        import os
         import json
+        import os
 
         path = os.path.join(self.definitions_dir, f"{workflow.workflow_id}.json")
         async with aiofiles.open(path, "w") as f:
@@ -651,8 +654,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Returns:
             Dictionary representation of the workflow or None if not found
         """
-        import os
         import json
+        import os
 
         path = os.path.join(self.definitions_dir, f"{workflow_id}.json")
         if not os.path.exists(path):
@@ -669,8 +672,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Returns:
             List of workflow definition dictionaries
         """
-        import os
         import json
+        import os
 
         result = []
         for filename in os.listdir(self.definitions_dir):
@@ -689,8 +692,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Args:
             instance: The workflow instance to save
         """
-        import os
         import json
+        import os
 
         path = os.path.join(self.instances_dir, f"{instance.instance_id}.json")
         async with aiofiles.open(path, "w") as f:
@@ -706,8 +709,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Returns:
             Dictionary representation of the instance or None if not found
         """
-        import os
         import json
+        import os
 
         path = os.path.join(self.instances_dir, f"{instance_id}.json")
         if not os.path.exists(path):
@@ -717,7 +720,9 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
             content = await f.read()
             return json.loads(content)
 
-    async def list_workflow_instances(self, workflow_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_workflow_instances(
+        self, workflow_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         List workflow instances.
 
@@ -727,8 +732,8 @@ class FileSystemPersistenceProvider(WorkflowPersistenceProvider):
         Returns:
             List of workflow instance dictionaries
         """
-        import os
         import json
+        import os
 
         result = []
         for filename in os.listdir(self.instances_dir):
@@ -753,10 +758,10 @@ class WorkflowRegistry:
     """
 
     def __init__(
-            self,
-            event_bus,
-            persistence_provider: Optional[WorkflowPersistenceProvider] = None,
-            auto_register_events: bool = True
+        self,
+        event_bus,
+        persistence_provider: Optional[WorkflowPersistenceProvider] = None,
+        auto_register_events: bool = True,
     ):
         """
         Initialize the workflow registry.
@@ -792,7 +797,9 @@ class WorkflowRegistry:
         workflow_defs = await self.persistence_provider.list_workflow_definitions()
         for workflow_def in workflow_defs:
             # Note: We need to load steps separately and reconstruct the workflow
-            self.workflows[workflow_def["workflow_id"]] = WorkflowDefinition.from_dict(workflow_def, {})
+            self.workflows[workflow_def["workflow_id"]] = WorkflowDefinition.from_dict(
+                workflow_def, {}
+            )
 
         logger.info(f"Loaded {len(workflow_defs)} workflow definitions")
 
@@ -804,7 +811,7 @@ class WorkflowRegistry:
         self.event_bus.subscribe(
             [evt.value for evt in WorkflowEventType],
             self._handle_workflow_event,
-            "workflow_registry"
+            "workflow_registry",
         )
 
         logger.info("Registered workflow event handlers")
@@ -823,11 +830,14 @@ class WorkflowRegistry:
             # Create a new workflow instance for the project
             project_id = payload.get("project_id")
             if project_id:
-                await self.start_workflow("standard_workflow", {
-                    "project_id": project_id,
-                    "correlation_id": event.get("correlation_id"),
-                    "source_event": event
-                })
+                await self.start_workflow(
+                    "standard_workflow",
+                    {
+                        "project_id": project_id,
+                        "correlation_id": event.get("correlation_id"),
+                        "source_event": event,
+                    },
+                )
 
         elif event_type == WorkflowEventType.ERROR.value:
             # Handle error events
@@ -886,7 +896,9 @@ class WorkflowRegistry:
         # Sort extensions by priority
         self.extensions[workflow_id][ext_point].sort(key=lambda x: x.priority)
 
-        logger.info(f"Registered extension {extension.extension_id} for workflow {workflow_id} at {ext_point}")
+        logger.info(
+            f"Registered extension {extension.extension_id} for workflow {workflow_id} at {ext_point}"
+        )
 
     async def get_workflow(self, workflow_id: str) -> Optional[WorkflowDefinition]:
         """
@@ -966,10 +978,7 @@ class WorkflowRegistry:
         return result
 
     async def start_workflow(
-            self,
-            workflow_id: str,
-            context: Dict[str, Any],
-            instance_id: Optional[str] = None
+        self, workflow_id: str, context: Dict[str, Any], instance_id: Optional[str] = None
     ) -> Optional[WorkflowInstance]:
         """
         Start a new workflow instance.
@@ -999,10 +1008,7 @@ class WorkflowRegistry:
 
         # Create the instance
         instance = WorkflowInstance(
-            instance_id=instance_id,
-            workflow_id=workflow_id,
-            context=full_context,
-            status="running"
+            instance_id=instance_id, workflow_id=workflow_id, context=full_context, status="running"
         )
 
         instance.started_at = datetime.utcnow()
@@ -1021,16 +1027,14 @@ class WorkflowRegistry:
             {
                 "instance_id": instance_id,
                 "workflow_id": workflow_id,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
         # Execute before_workflow extensions
         try:
             instance.context = await self.execute_extensions(
-                workflow_id,
-                ExtensionPoint.BEFORE_WORKFLOW,
-                instance.context
+                workflow_id, ExtensionPoint.BEFORE_WORKFLOW, instance.context
             )
         except Exception as e:
             logger.error(f"Error executing before_workflow extensions: {str(e)}")
@@ -1046,8 +1050,8 @@ class WorkflowRegistry:
                     "instance_id": instance_id,
                     "workflow_id": workflow_id,
                     "error": str(e),
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
             return instance
@@ -1059,11 +1063,11 @@ class WorkflowRegistry:
         return instance
 
     async def execute_extensions(
-            self,
-            workflow_id: str,
-            extension_point: Union[str, ExtensionPoint],
-            context: Dict[str, Any],
-            **kwargs
+        self,
+        workflow_id: str,
+        extension_point: Union[str, ExtensionPoint],
+        context: Dict[str, Any],
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Execute extensions for a workflow at a specific extension point.
@@ -1119,8 +1123,8 @@ class WorkflowRegistry:
                         "workflow_id": workflow_id,
                         "extension_id": ext.extension_id,
                         "extension_point": extension_point,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
 
                 # Execute the extension
@@ -1133,8 +1137,8 @@ class WorkflowRegistry:
                         "workflow_id": workflow_id,
                         "extension_id": ext.extension_id,
                         "extension_point": extension_point,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
             except Exception as e:
                 logger.error(f"Error executing extension {ext.extension_id}: {str(e)}")
@@ -1147,8 +1151,8 @@ class WorkflowRegistry:
                         "extension_id": ext.extension_id,
                         "extension_point": extension_point,
                         "error": str(e),
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
                 )
 
         return updated_context
@@ -1201,7 +1205,9 @@ class WorkflowRegistry:
                         # No more steps
                         current_step_id = None
                 except Exception as e:
-                    logger.error(f"Error executing step {current_step_id} in workflow {workflow_id}: {str(e)}")
+                    logger.error(
+                        f"Error executing step {current_step_id} in workflow {workflow_id}: {str(e)}"
+                    )
                     instance.status = "error"
                     instance.error = f"Error in step {current_step_id}: {str(e)}"
 
@@ -1217,8 +1223,8 @@ class WorkflowRegistry:
                             "workflow_id": workflow_id,
                             "step_id": current_step_id,
                             "error": str(e),
-                            "timestamp": datetime.utcnow().isoformat()
-                        }
+                            "timestamp": datetime.utcnow().isoformat(),
+                        },
                     )
 
                     return
@@ -1230,9 +1236,7 @@ class WorkflowRegistry:
             # Execute after_workflow extensions
             try:
                 instance.context = await self.execute_extensions(
-                    workflow_id,
-                    ExtensionPoint.AFTER_WORKFLOW,
-                    instance.context
+                    workflow_id, ExtensionPoint.AFTER_WORKFLOW, instance.context
                 )
             except Exception as e:
                 logger.error(f"Error executing after_workflow extensions: {str(e)}")
@@ -1249,8 +1253,8 @@ class WorkflowRegistry:
                 {
                     "instance_id": instance_id,
                     "workflow_id": workflow_id,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
             logger.info(f"Workflow {workflow_id} instance {instance_id} completed successfully")
@@ -1271,12 +1275,13 @@ class WorkflowRegistry:
                     "instance_id": instance_id,
                     "workflow_id": workflow_id,
                     "error": str(e),
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
 
 # Register our existing workflows
+
 
 async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> None:
     """
@@ -1301,8 +1306,8 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             "before_code_generation",
             "after_code_generation",
             "before_integration",
-            "after_integration"
-        ]
+            "after_integration",
+        ],
     )
 
     # Add steps
@@ -1329,13 +1334,11 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
                 "step": "project_analysis",
                 "project_id": project_id,
                 "analysis_result": analysis_result,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
-        return {
-            "analysis_result": analysis_result
-        }
+        return {"analysis_result": analysis_result}
 
     standard_workflow.add_step(
         WorkflowStep(
@@ -1343,7 +1346,7 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             name="Project Analysis",
             handler=analyze_project,
             next_steps=["spec_sheet_generation"],
-            extension_points=["before_analysis", "after_analysis"]
+            extension_points=["before_analysis", "after_analysis"],
         )
     )
 
@@ -1369,14 +1372,11 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
                 "project_id": project_id,
                 "spec_sheet_ids": [sheet.id for sheet in spec_sheets],
                 "errors": errors,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
-        return {
-            "spec_sheets": spec_sheets,
-            "errors": errors
-        }
+        return {"spec_sheets": spec_sheets, "errors": errors}
 
     standard_workflow.add_step(
         WorkflowStep(
@@ -1384,7 +1384,7 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             name="Specification Sheet Generation",
             handler=generate_spec_sheets,
             next_steps=["spec_sheet_completion"],
-            extension_points=["before_spec_generation", "after_spec_generation"]
+            extension_points=["before_spec_generation", "after_spec_generation"],
         )
     )
 
@@ -1425,13 +1425,11 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
                 {
                     "project_id": project_id,
                     "spec_sheet_id": completed_sheet.id,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
-        return {
-            "completed_sheets": completed_sheets
-        }
+        return {"completed_sheets": completed_sheets}
 
     standard_workflow.add_step(
         WorkflowStep(
@@ -1439,7 +1437,7 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             name="Specification Sheet Completion",
             handler=complete_spec_sheets,
             next_steps=["code_generation"],
-            extension_points=["before_spec_completion", "after_spec_completion"]
+            extension_points=["before_spec_completion", "after_spec_completion"],
         )
     )
 
@@ -1476,13 +1474,11 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
                     "project_id": project_id,
                     "spec_sheet_id": sheet.id,
                     "code_generation_id": synthesis_result.id,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
-        return {
-            "code_results": code_results
-        }
+        return {"code_results": code_results}
 
     standard_workflow.add_step(
         WorkflowStep(
@@ -1490,7 +1486,7 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             name="Code Generation",
             handler=generate_code,
             next_steps=["integration"],
-            extension_points=["before_code_generation", "after_code_generation"]
+            extension_points=["before_code_generation", "after_code_generation"],
         )
     )
 
@@ -1519,13 +1515,11 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             {
                 "project_id": project_id,
                 "assembly_result": assembly_result,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
-        return {
-            "assembly_result": assembly_result
-        }
+        return {"assembly_result": assembly_result}
 
     standard_workflow.add_step(
         WorkflowStep(
@@ -1533,7 +1527,7 @@ async def register_standard_workflow(workflow_registry: WorkflowRegistry) -> Non
             name="Integration",
             handler=integrate_code,
             next_steps=[],  # End of workflow
-            extension_points=["before_integration", "after_integration"]
+            extension_points=["before_integration", "after_integration"],
         )
     )
 
@@ -1562,7 +1556,7 @@ async def convert_to_formal_spec(spec_sheet):
         "parameters": [],
         "return_type": spec_sheet.get_field_value("return_type"),
         "constraints": [],
-        "examples": []
+        "examples": [],
     }
 
 
@@ -1580,10 +1574,7 @@ async def register_specialized_workflow(workflow_registry: WorkflowRegistry) -> 
         description="A specialized workflow for program synthesis with additional quality checks",
         version="1.0.0",
         parent_workflow_id="standard_workflow",  # Inherit from standard workflow
-        extension_points=[
-            "before_quality_check",
-            "after_quality_check"
-        ]
+        extension_points=["before_quality_check", "after_quality_check"],
     )
 
     # Reuse steps from the standard workflow
@@ -1624,17 +1615,14 @@ async def register_specialized_workflow(workflow_registry: WorkflowRegistry) -> 
                 # Replace the original result with the improved one
                 code_results[code_results.index(result)] = improved_result
 
-        return {
-            "code_results": code_results,
-            "quality_results": quality_results
-        }
+        return {"code_results": code_results, "quality_results": quality_results}
 
     quality_check_step = WorkflowStep(
         step_id="quality_check",
         name="Code Quality Check",
         handler=check_code_quality,
         next_steps=["integration"],
-        extension_points=["before_quality_check", "after_quality_check"]
+        extension_points=["before_quality_check", "after_quality_check"],
     )
 
     specialized_workflow.add_step(quality_check_step)
@@ -1669,7 +1657,7 @@ async def register_extensions(workflow_registry: WorkflowRegistry) -> None:
         # In a real implementation, this would collect metrics
         context["metrics"] = {
             "spec_count": len(context.get("completed_sheets", [])),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         return context
@@ -1680,7 +1668,7 @@ async def register_extensions(workflow_registry: WorkflowRegistry) -> None:
         handler=collect_metrics_before_code_generation,
         workflow_id="standard_workflow",
         extension_point="before_code_generation",
-        priority=0
+        priority=0,
     )
 
     await workflow_registry.register_extension(metrics_extension)
@@ -1705,7 +1693,7 @@ async def register_extensions(workflow_registry: WorkflowRegistry) -> None:
         handler=send_completion_notification,
         workflow_id="*",  # Apply to all workflows
         extension_point=ExtensionPoint.AFTER_WORKFLOW,
-        priority=0
+        priority=0,
     )
 
     await workflow_registry.register_extension(notification_extension)
@@ -1740,6 +1728,7 @@ async def initialize_workflow_registry(event_bus) -> WorkflowRegistry:
     await register_extensions(workflow_registry)
 
     return workflow_registry
+
 
 # Example usage:
 

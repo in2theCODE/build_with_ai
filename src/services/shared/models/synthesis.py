@@ -1,13 +1,37 @@
+"""
+Code synthesis models and result representation.
+
+This module defines models related to code synthesis, which is the process
+of generating code from specifications. The central class is SynthesisResult,
+which encapsulates the output of a code synthesis operation.
+
+Classes:
+    SynthesisResult: Result of a code synthesis operation
+"""
+
+from datetime import datetime
+from datetime import timezone
+
 # src/services/shared/models/synthesis.py
-from typing import Dict, Any, Optional, List, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+
 
 # Define strategy literals for better type safety
 SynthesisStrategyType = Literal[
-    "neural", "incremental", "sequential", "parallel",
-    "conditional", "statistical", "hybrid", "combined",
-    "incremental_sequential", "incremental_parallel",
+    "neural",
+    "incremental",
+    "sequential",
+    "parallel",
+    "conditional",
+    "statistical",
+    "hybrid",
+    "combined",
+    "incremental_sequential",
+    "incremental_parallel",
     "incremental_conditional",
 ]
 
@@ -19,59 +43,48 @@ class SynthesisResult(BaseModel):
     This is the central class that encapsulates generated code, AST,
     confidence scores, performance metrics, and generation strategy.
     """
+
     # Core fields
     program_ast: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Abstract Syntax Tree of the synthesized program"
+        default=None, description="Abstract Syntax Tree of the synthesized program"
     )
     code: Optional[str] = Field(
-        default=None,
-        description="String representation of the generated code"
+        default=None, description="String representation of the generated code"
     )
     # No alias here - we'll handle backwards compatibility differently
     confidence_score: float = Field(
-        default=0.0,
-        description="Confidence score of the synthesis result (0.0-1.0)"
+        default=0.0, description="Confidence score of the synthesis result (0.0-1.0)"
     )
-    time_taken: float = Field(
-        default=0.0,
-        description="Time taken for synthesis in seconds"
-    )
+    time_taken: float = Field(default=0.0, description="Time taken for synthesis in seconds")
 
     # Strategy and metadata
     strategy: Optional[SynthesisStrategyType] = Field(
-        default=None,
-        description="Strategy used for synthesis"
+        default=None, description="Strategy used for synthesis"
     )
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        description="When the result was generated"
+        description="When the result was generated",
     )
 
     # Additional fields for enhanced functionality
     errors: List[str] = Field(
-        default_factory=list,
-        description="List of errors encountered during synthesis"
+        default_factory=list, description="List of errors encountered during synthesis"
     )
     metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata about the synthesis process"
+        default_factory=dict, description="Additional metadata about the synthesis process"
     )
 
     # Preserving fields that might be used by other components
     verification_result: Optional[Any] = Field(
-        default=None,
-        description="Verification result if available"
+        default=None, description="Verification result if available"
     )
 
     # Up-to-date model configuration
     model_config = ConfigDict(
         frozen=True,
         arbitrary_types_allowed=True,
-        json_encoders={
-            datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")
-        },
-        populate_by_name=True  # For supporting various field names
+        json_encoders={datetime: lambda dt: dt.isoformat().replace("+00:00", "Z")},
+        populate_by_name=True,  # For supporting various field names
     )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -144,7 +157,7 @@ class SynthesisResult(BaseModel):
             confidence_score=avg_confidence,
             time_taken=total_time,
             strategy="combined",
-            metadata=combined_metadata
+            metadata=combined_metadata,
         )
 
     def with_code(self, code: str) -> "SynthesisResult":
@@ -164,5 +177,5 @@ class SynthesisResult(BaseModel):
             time_taken=self.time_taken,
             strategy=self.strategy,
             metadata=dict(self.metadata),
-            errors=list(self.errors)
+            errors=list(self.errors),
         )

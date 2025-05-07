@@ -6,15 +6,15 @@ underlying message broker technology. It provides a concrete implementation
 that enables the template registry system to use Pulsar for event-driven communication.
 """
 
+import abc
+import asyncio
+from datetime import datetime
 import json
 import logging
-import pulsar
-import asyncio
-from typing import Dict, List, Any, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional
 import uuid
-import abc
 
-from datetime import datetime
+import pulsar
 
 
 logger = logging.getLogger(__name__)
@@ -69,8 +69,14 @@ class EventBus(abc):
         pass
 
     @abc.abstractmethod
-    def subscribe(self, event_types: List[str], handler: Callable, subscription_name: str,
-                  subscription_type: str = "exclusive", **kwargs) -> bool:
+    def subscribe(
+        self,
+        event_types: List[str],
+        handler: Callable,
+        subscription_name: str,
+        subscription_type: str = "exclusive",
+        **kwargs,
+    ) -> bool:
         """
         Subscribe to events from the bus.
 
@@ -96,12 +102,12 @@ class PulsarEventBus(EventBus):
     """
 
     def __init__(
-            self,
-            service_url: str,
-            topic_prefix: str = "persistent://public/default/template-",
-            consumer_timeout_ms: int = 1000,  # Added the missing comma here
-            schema_registry_url: Optional[str] = None,
-            schema_registry_auth_token: Optional[str] = None,
+        self,
+        service_url: str,
+        topic_prefix: str = "persistent://public/default/template-",
+        consumer_timeout_ms: int = 1000,  # Added the missing comma here
+        schema_registry_url: Optional[str] = None,
+        schema_registry_auth_token: Optional[str] = None,
     ):
         """
         Initialize the Pulsar Event Bus.
@@ -129,8 +135,7 @@ class PulsarEventBus(EventBus):
             from infra.registration.schema_registry import SchemaRegistryClient
 
             self.schema_registry = SchemaRegistryClient(
-                url=schema_registry_url,
-                auth_token=schema_registry_auth_token
+                url=schema_registry_url, auth_token=schema_registry_auth_token
             )
 
     async def start(self) -> bool:
@@ -152,7 +157,7 @@ class PulsarEventBus(EventBus):
                     handler_info["handler"],
                     subscription_name,
                     handler_info["subscription_type"],
-                    **handler_info["options"]
+                    **handler_info["options"],
                 )
 
             logger.info(f"Started Pulsar Event Bus with service URL: {self.service_url}")
@@ -230,7 +235,9 @@ class PulsarEventBus(EventBus):
                 schema_id = self.schema_registry.get_schema_id(subject)
                 if schema_id:
                     if not self.schema_registry.validate_event_against_schema(event, schema_id):
-                        logger.error(f"Schema validation failed for event {event_type}: {schema_id}")
+                        logger.error(
+                            f"Schema validation failed for event {event_type}: {schema_id}"
+                        )
                         return False
 
             # Get or create producer
@@ -249,8 +256,14 @@ class PulsarEventBus(EventBus):
             logger.error(f"Failed to publish event of type {event_type}: {e}")
             return False
 
-    def subscribe(self, event_types: List[str], handler: Callable, subscription_name: str,
-                  subscription_type: str = "exclusive", **kwargs) -> bool:
+    def subscribe(
+        self,
+        event_types: List[str],
+        handler: Callable,
+        subscription_name: str,
+        subscription_type: str = "exclusive",
+        **kwargs,
+    ) -> bool:
         """
         Subscribe to events from the bus.
 
@@ -270,22 +283,20 @@ class PulsarEventBus(EventBus):
                 "event_types": event_types,
                 "handler": handler,
                 "subscription_type": subscription_type,
-                "options": kwargs
+                "options": kwargs,
             }
 
             # If already running, create consumer
             if self.running and self.client:
                 asyncio.create_task(
                     self._create_consumer(
-                        event_types,
-                        handler,
-                        subscription_name,
-                        subscription_type,
-                        **kwargs
+                        event_types, handler, subscription_name, subscription_type, **kwargs
                     )
                 )
 
-            logger.info(f"Registered subscription '{subscription_name}' for event types: {', '.join(event_types)}")
+            logger.info(
+                f"Registered subscription '{subscription_name}' for event types: {', '.join(event_types)}"
+            )
             return True
 
         except Exception as e:
@@ -312,14 +323,20 @@ class PulsarEventBus(EventBus):
                     topic=topic,
                     block_if_queue_full=True,
                     batching_enabled=True,
-                    batching_max_publish_delay_ms=10
+                    batching_max_publish_delay_ms=10,
                 )
                 logger.debug(f"Created producer for event type {event_type} on topic {topic}")
 
             return self.producers[event_type]
 
-    async def _create_consumer(self, event_types: List[str], handler: Callable, subscription_name: str,
-                               subscription_type: str, **kwargs):
+    async def _create_consumer(
+        self,
+        event_types: List[str],
+        handler: Callable,
+        subscription_name: str,
+        subscription_type: str,
+        **kwargs,
+    ):
         """
         Create consumers for the specified event types.
 
@@ -338,10 +355,12 @@ class PulsarEventBus(EventBus):
             "exclusive": pulsar.ConsumerType.Exclusive,
             "shared": pulsar.ConsumerType.Shared,
             "failover": pulsar.ConsumerType.Failover,
-            "key_shared": pulsar.ConsumerType.KeyShared
+            "key_shared": pulsar.ConsumerType.KeyShared,
         }
 
-        consumer_type = consumer_type_map.get(subscription_type.lower(), pulsar.ConsumerType.Exclusive)
+        consumer_type = consumer_type_map.get(
+            subscription_type.lower(), pulsar.ConsumerType.Exclusive
+        )
 
         # Create a consumer for each event type
         for event_type in event_types:
@@ -353,19 +372,18 @@ class PulsarEventBus(EventBus):
                 topic=topic,
                 subscription_name=subscription_name,
                 consumer_type=consumer_type,
-                **kwargs
+                **kwargs,
             )
 
             self.consumers[consumer_key] = consumer
 
             # Start consumer task
-            task = asyncio.create_task(
-                self._consume_events(consumer, event_type, handler)
-            )
+            task = asyncio.create_task(self._consume_events(consumer, event_type, handler))
             self.consumer_tasks.append(task)
 
             logger.debug(
-                f"Created consumer for event type {event_type} on topic {topic} with subscription {subscription_name}")
+                f"Created consumer for event type {event_type} on topic {topic} with subscription {subscription_name}"
+            )
 
     async def _consume_events(self, consumer, event_type: str, handler: Callable):
         """
@@ -392,7 +410,9 @@ class PulsarEventBus(EventBus):
 
                     # Acknowledge message
                     consumer.acknowledge(msg)
-                    logger.debug(f"Processed event {event.get('event_id', 'unknown')} of type {event_type}")
+                    logger.debug(
+                        f"Processed event {event.get('event_id', 'unknown')} of type {event_type}"
+                    )
 
                 except Exception as e:
                     # Negative acknowledge on handler error
@@ -438,5 +458,5 @@ class PulsarEventBus(EventBus):
             "event_type": event_type,
             "payload": payload,
             "metadata": metadata,
-            "version": version
+            "version": version,
         }

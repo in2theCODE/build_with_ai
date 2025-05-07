@@ -20,11 +20,9 @@ class SpecBasedSynthesisEngine(BaseComponent):
         self.parallel_synthesis = self.get_param("parallel_synthesis", False)
         self.min_confidence_threshold = self.get_param("min_confidence_threshold", 0.7)
         self.max_attempts = self.get_param("max_attempts", 3)
-        self.strategies_to_try = self.get_param("strategies_to_try", [
-            "neural_guided",
-            "example_guided",
-            "constraint_based"
-        ])
+        self.strategies_to_try = self.get_param(
+            "strategies_to_try", ["neural_guided", "example_guided", "constraint_based"]
+        )
 
         # Store specialized synthesizers
         self.synthesizers = {}
@@ -34,7 +32,9 @@ class SpecBasedSynthesisEngine(BaseComponent):
         for strategy, config in synthesizer_configs.items():
             self._initialize_synthesizer(strategy, config)
 
-        self.logger.info(f"Spec-based synthesis engine initialized with default strategy {self.default_strategy}")
+        self.logger.info(
+            f"Spec-based synthesis engine initialized with default strategy {self.default_strategy}"
+        )
 
     def _initialize_synthesizer(self, strategy, config):
         """Initialize a specialized synthesizer for a specific strategy."""
@@ -48,7 +48,9 @@ class SpecBasedSynthesisEngine(BaseComponent):
 
             if synthesizer:
                 self.synthesizers[strategy] = synthesizer
-                self.logger.info(f"Initialized {synthesizer_type} synthesizer for {strategy} strategy")
+                self.logger.info(
+                    f"Initialized {synthesizer_type} synthesizer for {strategy} strategy"
+                )
         except Exception as e:
             self.logger.error(f"Failed to initialize synthesizer for {strategy}: {e}")
 
@@ -118,13 +120,14 @@ class SpecBasedSynthesisEngine(BaseComponent):
                         "ast": result.get("ast", {}),
                         "confidence_score": result.get("confidence_score", 0),
                         "time_taken": end_time - start_time,
-                        "strategy": strategy
+                        "strategy": strategy,
                     }
 
                 # If confidence too low, try another strategy
                 if attempt < self.max_attempts - 1:
                     self.logger.info(
-                        f"Result confidence {result.get('confidence_score', 0)} below threshold {self.min_confidence_threshold}, trying another strategy")
+                        f"Result confidence {result.get('confidence_score', 0)} below threshold {self.min_confidence_threshold}, trying another strategy"
+                    )
                     strategy = self._get_next_strategy(strategy)
 
             except Exception as e:
@@ -136,7 +139,9 @@ class SpecBasedSynthesisEngine(BaseComponent):
 
         # If all attempts failed, return best-effort result
         end_time = time.time()
-        self.logger.warning(f"All synthesis attempts failed after {end_time - start_time:.2f} seconds")
+        self.logger.warning(
+            f"All synthesis attempts failed after {end_time - start_time:.2f} seconds"
+        )
 
         # Create a fallback result
         return {
@@ -144,7 +149,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
             "code": self._generate_fallback_code(spec),
             "confidence_score": 0.1,
             "time_taken": end_time - start_time,
-            "strategy": f"fallback_{strategy}"
+            "strategy": f"fallback_{strategy}",
         }
 
     def _select_strategy(self, spec):
@@ -222,7 +227,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
                     "code": result,
                     "confidence_score": 0.5,
                     "time_taken": end_time - start_time,
-                    "strategy": f"fallback_neural"
+                    "strategy": f"fallback_neural",
                 }
 
             return result
@@ -233,7 +238,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
                 "code": "",
                 "confidence_score": 0.1,
                 "time_taken": 1.0,
-                "strategy": f"fallback_{original_strategy}"
+                "strategy": f"fallback_{original_strategy}",
             }
 
     def _convert_spec_to_formal_spec(self, spec):
@@ -267,14 +272,14 @@ class SpecBasedSynthesisEngine(BaseComponent):
                     {"name": "dependencies", "type": "list"},
                     {"name": "event_handlers", "type": "list"},
                     {"name": "event_bus_config", "type": "dict"},
-                    {"name": "main_logic", "type": "str"}
+                    {"name": "main_logic", "type": "str"},
                 ],
                 "types": {
                     "dependencies": "list",
                     "event_handlers": "list",
                     "event_bus_config": "dict",
                     "main_logic": "str",
-                    "result": "str"
+                    "result": "str",
                 },
                 "constraints": constraints,
                 "examples": examples,
@@ -284,8 +289,8 @@ class SpecBasedSynthesisEngine(BaseComponent):
                     "dependencies": dependencies,
                     "event_handlers": event_handlers,
                     "event_bus_config": event_bus_config,
-                    "main_logic": main_logic
-                }
+                    "main_logic": main_logic,
+                },
             }
 
         # Handle other spec types similarly
@@ -300,10 +305,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
             "types": types,
             "constraints": constraints,
             "examples": examples,
-            "ast": {
-                "type": spec_type,
-                "fields": fields
-            }
+            "ast": {"type": spec_type, "fields": fields},
         }
 
     def _generate_fallback_code(self, spec):

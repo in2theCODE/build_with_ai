@@ -3,12 +3,13 @@
 Template Request Client
 Send template generation requests to Pulsar
 """
-import json
-import uuid
 import argparse
 from datetime import datetime
-import time
+import json
 import sys
+import time
+import uuid
+
 
 # Import Pulsar client
 try:
@@ -17,13 +18,16 @@ except ImportError:
     print("Pulsar client not installed. Run: pip install pulsar-client")
     sys.exit(1)
 
+
 def main():
     parser = argparse.ArgumentParser(description="Send template generation request")
     parser.add_argument("--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL")
     parser.add_argument("--category", required=True, help="Template category")
     parser.add_argument("--name", required=True, help="Template name")
     parser.add_argument("--description", required=True, help="Template description")
-    parser.add_argument("--services-file", required=True, help="JSON file with component definitions")
+    parser.add_argument(
+        "--services-file", required=True, help="JSON file with component definitions"
+    )
     parser.add_argument("--audience", default="system", help="Target audience")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout in seconds")
     parser.add_argument("--wait-response", action="store_true", help="Wait for response")
@@ -32,7 +36,7 @@ def main():
 
     # Load services
     try:
-        with open(args.components_file, 'r') as f:
+        with open(args.components_file, "r") as f:
             components = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Error loading services: {e}")
@@ -47,7 +51,7 @@ def main():
         "name": args.name,
         "description": args.description,
         "services": components,
-        "audience": args.audience
+        "audience": args.audience,
     }
 
     # Create Pulsar client
@@ -58,7 +62,7 @@ def main():
         producer = client.create_producer("template.generation.request")
 
         # Send request
-        producer.send(json.dumps(request).encode('utf-8'))
+        producer.send(json.dumps(request).encode("utf-8"))
         print(f"Sent template generation request: {request_id}")
 
         # Wait for response if requested
@@ -67,7 +71,7 @@ def main():
             consumer = client.subscribe(
                 topic="template.generation.response",
                 subscription_name=f"temp-client-{request_id}",
-                consumer_type=pulsar.ConsumerType.Exclusive
+                consumer_type=pulsar.ConsumerType.Exclusive,
             )
 
             print(f"Waiting for response (timeout: {args.timeout}s)...")
@@ -79,7 +83,7 @@ def main():
                     msg = consumer.receive(timeout_millis=1000)
 
                     # Parse response
-                    response = json.loads(msg.data().decode('utf-8'))
+                    response = json.loads(msg.data().decode("utf-8"))
 
                     # Check if this is our response
                     if response.get("request_id") == request_id:
@@ -106,11 +110,12 @@ def main():
 
     finally:
         # Clean up resources
-        if 'producer' in locals():
+        if "producer" in locals():
             producer.close()
         client.close()
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

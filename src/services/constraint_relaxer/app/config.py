@@ -19,12 +19,10 @@ class AppConfig:
 
         # Topics
         self.RELAXATION_REQUEST_TOPIC = os.getenv(
-            "RELAXATION_REQUEST_TOPIC",
-            "constraint.relaxation.requests"
+            "RELAXATION_REQUEST_TOPIC", "constraint.relaxation.requests"
         )
         self.RELAXATION_RESPONSE_TOPIC = os.getenv(
-            "RELAXATION_RESPONSE_TOPIC",
-            "constraint.relaxation.responses"
+            "RELAXATION_RESPONSE_TOPIC", "constraint.relaxation.responses"
         )
 
         # Constraint relaxer configuration

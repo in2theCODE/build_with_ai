@@ -6,17 +6,20 @@ Event bus client for connecting to Apache Pulsar.
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Callable, Awaitable, Type, TypeVar, Generic
+from typing import Any, Awaitable, Callable, Dict, Generic, Type, TypeVar
 
 import pulsar
-from pulsar.schema import AvroSchema, Record, String, Integer
-
+from pulsar.schema import AvroSchema
+from pulsar.schema import Integer
+from pulsar.schema import Record
+from pulsar.schema import String
 from src.services.shared.models.base import BaseMessage
+
 
 logger = logging.getLogger(__name__)
 
 # Define a type variable for BaseMessage subclasses
-T = TypeVar('T', bound=BaseMessage)
+T = TypeVar("T", bound=BaseMessage)
 
 
 class EventBusClient:
@@ -42,10 +45,7 @@ class EventBusClient:
             self.logger.info(f"Connecting to Pulsar at {service_url}")
 
             # Create client
-            self.client = pulsar.Client(
-                service_url,
-                operation_timeout_seconds=30
-            )
+            self.client = pulsar.Client(service_url, operation_timeout_seconds=30)
 
             self.logger.info("Connected to Pulsar event bus")
 
@@ -104,7 +104,7 @@ class EventBusClient:
             producer = self.producers[topic]
 
             # Serialize message
-            message_data = json.dumps(message).encode('utf-8')
+            message_data = json.dumps(message).encode("utf-8")
 
             # Send message
             producer.send(message_data)
@@ -114,8 +114,9 @@ class EventBusClient:
             self.logger.error(f"Failed to publish message to {topic}: {str(e)}")
             raise
 
-    async def subscribe_with_type(self, topic: str, message_type: Type[T],
-                                  handler: Callable[[T], Awaitable[None]]):
+    async def subscribe_with_type(
+        self, topic: str, message_type: Type[T], handler: Callable[[T], Awaitable[None]]
+    ):
         """
         Subscribe to a topic with a specific message type.
 
@@ -149,9 +150,7 @@ class EventBusClient:
 
             # Create consumer
             consumer = self.client.subscribe(
-                full_topic,
-                subscription_name,
-                consumer_type=pulsar.ConsumerType.Shared
+                full_topic, subscription_name, consumer_type=pulsar.ConsumerType.Shared
             )
 
             self.consumers[topic] = consumer
@@ -164,7 +163,9 @@ class EventBusClient:
             self.logger.error(f"Failed to subscribe to {topic}: {str(e)}")
             raise
 
-    async def _listen_for_messages(self, topic: str, consumer, handler: Callable[[Dict[str, Any]], Awaitable[None]]):
+    async def _listen_for_messages(
+        self, topic: str, consumer, handler: Callable[[Dict[str, Any]], Awaitable[None]]
+    ):
         """
         Listen for messages on a topic.
 
@@ -182,7 +183,7 @@ class EventBusClient:
 
                 if msg:
                     # Parse message
-                    message_data = msg.data().decode('utf-8')
+                    message_data = msg.data().decode("utf-8")
                     message = json.loads(message_data)
 
                     # Process message

@@ -1,11 +1,50 @@
-from enum import Enum, auto
-from pydantic import BaseModel, Field, ConfigDict
+"""
+Enumeration types for system-wide constants and identifiers.
+
+This module defines enumeration types that are used throughout the system
+to ensure consistent naming and values for various concepts. These enums
+help maintain type safety and improve code readability.
+
+Classes:
+    Components: Constants for component identification
+    Events: Constants for event types and topics
+    EventPriority: Event priority levels
+    EventType: Standardized event types
+    Database: Constants for database configuration
+    DatabaseConfig: Database configuration constants
+    Paths: Constants for file and directory paths
+    Techniques: Constants for neural code generation techniques
+    ModelConfig: Constants for model configuration
+    Metrics: Constants for metrics collection
+    MetricsConfig: Configuration for metrics collection
+    DeploymentConfig: Constants for deployment configuration
+    ErrorCodes: Constants for error and status codes
+    Constants: Container for all system constants
+    ProcessingMode: Processing modes for query handling
+    TaskStatus: Status of a task in the system
+    TaskPriority: Priority levels for tasks
+    ProjectType: Project types
+    ProjectStatus: Project status
+    SynthesisStrategy: Types of synthesis strategies
+    DisclosureLevel: Progressive disclosure levels for code synthesis
+    HealthStatus: Health status constants
+    VerificationResult: Result of verification process
+"""
+
+from enum import auto
+from enum import Enum
+
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class Components(str, Enum):
     """Constants for component identification"""
+
     # Core services
 
+    SPEC_REGISTRY = None
     NEURAL_INTERPRETOR = "neural_interpretor"
     PROJECT_MANAGER = "project_manager"
     NEURAL_CODE_GENERATOR = "neural_code_generator"
@@ -45,11 +84,13 @@ class Components(str, Enum):
     LANGUAGE_INTEROP = "language_interop"
     META_LEARNER = "meta_learner"
     SPEC_INFERENCE = "spec_inference"
-    SYNTHESIS_ENGINE ="synthesis_engine"
+    SYNTHESIS_ENGINE = "synthesis_engine"
     VERSION_MANAGER = "version_manager"
+
 
 class Events(str, Enum):
     """Constants for event types and topics"""
+
     # Event types
     CODE_GENERATION_REQUESTED = "ast_code_generator.generation_requested"
     CODE_GENERATION_COMPLETED = "ast_code_generator.generation_completed"
@@ -78,16 +119,20 @@ class Events(str, Enum):
     DEFAULT_OUTPUT_TOPIC = "code-generation-results"
     DEFAULT_SUBSCRIPTION_NAME = "code-generator-worker"
 
+
 # Consolidated from base.py and events.py
 class EventPriority(int, Enum):
     """Event priority levels."""
+
     LOW = 0
     NORMAL = 1
     HIGH = 2
     CRITICAL = 3
 
+
 class EventType(str, Enum):
     """Standardized event types for the system."""
+
     # Neural code generator events
     CODE_GENERATION_REQUESTED = "ast_code_generator.generation_requested"
     CODE_GENERATION_COMPLETED = "ast_code_generator.generation_completed"
@@ -137,9 +182,9 @@ class EventType(str, Enum):
     AUTH_FAILED = "auth.auth_failed"
 
 
-
 class Database(str, Enum):
     """Constants for database configuration"""
+
     # Vector database
     VECTOR_DB_TYPE_MILVUS = "milvus"
     VECTOR_DB_TYPE_QDRANT = "qdrant"
@@ -155,37 +200,58 @@ class Database(str, Enum):
 
 class DatabaseConfig(BaseModel):
     """Database configuration constants"""
-    DEFAULT_VECTOR_DIMENSION: int = Field(1536, description="Default vector dimension for embeddings")
-    DEFAULT_COLLECTION_NAME: str = Field("neural_code_embeddings",
-                                         description="Default collection name for vector database")
+
+    DEFAULT_VECTOR_DIMENSION: int = Field(
+        1536, description="Default vector dimension for embeddings"
+    )
+    DEFAULT_COLLECTION_NAME: str = Field(
+        "neural_code_embeddings", description="Default collection name for vector database"
+    )
     DEFAULT_VECTOR_INDEX_TYPE: str = Field("HNSW", description="Default vector index type")
     DEFAULT_VECTOR_METRIC_TYPE: str = Field("COSINE", description="Default vector metric type")
     DEFAULT_DATABASE_NAME: str = Field("neural_code_generator", description="Default database name")
     DEFAULT_CACHE_TTL: int = Field(3600, description="Default cache TTL in seconds")
 
     model_config = ConfigDict(frozen=True)
+
+
 class Paths(BaseModel):
     """Constants for file and directory paths"""
+
     BASE_PATH: str = Field("program_synthesis_system", description="Base path for the system")
-    COMPONENTS_PATH: str = Field("program_synthesis_system/components", description="Path for system components")
-    SHARED_PATH: str = Field("program_synthesis_system/shared", description="Path for shared modules")
-    CONFIGS_PATH: str = Field("program_synthesis_system/configs", description="Path for configuration files")
+    COMPONENTS_PATH: str = Field(
+        "program_synthesis_system/components", description="Path for system components"
+    )
+    SHARED_PATH: str = Field(
+        "program_synthesis_system/shared", description="Path for shared modules"
+    )
+    CONFIGS_PATH: str = Field(
+        "program_synthesis_system/configs", description="Path for configuration files"
+    )
 
-    NEURAL_CODE_GENERATOR_PATH: str = Field("build_with_ai/src/neural_code_generator",
-                                            description="Path for neural code generator")
-    KNOWLEDGE_BASE_PATH: str = Field("build_with_ai/src/knowledge_base",
-                                     description="Path for knowledge base")
-    AST_CODE_GENERATOR_PATH: str = Field("build_with_ai/components/ast_code_generator",
-                                         description="Path for AST code generator")
+    NEURAL_CODE_GENERATOR_PATH: str = Field(
+        "build_with_ai/src/neural_code_generator", description="Path for neural code generator"
+    )
+    KNOWLEDGE_BASE_PATH: str = Field(
+        "build_with_ai/src/knowledge_base", description="Path for knowledge base"
+    )
+    AST_CODE_GENERATOR_PATH: str = Field(
+        "build_with_ai/components/ast_code_generator", description="Path for AST code generator"
+    )
 
-    DEFAULT_MODEL_PATH: str = Field("/app/models/deepseek-coder-6.7b-instruct", description="Default path for models")
-    DEFAULT_KNOWLEDGE_BASE_PATH: str = Field("/app/knowledge_base", description="Default path for knowledge base")
+    DEFAULT_MODEL_PATH: str = Field(
+        "/app/models/deepseek-coder-6.7b-instruct", description="Default path for models"
+    )
+    DEFAULT_KNOWLEDGE_BASE_PATH: str = Field(
+        "/app/knowledge_base", description="Default path for knowledge base"
+    )
 
     model_config = ConfigDict(frozen=True)
 
 
 class Techniques(str, Enum):
     """Constants for neural code generation techniques"""
+
     MULTI_HEAD_ATTENTION = "multi_head_attention"
     RETRIEVAL_AUGMENTATION = "retrieval_augmentation"
     TREE_TRANSFORMERS = "tree_transformers"
@@ -205,8 +271,11 @@ class Techniques(str, Enum):
 
 class ModelConfig(BaseModel):
     """Constants for model configuration"""
+
     DEFAULT_MODEL_NAME: str = Field("DeepSeek-Coder 8B", description="Default model name")
-    DEFAULT_MODEL_PATH: str = Field("/app/models/deepseek-coder-8b-instruct", description="Default model path")
+    DEFAULT_MODEL_PATH: str = Field(
+        "/app/models/deepseek-coder-8b-instruct", description="Default model path"
+    )
     DEFAULT_CONTEXT_LENGTH: int = Field(8192, description="Default context length")
     DEFAULT_TEMPERATURE: float = Field(0.2, description="Default temperature")
     DEFAULT_TOP_P: float = Field(0.95, description="Default top-p value")
@@ -218,6 +287,7 @@ class ModelConfig(BaseModel):
 
     class SynthesisStrategy(str, Enum):
         """Types of synthesis strategies."""
+
         BOTTOM_UP = "bottom_up"
         TOP_DOWN = "top_down"
         ENUMERATIVE = "enumerative"
@@ -229,6 +299,7 @@ class ModelConfig(BaseModel):
 
     class DisclosureLevel(Enum):
         """Progressive disclosure levels for code synthesis."""
+
         HIGH_LEVEL = auto()  # Only signatures and high-level descriptions
         MID_LEVEL = auto()  # Implementation with simplified details
         DETAILED = auto()  # Complete implementation with all details
@@ -236,6 +307,7 @@ class ModelConfig(BaseModel):
 
 class Metrics(str, Enum):
     """Constants for metrics collection"""
+
     # Metric names
     METRIC_REQUESTS_TOTAL = "neural_code_generator_requests_total"
     METRIC_REQUEST_DURATION = "neural_code_generator_request_duration_seconds"
@@ -257,6 +329,7 @@ class Metrics(str, Enum):
 
 class MetricsConfig(BaseModel):
     """Configuration for metrics collection"""
+
     DEFAULT_METRICS_PORT: int = Field(8081, description="Default metrics port")
     DEFAULT_METRICS_ENDPOINT: str = Field("/metrics", description="Default metrics endpoint")
 
@@ -265,7 +338,10 @@ class MetricsConfig(BaseModel):
 
 class DeploymentConfig(BaseModel):
     """Constants for deployment configuration"""
-    DEFAULT_IMAGE: str = Field("program-synthesis/neural-code-generator:latest", description="Default container image")
+
+    DEFAULT_IMAGE: str = Field(
+        "program-synthesis/neural-code-generator:latest", description="Default container image"
+    )
     DEFAULT_PORT: int = Field(8000, description="Default port")
     DEFAULT_CPU_REQUEST: str = Field("2", description="Default CPU request")
     DEFAULT_MEMORY_REQUEST: str = Field("16Gi", description="Default memory request")
@@ -286,6 +362,7 @@ class DeploymentConfig(BaseModel):
 
 class ErrorCodes(int, Enum):
     """Constants for error and status codes"""
+
     SUCCESS = 0
     ERROR_GENERAL = 1
     ERROR_INVALID_INPUT = 2
@@ -299,42 +376,53 @@ class ErrorCodes(int, Enum):
 
 class Constants(BaseModel):
     """Container for all system constants"""
+
     VERSION: str = Field("1.0.0", description="System version")
 
     model_config = ConfigDict(frozen=True)
 
+
 class ProcessingMode(str, Enum):
     """Processing modes for query handling"""
+
     REACTIVE = "reactive"  # Fast path for pattern matching
     DELIBERATIVE = "deliberative"  # Thoughtful path for complex queries
     COLLABORATIVE = "collaborative"  # Requires multiple agents
 
+
 class TaskStatus(str, Enum):
     """Status of a task in the system"""
+
     PENDING = "pending"
     ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class TaskPriority(int, Enum):
     """Priority levels for tasks"""
+
     CRITICAL = 4
     HIGH = 3
     MEDIUM = 2
     LOW = 1
     BACKGROUND = 0
 
+
 class ProjectType(str, Enum):
     """Project types."""
+
     WEB_APP = "WEB_APP"
     MOBILE_APP = "MOBILE_APP"
     API_SERVICE = "API_SERVICE"
     LIBRARY = "LIBRARY"
     CLI_TOOL = "CLI_TOOL"
 
+
 class ProjectStatus(str, Enum):
     """Project status."""
+
     INITIALIZING = "INITIALIZING"
     ANALYZING = "ANALYZING"
     SPEC_SHEETS_GENERATED = "SPEC_SHEETS_GENERATED"
@@ -344,8 +432,10 @@ class ProjectStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+
 class SynthesisStrategy(str, Enum):
     """Types of synthesis strategies."""
+
     BOTTOM_UP = "bottom_up"
     TOP_DOWN = "top_down"
     ENUMERATIVE = "enumerative"
@@ -355,22 +445,28 @@ class SynthesisStrategy(str, Enum):
     EXAMPLE_GUIDED = "example_guided"
     NEURAL_GUIDED = "neural_guided"
 
+
 class DisclosureLevel(Enum):
     """Progressive disclosure levels for code synthesis."""
+
     HIGH_LEVEL = auto()  # Only signatures and high-level descriptions
     MID_LEVEL = auto()  # Implementation with simplified details
     DETAILED = auto()  # Complete implementation with all details
 
+
 class HealthStatus(str, Enum):
     """Health status constants."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     STARTING = "starting"
     STOPPING = "stopping"
 
+
 class VerificationResult(str, Enum):
     """Result of verification process."""
+
     COUNTEREXAMPLE_FOUND = "counterexample_found"
     VERIFIED = "verified"
     FALSIFIED = "falsified"

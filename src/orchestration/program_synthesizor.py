@@ -6,15 +6,15 @@ A high-level architecture for implementing a code generation system
 that uses formal synthesis methods with statistical verification.
 """
 
-import yaml
+from enum import Enum
 import json
 import logging
-import time
-from enum import Enum
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple
+import time
+from typing import Any, Dict, Optional, Tuple
 
 from src.services.shared.models import Components as ComponentType
+import yaml
 
 
 class VerificationResult(Enum):
@@ -50,7 +50,9 @@ class SynthesisSystem:
 
         # Initialize optimization services
         self.incremental_synthesis = self._initialize_component(ComponentType.INCREMENTAL_SYNTHESIS)
-        self.verification_stratifier = self._initialize_component(ComponentType.VERIFICATION_STRATIFIER)
+        self.verification_stratifier = self._initialize_component(
+            ComponentType.VERIFICATION_STRATIFIER
+        )
         self.language_interop = self._initialize_component(ComponentType.LANGUAGE_INTEROP)
         self.meta_learner = self._initialize_component(ComponentType.META_LEARNER)
         self.constraint_relaxer = self._initialize_component(ComponentType.CONSTRAINT_RELAXER)
@@ -63,39 +65,38 @@ class SynthesisSystem:
     def _setup_logger(self) -> logging.Logger:
         """Set up logging for the synthesis system."""
         logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        return logging.getLogger('synthesis-system')
+        return logging.getLogger("synthesis-system")
 
     def _load_config(self) -> Dict[str, Any]:
         """Load the configuration from YAML file."""
         if not self.config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
-        with open(self.config_path, 'r') as f:
+        with open(self.config_path, "r") as f:
             return yaml.safe_load(f)
 
     def _initialize_component(self, component_type: ComponentType) -> Any:
         """Initialize a system component based on configuration."""
-        component_config = self.config.get('services', {}).get(component_type.value, {})
-        component_class = component_config.get('class')
+        component_config = self.config.get("services", {}).get(component_type.value, {})
+        component_class = component_config.get("class")
 
         if not component_class:
             raise ValueError(f"No class specified for component: {component_type.value}")
 
         # Dynamic import of the component class
-        module_path, class_name = component_class.rsplit('.', 1)
+        module_path, class_name = component_class.rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
         component_cls = getattr(module, class_name)
 
         # Initialize with configuration
-        return component_cls(**component_config.get('params', {}))
+        return component_cls(**component_config.get("params", {}))
 
     def _initialize_component(self, component_type: ComponentType) -> Any:
         """Initialize a system component based on configuration."""
-        component_config = self.config.get('services', {}).get(component_type.value, {})
-        component_class = component_config.get('class')
+        component_config = self.config.get("services", {}).get(component_type.value, {})
+        component_class = component_config.get("class")
 
         # If this component is optional and not configured, return None
         if not component_class and component_type.value in [
@@ -109,7 +110,7 @@ class SynthesisSystem:
             ComponentType.CONSTRAINT_RELAXER.value,
             ComponentType.SPEC_INFERENCE.value,
             ComponentType.VERSION_MANAGER.value,
-            ComponentType.INTERFACE_CONTRACTOR.value
+            ComponentType.INTERFACE_CONTRACTOR.value,
         ]:
             self.logger.info(f"Optional component {component_type.value} not configured, skipping")
             return None
@@ -121,7 +122,7 @@ class SynthesisSystem:
             ComponentType.STATISTICAL_VERIFIER.value,
             ComponentType.CODE_GENERATOR.value,
             ComponentType.FEEDBACK_COLLECTOR.value,
-            ComponentType.KNOWLEDGE_BASE.value
+            ComponentType.KNOWLEDGE_BASE.value,
         ]:
             raise ValueError(f"No class specified for required component: {component_type.value}")
 
@@ -130,16 +131,16 @@ class SynthesisSystem:
             return None
 
         # Dynamic import of the component class
-        module_path, class_name = component_class.rsplit('.', 1)
+        module_path, class_name = component_class.rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
         component_cls = getattr(module, class_name)
 
         # Initialize with configuration
-        return component_cls(**component_config.get('params', {}))
+        return component_cls(**component_config.get("params", {}))
 
-    def generate_from_spec(self,
-                           specification: str,
-                           context: Optional[Dict[str, Any]] = None) -> Tuple[str, Dict[str, Any]]:
+    def generate_from_spec(
+        self, specification: str, context: Optional[Dict[str, Any]] = None
+    ) -> Tuple[str, Dict[str, Any]]:
         """
         Generate code from a specification with verification.
 
@@ -157,8 +158,8 @@ class SynthesisSystem:
         if self.spec_inference and context:
             inferred_spec_data = self.spec_inference.enhance_specification(specification, context)
             if inferred_spec_data:
-                specification = inferred_spec_data.get('enhanced_spec', specification)
-                context = {**context, **inferred_spec_data.get('inferred_context', {})}
+                specification = inferred_spec_data.get("enhanced_spec", specification)
+                context = {**context, **inferred_spec_data.get("inferred_context", {})}
                 self.logger.info("Enhanced specification with inferred details")
 
         # Check version manager for prior versions if component exists
@@ -166,7 +167,9 @@ class SynthesisSystem:
         if self.version_manager:
             prior_versions = self.version_manager.find_prior_versions(specification, context)
             if prior_versions:
-                self.logger.info(f"Found {len(prior_versions)} prior versions of this specification")
+                self.logger.info(
+                    f"Found {len(prior_versions)} prior versions of this specification"
+                )
 
         # Check knowledge base for cached results
         cache_key = self._compute_cache_key(specification, context)
@@ -176,7 +179,7 @@ class SynthesisSystem:
             # Update metadata with version info if it exists
             if self.version_manager:
                 self.version_manager.record_usage(cache_key, cached_result)
-            return cached_result['code'], cached_result['metadata']
+            return cached_result["code"], cached_result["metadata"]
 
         # Parse the specification into a formal model
         formal_spec = self.spec_parser.parse(specification, context)
@@ -187,7 +190,9 @@ class SynthesisSystem:
         if self.incremental_synthesis and formal_spec.is_decomposable():
             use_incremental = True
             incremental_components = self.incremental_synthesis.decompose(formal_spec)
-            self.logger.info(f"Using incremental synthesis with {len(incremental_components)} services")
+            self.logger.info(
+                f"Using incremental synthesis with {len(incremental_components)} services"
+            )
 
         if use_incremental:
             # Synthesize incrementally
@@ -205,21 +210,19 @@ class SynthesisSystem:
         # Use verification stratification if available
         if self.verification_stratifier:
             verification_result = self.verification_stratifier.stratified_verify(
-                synthesis_result,
-                formal_spec
+                synthesis_result, formal_spec
             )
         else:
             # Traditional verification
-            verification_result = self.statistical_verifier.verify(
-                synthesis_result,
-                formal_spec
-            )
+            verification_result = self.statistical_verifier.verify(synthesis_result, formal_spec)
 
         # Add symbolic execution tests if component exists
         if self.symbolic_executor and verification_result.status == VerificationResult.VERIFIED:
             symbolic_tests = self.symbolic_executor.generate_tests(synthesis_result, formal_spec)
             if symbolic_tests:
-                symbolic_result = self.symbolic_executor.execute_tests(symbolic_tests, synthesis_result)
+                symbolic_result = self.symbolic_executor.execute_tests(
+                    symbolic_tests, synthesis_result
+                )
                 if not symbolic_result.passed:
                     verification_result.status = VerificationResult.COUNTEREXAMPLE_FOUND
                     verification_result.reason = "Failed symbolic execution tests"
@@ -228,11 +231,15 @@ class SynthesisSystem:
         # If verification fails but we have constraint relaxation, try relaxing constraints
         if verification_result.status != VerificationResult.VERIFIED and self.constraint_relaxer:
             self.logger.info("Attempting constraint relaxation after verification failure")
-            relaxed_spec = self.constraint_relaxer.relax_constraints(formal_spec, verification_result)
+            relaxed_spec = self.constraint_relaxer.relax_constraints(
+                formal_spec, verification_result
+            )
             if relaxed_spec:
                 self.logger.info("Successfully relaxed constraints, retrying synthesis")
                 relaxed_synthesis = self.synthesis_engine.synthesize(relaxed_spec)
-                relaxed_verification = self.statistical_verifier.verify(relaxed_synthesis, relaxed_spec)
+                relaxed_verification = self.statistical_verifier.verify(
+                    relaxed_synthesis, relaxed_spec
+                )
 
                 if relaxed_verification.status == VerificationResult.VERIFIED:
                     self.logger.info("Verification succeeded with relaxed constraints")
@@ -243,10 +250,11 @@ class SynthesisSystem:
         # Generate the final code with language interoperability if available
         if verification_result.status == VerificationResult.VERIFIED:
             if self.language_interop:
-                target_language = context.get('target_language', self.config.get('default_language', 'python'))
+                target_language = context.get(
+                    "target_language", self.config.get("default_language", "python")
+                )
                 generated_code = self.language_interop.generate_for_language(
-                    synthesis_result,
-                    target_language
+                    synthesis_result, target_language
                 )
             else:
                 generated_code = self.code_generator.generate(synthesis_result)
@@ -255,43 +263,50 @@ class SynthesisSystem:
             interface_valid = True
             if self.interface_contractor:
                 interface_result = self.interface_contractor.verify_interfaces(
-                    generated_code,
-                    context.get('interface_contracts', {})
+                    generated_code, context.get("interface_contracts", {})
                 )
                 interface_valid = interface_result.is_valid
 
                 if not interface_valid:
-                    self.logger.warning(f"Generated code fails interface contracts: {interface_result.failures}")
+                    self.logger.warning(
+                        f"Generated code fails interface contracts: {interface_result.failures}"
+                    )
 
             # Only store fully valid code in the knowledge base
             if interface_valid:
                 # Store in knowledge base
                 metadata = {
-                    'synthesis_time': synthesis_result.time_taken,
-                    'verification_time': verification_result.time_taken,
-                    'confidence': verification_result.confidence,
-                    'used_incremental': use_incremental,
-                    'used_relaxation': synthesis_result.used_relaxation if hasattr(synthesis_result,
-                                                                                   'used_relaxation') else False,
-                    'total_time': time.time() - start_time
+                    "synthesis_time": synthesis_result.time_taken,
+                    "verification_time": verification_result.time_taken,
+                    "confidence": verification_result.confidence,
+                    "used_incremental": use_incremental,
+                    "used_relaxation": (
+                        synthesis_result.used_relaxation
+                        if hasattr(synthesis_result, "used_relaxation")
+                        else False
+                    ),
+                    "total_time": time.time() - start_time,
                 }
 
                 # Store the result
-                self.knowledge_base.store(cache_key, {
-                    'code': generated_code,
-                    'metadata': metadata
-                })
+                self.knowledge_base.store(cache_key, {"code": generated_code, "metadata": metadata})
 
                 # Record in version manager if it exists
                 if self.version_manager:
-                    self.version_manager.record_new_version(cache_key, specification, context, metadata)
+                    self.version_manager.record_new_version(
+                        cache_key, specification, context, metadata
+                    )
 
                 # Update meta-learner with successful strategy if component exists
                 if self.meta_learner:
                     self.meta_learner.record_success(
                         specification,
                         context,
-                        synthesis_result.strategy if hasattr(synthesis_result, 'strategy') else 'default'
+                        (
+                            synthesis_result.strategy
+                            if hasattr(synthesis_result, "strategy")
+                            else "default"
+                        ),
                     )
 
                 return generated_code, metadata
@@ -302,10 +317,7 @@ class SynthesisSystem:
             # Handle verification failure
             self.logger.error(f"Verification failed: {verification_result.reason}")
             self.feedback_collector.record_failure(
-                specification,
-                context,
-                synthesis_result,
-                verification_result
+                specification, context, synthesis_result, verification_result
             )
 
             # Update meta-learner with failed strategy if component exists
@@ -313,16 +325,20 @@ class SynthesisSystem:
                 self.meta_learner.record_failure(
                     specification,
                     context,
-                    synthesis_result.strategy if hasattr(synthesis_result, 'strategy') else 'default'
+                    (
+                        synthesis_result.strategy
+                        if hasattr(synthesis_result, "strategy")
+                        else "default"
+                    ),
                 )
 
             # Try to repair or return best effort solution
-            if self.config.get('allow_best_effort', False):
+            if self.config.get("allow_best_effort", False):
                 best_effort_code = self.code_generator.generate_best_effort(synthesis_result)
                 metadata = {
-                    'best_effort': True,
-                    'verification_status': verification_result.status.value,
-                    'total_time': time.time() - start_time
+                    "best_effort": True,
+                    "verification_status": verification_result.status.value,
+                    "total_time": time.time() - start_time,
                 }
                 return best_effort_code, metadata
             else:
@@ -332,10 +348,12 @@ class SynthesisSystem:
         """Compute a cache key for the knowledge base."""
         context_str = json.dumps(context or {}, sort_keys=True)
         import hashlib
+
         return hashlib.sha256(f"{specification}:{context_str}".encode()).hexdigest()
 
 
 # Example implementations of core interfaces
+
 
 class FormalSpecification:
     """Represents a formal specification parsed from requirements."""
@@ -371,7 +389,7 @@ class VerificationReport:
 class SMTSpecificationParser:
     """Parses specifications into SMT constraints."""
 
-    def __init__(self, smt_solver='z3', type_system='simple'):
+    def __init__(self, smt_solver="z3", type_system="simple"):
         self.smt_solver = smt_solver
         self.type_system = type_system
 
@@ -384,7 +402,7 @@ class SMTSpecificationParser:
             ast=None,  # Abstract syntax tree
             constraints=[],  # SMT constraints
             types={},  # Type assignments
-            examples=[]  # Input/output examples
+            examples=[],  # Input/output examples
         )
 
 
@@ -404,16 +422,17 @@ class SketchSynthesisEngine:
         return SynthesisResult(
             program_ast=None,  # AST of synthesized program
             confidence_score=0.95,  # Confidence in the result
-            time_taken=1.5  # Time taken in seconds
+            time_taken=1.5,  # Time taken in seconds
         )
 
 
 # Example implementation of core and optimization services
 
+
 class PostgresVectorKnowledgeBase:
     """Knowledge base using PostgreSQL with vector embeddings for semantic matching."""
 
-    def __init__(self, connection_string, embedding_model='universal-sentence-encoder'):
+    def __init__(self, connection_string, embedding_model="universal-sentence-encoder"):
         self.connection_string = connection_string
         self.embedding_model = embedding_model
         # In a real implementation, we'd establish connection to PostgreSQL here
@@ -448,10 +467,7 @@ class SimplePropertyTester(BaseVerifier):
     def verify(self, synthesis_result, formal_spec):
         # Implementation would perform quick property checks
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED,
-            confidence=0.8,
-            time_taken=0.2,
-            counterexamples=[]
+            status=VerificationResult.VERIFIED, confidence=0.8, time_taken=0.2, counterexamples=[]
         )
         return verification_report
 
@@ -462,10 +478,7 @@ class BoundedModelChecker(BaseVerifier):
     def verify(self, synthesis_result, formal_spec):
         # Implementation would perform bounded model checking
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED,
-            confidence=0.95,
-            time_taken=1.5,
-            counterexamples=[]
+            status=VerificationResult.VERIFIED, confidence=0.95, time_taken=1.5, counterexamples=[]
         )
         return verification_report
 
@@ -476,10 +489,7 @@ class FormalVerifier(BaseVerifier):
     def verify(self, synthesis_result, formal_spec):
         # Implementation would perform thorough formal verification
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED,
-            confidence=0.99,
-            time_taken=5.0,
-            counterexamples=[]
+            status=VerificationResult.VERIFIED, confidence=0.99, time_taken=5.0, counterexamples=[]
         )
         return verification_report
 
@@ -502,16 +512,16 @@ def decompose(self, formal_spec):
     # For now, just create two dummy services
     component1 = FormalSpecification(
         ast=formal_spec.ast,
-        constraints=formal_spec.constraints[:len(formal_spec.constraints) // 2],
+        constraints=formal_spec.constraints[: len(formal_spec.constraints) // 2],
         types=formal_spec.types,
-        examples=formal_spec.examples
+        examples=formal_spec.examples,
     )
 
     component2 = FormalSpecification(
         ast=formal_spec.ast,
-        constraints=formal_spec.constraints[len(formal_spec.constraints) // 2:],
+        constraints=formal_spec.constraints[len(formal_spec.constraints) // 2 :],
         types=formal_spec.types,
-        examples=formal_spec.examples
+        examples=formal_spec.examples,
     )
 
     components = [component1, component2]
@@ -526,11 +536,7 @@ def combine(self, components_results):
         return None
 
     # Merge program ASTs
-    combined_ast = {
-        "type": "program",
-        "language": "python",
-        "functions": []
-    }
+    combined_ast = {"type": "program", "language": "python", "functions": []}
 
     for result in components_results:
         if result and result.program_ast and "functions" in result.program_ast:
@@ -538,13 +544,15 @@ def combine(self, components_results):
 
     # Calculate combined metrics
     total_time = sum(r.time_taken for r in components_results if r)
-    avg_confidence = sum(r.confidence_score for r in components_results if r) / len(components_results)
+    avg_confidence = sum(r.confidence_score for r in components_results if r) / len(
+        components_results
+    )
 
     return SynthesisResult(
         program_ast=combined_ast,
         confidence_score=avg_confidence,
         time_taken=total_time,
-        strategy="incremental"
+        strategy="incremental",
     )
 
 
@@ -552,7 +560,7 @@ class LanguageInteroperability:
     """Handles cross-language code generation from internal AST representation."""
 
     def __init__(self, supported_languages=None):
-        self.supported_languages = supported_languages or ['python', 'typescript', 'java', 'go']
+        self.supported_languages = supported_languages or ["python", "typescript", "java", "go"]
         # In a real implementation, we'd load language-specific code generators
 
     def generate_for_language(self, synthesis_result, target_language):
@@ -600,6 +608,7 @@ class MetaLearningSystem:
         # Implementation would classify the problem using heuristics or ML
         # For simplicity, we'll just return a hash of the specification
         import hashlib
+
         return hashlib.md5(specification.encode()).hexdigest()[:8]
 
 
@@ -622,10 +631,7 @@ class ConstraintRelaxer:
                 break
 
             # Identify constraints that are violated by this counterexample
-            violated_constraints = self._identify_violated_constraints(
-                relaxed_spec,
-                counterexample
-            )
+            violated_constraints = self._identify_violated_constraints(relaxed_spec, counterexample)
 
             if not violated_constraints:
                 continue
@@ -662,7 +668,7 @@ class ConstraintRelaxer:
 class SymbolicExecutor:
     """Generates and runs symbolic execution tests to find edge cases."""
 
-    def __init__(self, engine='klee', timeout=60):
+    def __init__(self, engine="klee", timeout=60):
         self.engine = engine
         self.timeout = timeout
 
@@ -701,5 +707,5 @@ class InterfaceContractor:
         return Result()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

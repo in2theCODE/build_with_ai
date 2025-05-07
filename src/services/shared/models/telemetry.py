@@ -1,12 +1,24 @@
+"""
+Telemetry manager for collecting metrics across the system.
+
+This module provides functionality for collecting and reporting metrics
+from various parts of the system. It uses a singleton pattern to ensure
+that metrics are centrally collected.
+
+Classes:
+    TelemetryManager: Singleton class for managing telemetry
+"""
+
 #!/usr/bin/env python3
 """
 Telemetry manager for collecting metrics across the system.
 """
 
+from datetime import datetime
+from datetime import timezone
 import logging
-from typing import Dict, Any, List, Optional
 import threading
-from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 
 class TelemetryManager:
@@ -14,6 +26,7 @@ class TelemetryManager:
     Singleton class for managing telemetry across the system.
     Records metrics and provides reporting capabilities.
     """
+
     _instance = None
     _lock = threading.Lock()
 
@@ -45,10 +58,7 @@ class TelemetryManager:
         if name not in self.metrics:
             self.metrics[name] = []
 
-        self.metrics[name].append({
-            "value": value,
-            "timestamp": timestamp
-        })
+        self.metrics[name].append({"value": value, "timestamp": timestamp})
 
     def get_metrics(self, name: Optional[str] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -80,7 +90,7 @@ class TelemetryManager:
         summary = {
             "start_time": self.start_time,
             "elapsed_time": datetime.now(timezone.utc) - self.start_time,
-            "metrics_count": len(self.metrics)
+            "metrics_count": len(self.metrics),
         }
 
         # Add summaries for numeric metrics

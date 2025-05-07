@@ -9,22 +9,29 @@ creating and managing projects, analyzing requirements, and generating
 the appropriate spec sheets based on project needs.
 """
 
-import os
-import logging
-import uuid
-import json
-from typing import Dict, List, Optional, Tuple, Any, Set
 import asyncio
 from datetime import datetime
+import json
+import logging
+import os
+from typing import Any, Dict, List, Optional, Set, Tuple
+import uuid
 
-from models.project import (
-    Project, ProjectStatus, ProjectType, TechnologyStack,
-    RequirementCategory, Requirement, ProjectAnalysisResult,
-    SpecSheetRequirement
-)
-from models.spec_sheet import SpecSheet, SpecSheetTemplate, SectionValues, FieldValue
-from infra.storage.repository import StorageRepository
 from core.spec_registry import SpecRegistry
+from infra.storage.repository import StorageRepository
+from models.project import Project
+from models.project import ProjectAnalysisResult
+from models.project import ProjectStatus
+from models.project import ProjectType
+from models.project import Requirement
+from models.project import RequirementCategory
+from models.project import SpecSheetRequirement
+from models.project import TechnologyStack
+from models.spec_sheet import FieldValue
+from models.spec_sheet import SectionValues
+from models.spec_sheet import SpecSheet
+from models.spec_sheet import SpecSheetTemplate
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -64,39 +71,40 @@ class ProjectManager:
         logger.info(f"Creating project: {project_data.get('name', 'Unnamed project')}")
 
         # Generate a unique ID if none provided
-        if 'id' not in project_data:
-            project_data['id'] = str(uuid.uuid4())
+        if "id" not in project_data:
+            project_data["id"] = str(uuid.uuid4())
 
         # Set default values
-        if 'status' not in project_data:
-            project_data['status'] = ProjectStatus.INITIALIZING
+        if "status" not in project_data:
+            project_data["status"] = ProjectStatus.INITIALIZING
 
-        if 'created_at' not in project_data:
-            project_data['created_at'] = datetime.now().isoformat()
+        if "created_at" not in project_data:
+            project_data["created_at"] = datetime.now().isoformat()
 
-        if 'updated_at' not in project_data:
-            project_data['updated_at'] = project_data['created_at']
+        if "updated_at" not in project_data:
+            project_data["updated_at"] = project_data["created_at"]
 
-        if 'spec_sheet_ids' not in project_data:
-            project_data['spec_sheet_ids'] = []
+        if "spec_sheet_ids" not in project_data:
+            project_data["spec_sheet_ids"] = []
 
-        if 'code_generation_ids' not in project_data:
-            project_data['code_generation_ids'] = []
+        if "code_generation_ids" not in project_data:
+            project_data["code_generation_ids"] = []
 
         # Create project object
         project = Project(
-            id=project_data['id'],
-            name=project_data['name'],
-            description=project_data.get('description', ''),
-            project_type=project_data.get('project_type', ProjectType.WEB_APP),
-            status=project_data['status'],
+            id=project_data["id"],
+            name=project_data["name"],
+            description=project_data.get("description", ""),
+            project_type=project_data.get("project_type", ProjectType.WEB_APP),
+            status=project_data["status"],
             technology_stack=TechnologyStack(
-                **project_data.get('technology_stack', {'languages': [], 'frameworks': []})),
-            requirements=[Requirement(**r) for r in project_data.get('requirements', [])],
-            spec_sheet_ids=project_data['spec_sheet_ids'],
-            code_generation_ids=project_data['code_generation_ids'],
-            created_at=project_data['created_at'],
-            updated_at=project_data['updated_at']
+                **project_data.get("technology_stack", {"languages": [], "frameworks": []})
+            ),
+            requirements=[Requirement(**r) for r in project_data.get("requirements", [])],
+            spec_sheet_ids=project_data["spec_sheet_ids"],
+            code_generation_ids=project_data["code_generation_ids"],
+            created_at=project_data["created_at"],
+            updated_at=project_data["updated_at"],
         )
 
         # Store in repository
@@ -120,18 +128,19 @@ class ProjectManager:
             return None
 
         return Project(
-            id=project_data['id'],
-            name=project_data['name'],
-            description=project_data.get('description', ''),
-            project_type=project_data.get('project_type', ProjectType.WEB_APP),
-            status=project_data['status'],
+            id=project_data["id"],
+            name=project_data["name"],
+            description=project_data.get("description", ""),
+            project_type=project_data.get("project_type", ProjectType.WEB_APP),
+            status=project_data["status"],
             technology_stack=TechnologyStack(
-                **project_data.get('technology_stack', {'languages': [], 'frameworks': []})),
-            requirements=[Requirement(**r) for r in project_data.get('requirements', [])],
-            spec_sheet_ids=project_data.get('spec_sheet_ids', []),
-            code_generation_ids=project_data.get('code_generation_ids', []),
-            created_at=project_data.get('created_at', datetime.now().isoformat()),
-            updated_at=project_data.get('updated_at', datetime.now().isoformat())
+                **project_data.get("technology_stack", {"languages": [], "frameworks": []})
+            ),
+            requirements=[Requirement(**r) for r in project_data.get("requirements", [])],
+            spec_sheet_ids=project_data.get("spec_sheet_ids", []),
+            code_generation_ids=project_data.get("code_generation_ids", []),
+            created_at=project_data.get("created_at", datetime.now().isoformat()),
+            updated_at=project_data.get("updated_at", datetime.now().isoformat()),
         )
 
     async def update_project(self, project: Project) -> bool:
@@ -197,18 +206,19 @@ class ProjectManager:
 
             for project_data in project_data_list:
                 project = Project(
-                    id=project_data['id'],
-                    name=project_data['name'],
-                    description=project_data.get('description', ''),
-                    project_type=project_data.get('project_type', ProjectType.WEB_APP),
-                    status=project_data['status'],
+                    id=project_data["id"],
+                    name=project_data["name"],
+                    description=project_data.get("description", ""),
+                    project_type=project_data.get("project_type", ProjectType.WEB_APP),
+                    status=project_data["status"],
                     technology_stack=TechnologyStack(
-                        **project_data.get('technology_stack', {'languages': [], 'frameworks': []})),
-                    requirements=[Requirement(**r) for r in project_data.get('requirements', [])],
-                    spec_sheet_ids=project_data.get('spec_sheet_ids', []),
-                    code_generation_ids=project_data.get('code_generation_ids', []),
-                    created_at=project_data.get('created_at', datetime.now().isoformat()),
-                    updated_at=project_data.get('updated_at', datetime.now().isoformat())
+                        **project_data.get("technology_stack", {"languages": [], "frameworks": []})
+                    ),
+                    requirements=[Requirement(**r) for r in project_data.get("requirements", [])],
+                    spec_sheet_ids=project_data.get("spec_sheet_ids", []),
+                    code_generation_ids=project_data.get("code_generation_ids", []),
+                    created_at=project_data.get("created_at", datetime.now().isoformat()),
+                    updated_at=project_data.get("updated_at", datetime.now().isoformat()),
                 )
 
                 projects.append(project)
@@ -244,99 +254,130 @@ class ProjectManager:
             if self._has_api_requirements(project):
                 if self._has_microservice_requirements(project):
                     # Microservice architecture
-                    spec_sheet_requirements.append(SpecSheetRequirement(
-                        spec_sheet_type="architecture/microservices",
-                        count=1,
-                        reason="Project requires a microservice architecture",
-                        related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                                  ["microservice", "distributed"])
-                    ))
+                    spec_sheet_requirements.append(
+                        SpecSheetRequirement(
+                            spec_sheet_type="architecture/microservices",
+                            count=1,
+                            reason="Project requires a microservice architecture",
+                            related_requirements=self._get_requirement_ids_by_keyword(
+                                project, ["microservice", "distributed"]
+                            ),
+                        )
+                    )
                 else:
                     # Monolithic architecture
-                    spec_sheet_requirements.append(SpecSheetRequirement(
-                        spec_sheet_type="architecture/monolithic",
-                        count=1,
-                        reason="Project requires a monolithic architecture",
-                        related_requirements=self._get_requirement_ids_by_keyword(project, ["monolithic", "single"])
-                    ))
+                    spec_sheet_requirements.append(
+                        SpecSheetRequirement(
+                            spec_sheet_type="architecture/monolithic",
+                            count=1,
+                            reason="Project requires a monolithic architecture",
+                            related_requirements=self._get_requirement_ids_by_keyword(
+                                project, ["monolithic", "single"]
+                            ),
+                        )
+                    )
 
             # Check for event-driven requirements
             if self._has_event_driven_requirements(project):
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type="architecture/event-driven",
-                    count=1,
-                    reason="Project requires event-driven architecture",
-                    related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                              ["event", "message", "queue", "pubsub"])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type="architecture/event-driven",
+                        count=1,
+                        reason="Project requires event-driven architecture",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, ["event", "message", "queue", "pubsub"]
+                        ),
+                    )
+                )
 
                 # Estimate the number of events
                 event_count = self._estimate_event_count(project)
                 if event_count > 0:
-                    spec_sheet_requirements.append(SpecSheetRequirement(
-                        spec_sheet_type="architecture/event-driven/event_template",
-                        count=event_count,
-                        reason=f"Project requires {event_count} event definitions",
-                        related_requirements=self._get_requirement_ids_by_keyword(project, ["event", "message"])
-                    ))
+                    spec_sheet_requirements.append(
+                        SpecSheetRequirement(
+                            spec_sheet_type="architecture/event-driven/event_template",
+                            count=event_count,
+                            reason=f"Project requires {event_count} event definitions",
+                            related_requirements=self._get_requirement_ids_by_keyword(
+                                project, ["event", "message"]
+                            ),
+                        )
+                    )
 
         # Backend requirements
         if self._has_api_requirements(project):
             # REST API
             api_endpoint_count = self._estimate_api_endpoint_count(project)
 
-            spec_sheet_requirements.append(SpecSheetRequirement(
-                spec_sheet_type="backend/api/rest",
-                count=1,
-                reason="Project requires a REST API",
-                related_requirements=self._get_requirement_ids_by_keyword(project, ["api", "rest", "endpoint"])
-            ))
+            spec_sheet_requirements.append(
+                SpecSheetRequirement(
+                    spec_sheet_type="backend/api/rest",
+                    count=1,
+                    reason="Project requires a REST API",
+                    related_requirements=self._get_requirement_ids_by_keyword(
+                        project, ["api", "rest", "endpoint"]
+                    ),
+                )
+            )
 
             # Database
             if self._has_database_requirements(project):
                 db_type = self._determine_database_type(project)
                 model_count = self._estimate_model_count(project)
 
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type=f"backend/database/{db_type}",
-                    count=1,
-                    reason=f"Project requires a {db_type} database",
-                    related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                              ["database", "data", "storage", db_type])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type=f"backend/database/{db_type}",
+                        count=1,
+                        reason=f"Project requires a {db_type} database",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, ["database", "data", "storage", db_type]
+                        ),
+                    )
+                )
 
                 # Check if a specific database provider is mentioned
                 db_provider = self._determine_database_provider(project)
                 if db_provider:
-                    spec_sheet_requirements.append(SpecSheetRequirement(
-                        spec_sheet_type=f"backend/database/providers/{db_provider}",
-                        count=1,
-                        reason=f"Project requires {db_provider} as database provider",
-                        related_requirements=self._get_requirement_ids_by_keyword(project, [db_provider])
-                    ))
+                    spec_sheet_requirements.append(
+                        SpecSheetRequirement(
+                            spec_sheet_type=f"backend/database/providers/{db_provider}",
+                            count=1,
+                            reason=f"Project requires {db_provider} as database provider",
+                            related_requirements=self._get_requirement_ids_by_keyword(
+                                project, [db_provider]
+                            ),
+                        )
+                    )
 
             # Authentication
             if self._has_auth_requirements(project):
                 auth_type = self._determine_auth_type(project)
 
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type=f"backend/auth/{auth_type}",
-                    count=1,
-                    reason=f"Project requires {auth_type} authentication",
-                    related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                              ["auth", "authentication", "login",
-                                                                               auth_type])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type=f"backend/auth/{auth_type}",
+                        count=1,
+                        reason=f"Project requires {auth_type} authentication",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, ["auth", "authentication", "login", auth_type]
+                        ),
+                    )
+                )
 
                 # Check if a specific auth provider is mentioned
                 auth_provider = self._determine_auth_provider(project)
                 if auth_provider:
-                    spec_sheet_requirements.append(SpecSheetRequirement(
-                        spec_sheet_type=f"backend/auth/providers/{auth_provider}",
-                        count=1,
-                        reason=f"Project requires {auth_provider} as auth provider",
-                        related_requirements=self._get_requirement_ids_by_keyword(project, [auth_provider])
-                    ))
+                    spec_sheet_requirements.append(
+                        SpecSheetRequirement(
+                            spec_sheet_type=f"backend/auth/providers/{auth_provider}",
+                            count=1,
+                            reason=f"Project requires {auth_provider} as auth provider",
+                            related_requirements=self._get_requirement_ids_by_keyword(
+                                project, [auth_provider]
+                            ),
+                        )
+                    )
 
         # Frontend requirements
         if project.project_type in [ProjectType.WEB_APP, ProjectType.MOBILE_APP]:
@@ -346,45 +387,59 @@ class ProjectManager:
             page_count = self._estimate_page_count(project)
 
             if page_count > 0:
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type=f"frontend/{frontend_type}/pages",
-                    count=page_count,
-                    reason=f"Project requires {page_count} {frontend_type} pages/screens",
-                    related_requirements=self._get_requirement_ids_by_keyword(project, ["page", "screen", "view", "ui"])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type=f"frontend/{frontend_type}/pages",
+                        count=page_count,
+                        reason=f"Project requires {page_count} {frontend_type} pages/screens",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, ["page", "screen", "view", "ui"]
+                        ),
+                    )
+                )
 
             # Components
             component_count = self._estimate_component_count(project)
 
             if component_count > 0:
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type=f"frontend/{frontend_type}/services",
-                    count=component_count,
-                    reason=f"Project requires {component_count} reusable services",
-                    related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                              ["component", "widget", "reusable"])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type=f"frontend/{frontend_type}/services",
+                        count=component_count,
+                        reason=f"Project requires {component_count} reusable services",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, ["component", "widget", "reusable"]
+                        ),
+                    )
+                )
 
             # Styling
             styling_framework = self._determine_styling_framework(project)
             if styling_framework:
-                spec_sheet_requirements.append(SpecSheetRequirement(
-                    spec_sheet_type=f"frontend/styling/{styling_framework}",
-                    count=1,
-                    reason=f"Project requires {styling_framework} for styling",
-                    related_requirements=self._get_requirement_ids_by_keyword(project,
-                                                                              [styling_framework, "styling", "css"])
-                ))
+                spec_sheet_requirements.append(
+                    SpecSheetRequirement(
+                        spec_sheet_type=f"frontend/styling/{styling_framework}",
+                        count=1,
+                        reason=f"Project requires {styling_framework} for styling",
+                        related_requirements=self._get_requirement_ids_by_keyword(
+                            project, [styling_framework, "styling", "css"]
+                        ),
+                    )
+                )
 
         # Cloud/DevOps requirements
         cloud_provider = self._determine_cloud_provider(project)
         if cloud_provider:
-            spec_sheet_requirements.append(SpecSheetRequirement(
-                spec_sheet_type=f"cloud/{cloud_provider}",
-                count=1,
-                reason=f"Project requires {cloud_provider} for hosting",
-                related_requirements=self._get_requirement_ids_by_keyword(project, [cloud_provider, "cloud", "hosting"])
-            ))
+            spec_sheet_requirements.append(
+                SpecSheetRequirement(
+                    spec_sheet_type=f"cloud/{cloud_provider}",
+                    count=1,
+                    reason=f"Project requires {cloud_provider} for hosting",
+                    related_requirements=self._get_requirement_ids_by_keyword(
+                        project, [cloud_provider, "cloud", "hosting"]
+                    ),
+                )
+            )
 
         # Recommend a technology stack
         recommended_stack = self._recommend_technology_stack(project, spec_sheet_requirements)
@@ -394,7 +449,7 @@ class ProjectManager:
             project_id=project_id,
             spec_sheet_requirements=spec_sheet_requirements,
             recommended_technology_stack=recommended_stack,
-            notes=f"Analysis based on {len(project.requirements)} requirements"
+            notes=f"Analysis based on {len(project.requirements)} requirements",
         )
 
         return result
@@ -421,7 +476,17 @@ class ProjectManager:
 
     def _has_event_driven_requirements(self, project: Project) -> bool:
         """Check if the project has event-driven requirements."""
-        keywords = ["event", "message", "queue", "pubsub", "pub-sub", "event-driven", "kafka", "rabbitmq", "pulsar"]
+        keywords = [
+            "event",
+            "message",
+            "queue",
+            "pubsub",
+            "pub-sub",
+            "event-driven",
+            "kafka",
+            "rabbitmq",
+            "pulsar",
+        ]
         return self._has_requirements_with_keywords(project, keywords)
 
     def _has_requirements_with_keywords(self, project: Project, keywords: List[str]) -> bool:
@@ -549,7 +614,7 @@ class ProjectManager:
             "pinecone": ["pinecone"],
             "milvus": ["milvus"],
             "qdrant": ["qdrant"],
-            "pgvector": ["pgvector"]
+            "pgvector": ["pgvector"],
         }
 
         for req in project.requirements:
@@ -588,7 +653,7 @@ class ProjectManager:
             "clerk": ["clerk"],
             "cognito": ["cognito", "aws auth"],
             "supabase-auth": ["supabase auth"],
-            "okta": ["okta"]
+            "okta": ["okta"],
         }
 
         for req in project.requirements:
@@ -609,7 +674,7 @@ class ProjectManager:
             "material-ui": ["material-ui", "material design", "mui"],
             "styled-services": ["styled-services", "styled services"],
             "sass": ["sass", "scss"],
-            "chakra-ui": ["chakra", "chakra-ui"]
+            "chakra-ui": ["chakra", "chakra-ui"],
         }
 
         for req in project.requirements:
@@ -631,7 +696,7 @@ class ProjectManager:
             "digital-ocean": ["digital ocean", "digitalocean"],
             "heroku": ["heroku"],
             "vercel": ["vercel", "zeit"],
-            "netlify": ["netlify"]
+            "netlify": ["netlify"],
         }
 
         for req in project.requirements:
@@ -643,20 +708,16 @@ class ProjectManager:
 
         return None
 
-    def _recommend_technology_stack(self, project: Project,
-                                    spec_sheet_requirements: List[SpecSheetRequirement]) -> TechnologyStack:
+    def _recommend_technology_stack(
+        self, project: Project, spec_sheet_requirements: List[SpecSheetRequirement]
+    ) -> TechnologyStack:
         """Recommend a technology stack based on requirements."""
         # Extract spec sheet types
         spec_types = [req.spec_sheet_type for req in spec_sheet_requirements]
 
         # Initialize stack with empty lists
         stack = TechnologyStack(
-            languages=[],
-            frameworks=[],
-            databases=[],
-            frontend=[],
-            backend=[],
-            infrastructure=[]
+            languages=[], frameworks=[], databases=[], frontend=[], backend=[], infrastructure=[]
         )
 
         # Determine languages based on requirements
@@ -806,8 +867,11 @@ class ProjectManager:
             # Get template for this requirement
             try:
                 # Determine template category from spec_sheet_type
-                template_category = req.spec_sheet_type.split("/")[
-                    0] if "/" in req.spec_sheet_type else req.spec_sheet_type
+                template_category = (
+                    req.spec_sheet_type.split("/")[0]
+                    if "/" in req.spec_sheet_type
+                    else req.spec_sheet_type
+                )
 
                 # List templates in this category
                 templates = await self.spec_registry.list_templates(category=template_category)
@@ -833,9 +897,7 @@ class ProjectManager:
 
                     # Create blank spec sheet
                     spec_sheet = await self._create_blank_spec_sheet(
-                        project_id=project_id,
-                        template=template,
-                        name=sheet_name
+                        project_id=project_id, template=template, name=sheet_name
                     )
 
                     if spec_sheet:
@@ -844,8 +906,12 @@ class ProjectManager:
                         errors.append(f"Failed to create spec sheet for template: {template.id}")
 
             except Exception as e:
-                logger.error(f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}")
-                errors.append(f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}")
+                logger.error(
+                    f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}"
+                )
+                errors.append(
+                    f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}"
+                )
 
         # Update project with spec sheet IDs
         if spec_sheets:
@@ -855,8 +921,9 @@ class ProjectManager:
 
         return spec_sheets, errors
 
-    async def _create_blank_spec_sheet(self, project_id: str, template: SpecSheetTemplate, name: str) -> Optional[
-        SpecSheet]:
+    async def _create_blank_spec_sheet(
+        self, project_id: str, template: SpecSheetTemplate, name: str
+    ) -> Optional[SpecSheet]:
         """
         Create a blank spec sheet based on a template.
 
@@ -878,15 +945,11 @@ class ProjectManager:
                 fields = []
 
                 for template_field in template_field.fields:
-                    fields.append(FieldValue(
-                        name=template_field.name,
-                        value=template_field.default_value
-                    ))
+                    fields.append(
+                        FieldValue(name=template_field.name, value=template_field.default_value)
+                    )
 
-                sections.append(SectionValues(
-                    name=template_section.name,
-                    fields=fields
-                ))
+                sections.append(SectionValues(name=template_section.name, fields=fields))
 
             # Create spec sheet
             spec_sheet = SpecSheet(
@@ -898,7 +961,7 @@ class ProjectManager:
                 created_at=datetime.now().isoformat(),
                 updated_at=datetime.now().isoformat(),
                 completed=False,
-                validated=False
+                validated=False,
             )
 
             # Store in repository

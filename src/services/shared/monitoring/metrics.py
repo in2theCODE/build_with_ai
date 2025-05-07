@@ -1,13 +1,14 @@
 # src/shared/metrics.py
 
-import functools
-import time
 import asyncio
+import functools
 import logging
-from typing import Callable, Any, Optional
+import time
+from typing import Optional
 
 # Import your existing metrics collector
 from metrics_collector import MetricsCollector
+
 
 # Global metrics collector instance that can be set by the application
 _metrics_collector: Optional[MetricsCollector] = None
@@ -42,7 +43,7 @@ def track_inference_time(func):
 
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
-        component_name = func.__module__.split('.')[-1]
+        component_name = func.__module__.split(".")[-1]
         function_name = func.__name__
 
         # Start timer
@@ -59,7 +60,7 @@ def track_inference_time(func):
 
     @functools.wraps(func)
     async def async_wrapper(*args, **kwargs):
-        component_name = func.__module__.split('.')[-1]
+        component_name = func.__module__.split(".")[-1]
         function_name = func.__name__
 
         # Start timer
@@ -97,10 +98,9 @@ def _record_success(component_name: str, function_name: str, start_time: float):
 
             # If you have a histogram for function duration
             timer = _metrics_collector.request_duration.labels(
-                component=component_name,
-                strategy=function_name
+                component=component_name, strategy=function_name
             )
-            if hasattr(timer, 'observe'):
+            if hasattr(timer, "observe"):
                 timer.observe(duration)
         except Exception as e:
             logging.error(f"Error recording metrics: {e}")

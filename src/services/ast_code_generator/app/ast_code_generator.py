@@ -1,19 +1,17 @@
-import logging
-import uuid
 from datetime import time
+import logging
+from typing import Any, Dict, List
+import uuid
 
-from src.services.knowledge_base.db_adapter import DatabaseAdapter
+from src.services.knowledge_base.app.db_adapter import DatabaseAdapter
 from src.services.shared.constants.base_component import BaseComponent
-from src.services.shared.logging.logger import get_logger
 from src.services.shared.constants.models import SynthesisResult
-
-
-
-from typing import Dict, Any, List
+from src.services.shared.logging.logger import get_logger
 
 
 def _generate_function_stub(synthesis_result):
     pass
+
 
 def _optimize_ast(ast: Dict[str, Any], level: int) -> Dict[str, Any]:
     """Apply optimizations to the AST."""
@@ -40,21 +38,20 @@ def _apply_style(code: str, style_guide: str) -> str:
             # Ensure consistent indentation (four spaces)
             indent_level = 0
             for char in line:
-                if char == ' ':
+                if char == " ":
                     indent_level += 1
                 else:
                     break
 
             # Normalize indentation to be a multiple of 4 spaces
             normalized_indent = (indent_level // 4) * 4
-            formatted_line = ' ' * normalized_indent + line.strip()
+            formatted_line = " " * normalized_indent + line.strip()
             formatted_lines.append(formatted_line)
         else:
             # Keep empty lines
             formatted_lines.append("")
 
     return "\n".join(formatted_lines) + "\n"
-
 
 
 def _add_comments(code: str, ast: Dict[str, Any]) -> str:
@@ -120,7 +117,7 @@ class ASTCodeGenerator(BaseComponent):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.code = self.get_param("ast_result")
 
-    def generate(self, synthesis_result:SynthesisResult) -> str:
+    def generate(self, synthesis_result: SynthesisResult) -> str:
         """
         Generate code from a synthesis result.
 
@@ -182,7 +179,9 @@ class ASTCodeGenerator(BaseComponent):
 
 {code}"""
 
-        self.logger.info(f"Best-effort code generation completed, {len(code.splitlines())} lines generated")
+        self.logger.info(
+            f"Best-effort code generation completed, {len(code.splitlines())} lines generated"
+        )
 
         return code
 
@@ -233,14 +232,20 @@ class ASTCodeGenerator(BaseComponent):
             statement_type = statement.get("type", "unknown")
 
             if statement_type == "return":
-                value_expr = self._generate_expression(statement.get("value", {"type": "literal", "value": 0}))
+                value_expr = self._generate_expression(
+                    statement.get("value", {"type": "literal", "value": 0})
+                )
                 code_lines.append(f"    return {value_expr}")
             elif statement_type == "assignment":
                 target = statement.get("target", "result")
-                value_expr = self._generate_expression(statement.get("value", {"type": "literal", "value": 0}))
+                value_expr = self._generate_expression(
+                    statement.get("value", {"type": "literal", "value": 0})
+                )
                 code_lines.append(f"    {target} = {value_expr}")
             elif statement_type == "if":
-                condition = self._generate_expression(statement.get("condition", {"type": "literal", "value": True}))
+                condition = self._generate_expression(
+                    statement.get("condition", {"type": "literal", "value": True})
+                )
                 then_body = self._generate_body(statement.get("then_body", []))
                 else_body = self._generate_body(statement.get("else_body", []))
                 code_lines.append(f"    if {condition}:")
@@ -250,7 +255,9 @@ class ASTCodeGenerator(BaseComponent):
                     code_lines.extend([f"    {line}" for line in else_body.splitlines()])
             elif statement_type == "loop":
                 iterator = statement.get("iterator", "i")
-                iterable = self._generate_expression(statement.get("iterable", {"type": "literal", "value": "range(10)"}))
+                iterable = self._generate_expression(
+                    statement.get("iterable", {"type": "literal", "value": "range(10)"})
+                )
                 loop_body = self._generate_body(statement.get("body", []))
                 code_lines.append(f"    for {iterator} in {iterable}:")
                 code_lines.extend([f"    {line}" for line in loop_body.splitlines()])
@@ -329,7 +336,9 @@ class ASTCodeGenerator(BaseComponent):
 
                 if similar_results and similar_results[0]["score"] > 0.95:
                     # Found a very similar AST, use its code
-                    self.logger.info(f"Using similar AST with similarity score {similar_results[0]['score']}")
+                    self.logger.info(
+                        f"Using similar AST with similarity score {similar_results[0]['score']}"
+                    )
                     return similar_results[0]["generated_code"]
             except Exception as e:
                 self.logger.error(f"Error searching for similar ASTs: {str(e)}")
@@ -372,10 +381,10 @@ class ASTCodeGenerator(BaseComponent):
                     "value": execution_time,
                     "tags": {
                         "optimization_level": self.optimization_level,
-                        "lines_generated": len(code.splitlines())
-                    }
+                        "lines_generated": len(code.splitlines()),
+                    },
                 }
-            }
+            },
         )
 
         return code
@@ -391,8 +400,12 @@ class ASTCodeGenerator(BaseComponent):
 
         # Start with the original function signature
         param_str = ", ".join(parameters)
-        result = [f"def {function_name}({param_str}):", '    """Best-effort implementation.\n',
-                  '    WARNING: This function was generated without complete verification.\n', '    """\n']
+        result = [
+            f"def {function_name}({param_str}):",
+            '    """Best-effort implementation.\n',
+            "    WARNING: This function was generated without complete verification.\n",
+            '    """\n',
+        ]
 
         # Add a docstring noting this is a best-effort implementation
 
@@ -400,7 +413,7 @@ class ASTCodeGenerator(BaseComponent):
         for param in parameters:
             result.append(f"    # Validate {param}")
             result.append(f"    if {param} is None:")
-            result.append(f"        raise ValueError(f\"{param} cannot be None\")")
+            result.append(f'        raise ValueError(f"{param} cannot be None")')
 
         # Add try-except block around the original body
         result.append("    try:")
@@ -416,9 +429,7 @@ class ASTCodeGenerator(BaseComponent):
         # Add exception handling
         result.append("    except Exception as e:")
         result.append("        # Log the error and return a safe default value")
-        result.append("        print(f\"Error in {function_name}: {e}\")")
+        result.append('        print(f"Error in {function_name}: {e}")')
         result.append("        return None")
 
         return "\n".join(result) + "\n"
-
-

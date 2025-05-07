@@ -8,11 +8,12 @@ failures and prevent operation when the system is not functioning correctly.
 """
 
 import asyncio
-import logging
-import time
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, TypeVar, Union, cast
+import logging
+import time
+from typing import Any, Callable, cast, Dict, Optional, TypeVar, Union
+
 
 # Import metrics collector if available
 try:
@@ -21,8 +22,8 @@ except ImportError:
     MetricsCollector = None
 
 # Type variables for function decorators
-F = TypeVar('F', bound=Callable[..., Any])
-AsyncF = TypeVar('AsyncF', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
+AsyncF = TypeVar("AsyncF", bound=Callable[..., Any])
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class CircuitState(Enum):
     """States of the circuit breaker."""
+
     CLOSED = "closed"  # Normal operation, requests pass through
     OPEN = "open"  # Failure detected, requests are blocked
     HALF_OPEN = "half_open"  # Testing if service has recovered
@@ -37,6 +39,7 @@ class CircuitState(Enum):
 
 class CircuitBreakerError(Exception):
     """Exception raised when the circuit breaker is open."""
+
     pass
 
 
@@ -50,12 +53,12 @@ class CircuitBreaker:
     """
 
     def __init__(
-            self,
-            name: str,
-            failure_threshold: int = 5,
-            reset_timeout: float = 30.0,
-            half_open_max_requests: int = 2,
-            metrics_collector: Optional[Any] = None
+        self,
+        name: str,
+        failure_threshold: int = 5,
+        reset_timeout: float = 30.0,
+        half_open_max_requests: int = 2,
+        metrics_collector: Optional[Any] = None,
     ):
         """
         Initialize the circuit breaker.
@@ -86,9 +89,8 @@ class CircuitBreaker:
         logger.info(f"Circuit breaker '{name}' initialized with threshold {failure_threshold}")
 
         # Register with metrics if available
-        if self.metrics_collector and hasattr(self.metrics_collector, 'component_up'):
-            self.metrics_collector.component_up.labels(
-                component=self.name).set(1)
+        if self.metrics_collector and hasattr(self.metrics_collector, "component_up"):
+            self.metrics_collector.component_up.labels(component=self.name).set(1)
 
     async def _state_transition(self, new_state: CircuitState) -> None:
         """
@@ -100,18 +102,21 @@ class CircuitBreaker:
         old_state = self.state
         self.state = new_state
 
-        logger.info(f"Circuit breaker '{self.name}' state changed: {old_state.value} -> {new_state.value}")
+        logger.info(
+            f"Circuit breaker '{self.name}' state changed: {old_state.value} -> {new_state.value}"
+        )
 
         # Record state change in metrics if available
         if self.metrics_collector:
             try:
                 # Record event if the metrics collector has that method
-                if hasattr(self.metrics_collector, 'record_event_emitted'):
+                if hasattr(self.metrics_collector, "record_event_emitted"):
                     self.metrics_collector.record_event_emitted(
-                        f"circuit_breaker_{new_state.value}")
+                        f"circuit_breaker_{new_state.value}"
+                    )
 
                 # Update component status based on circuit state
-                if hasattr(self.metrics_collector, 'set_component_up'):
+                if hasattr(self.metrics_collector, "set_component_up"):
                     self.metrics_collector.set_component_up(new_state != CircuitState.OPEN)
 
             except Exception as e:
@@ -213,12 +218,14 @@ class CircuitBreaker:
             "failure_count": self.failure_count,
             "last_failure_time": self.last_failure_time,
             "last_success_time": self.last_success_time,
-            "half_open_requests": self.half_open_requests
+            "half_open_requests": self.half_open_requests,
         }
 
     def __str__(self) -> str:
         """String representation of the circuit breaker."""
-        return f"CircuitBreaker({self.name}, state={self.state.value}, failures={self.failure_count})"
+        return (
+            f"CircuitBreaker({self.name}, state={self.state.value}, failures={self.failure_count})"
+        )
 
 
 def circuit_breaker(breaker: CircuitBreaker) -> Callable[[F], F]:
@@ -298,9 +305,7 @@ def async_circuit_breaker(breaker: CircuitBreaker) -> Callable[[AsyncF], AsyncF]
 
 # Convenience function to create circuit breaker from config
 def create_circuit_breaker_from_config(
-        config: Dict[str, Any],
-        name: str,
-        metrics_collector: Optional[Any] = None
+    config: Dict[str, Any], name: str, metrics_collector: Optional[Any] = None
 ) -> CircuitBreaker:
     """
     Create a circuit breaker instance from configuration.
@@ -319,5 +324,5 @@ def create_circuit_breaker_from_config(
         failure_threshold=cb_config.get("failure_threshold", 5),
         reset_timeout=cb_config.get("reset_timeout_seconds", 30.0),
         half_open_max_requests=cb_config.get("half_open_max_requests", 2),
-        metrics_collector=metrics_collector
+        metrics_collector=metrics_collector,
     )

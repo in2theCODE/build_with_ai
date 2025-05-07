@@ -1,1 +1,7 @@
-from .program_synthesizor import SynthesisResult, SynthesisSystem, SketchSynthesisEngine, SymbolicExecutor, SMTSpecificationParser, SimplePropertyTester, FormalSpecification
+from .program_synthesizor import FormalSpecification
+from .program_synthesizor import SimplePropertyTester
+from .program_synthesizor import SketchSynthesisEngine
+from .program_synthesizor import SMTSpecificationParser
+from .program_synthesizor import SymbolicExecutor
+from .program_synthesizor import SynthesisResult
+from .program_synthesizor import SynthesisSystem

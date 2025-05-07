@@ -6,7 +6,12 @@ This module provides a sophisticated logging system with structured logging,
 multi-tenant support, log rotation, and performance monitoring capabilities.
 """
 import contextlib
+from contextvars import ContextVar
+from dataclasses import asdict
+from dataclasses import dataclass
+from dataclasses import field
 import datetime
+from enum import Enum
 import functools
 import inspect
 import json
@@ -14,21 +19,31 @@ import logging
 import logging.config
 import logging.handlers
 import os
+from pathlib import Path
 import sys
 import threading
 import time
 import traceback
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    TypeVar,
+    Union,
+)
 import uuid
-from contextvars import ContextVar
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable, TypeVar, Union, Set, TextIO
 
 
 try:
     import colorama
-    from colorama import Fore, Back, Style
+    from colorama import Back
+    from colorama import Fore
+    from colorama import Style
+
     COLORS_AVAILABLE = True
     colorama.init()
 except ImportError:
@@ -36,16 +51,16 @@ except ImportError:
 
 
 # Type variables for function decorators
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 # Context variables for storing request context
-current_tenant_id: ContextVar[str] = ContextVar('current_tenant_id', default='')
-current_request_id: ContextVar[str] = ContextVar('current_request_id', default='')
-current_user_id: ContextVar[str] = ContextVar('current_user_id', default='')
-current_correlation_id: ContextVar[str] = ContextVar('current_correlation_id', default='')
-current_session_id: ContextVar[str] = ContextVar('current_session_id', default='')
-current_operation: ContextVar[str] = ContextVar('current_operation', default='')
+current_tenant_id: ContextVar[str] = ContextVar("current_tenant_id", default="")
+current_request_id: ContextVar[str] = ContextVar("current_request_id", default="")
+current_user_id: ContextVar[str] = ContextVar("current_user_id", default="")
+current_correlation_id: ContextVar[str] = ContextVar("current_correlation_id", default="")
+current_session_id: ContextVar[str] = ContextVar("current_session_id", default="")
+current_operation: ContextVar[str] = ContextVar("current_operation", default="")
 
 
 class LogLevel(Enum):
@@ -104,7 +119,9 @@ class StructuredLogRecord(logging.LogRecord):
 class StructuredLogger(logging.Logger):
     """Logger that supports structured logging with context."""
 
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
+    def makeRecord(
+        self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None
+    ):
         """Create a LogRecord with structured data support."""
         # Create record with the extended class
         record = StructuredLogRecord(name, level, fn, lno, msg, args, exc_info, func, sinfo)
@@ -155,8 +172,11 @@ class StructuredLogger(logging.Logger):
 class MultiTenantFilter(logging.Filter):
     """Filter that allows controlling log output by tenant."""
 
-    def __init__(self, tenant_whitelist: Optional[Set[str]] = None,
-                 tenant_blacklist: Optional[Set[str]] = None):
+    def __init__(
+        self,
+        tenant_whitelist: Optional[Set[str]] = None,
+        tenant_blacklist: Optional[Set[str]] = None,
+    ):
         """
         Initialize the filter.
 
@@ -206,8 +226,14 @@ class ColorFormatter(logging.Formatter):
 
     RESET = Style.RESET_ALL
 
-    def __init__(self, fmt: Optional[str] = None, datefmt: Optional[str] = None,
-                 style: str = '%', validate: bool = True, use_colors: bool = True):
+    def __init__(
+        self,
+        fmt: Optional[str] = None,
+        datefmt: Optional[str] = None,
+        style: str = "%",
+        validate: bool = True,
+        use_colors: bool = True,
+    ):
         """
         Initialize the formatter.
 
@@ -270,7 +296,14 @@ class JsonFormatter(logging.Formatter):
         }
 
         # Add context fields
-        for field in ["tenant_id", "request_id", "user_id", "correlation_id", "session_id", "operation"]:
+        for field in [
+            "tenant_id",
+            "request_id",
+            "user_id",
+            "correlation_id",
+            "session_id",
+            "operation",
+        ]:
             if hasattr(record, field):
                 value = getattr(record, field)
                 if value:  # Only add non-empty values
@@ -286,7 +319,7 @@ class JsonFormatter(logging.Formatter):
             log_data["exception"] = {
                 "type": exc_type.__name__,
                 "message": str(exc_value),
-                "traceback": traceback.format_exception(exc_type, exc_value, exc_traceback)
+                "traceback": traceback.format_exception(exc_type, exc_value, exc_traceback),
             }
 
         # Convert to JSON
@@ -423,7 +456,11 @@ class LoggerFactory:
                 console_handler.setFormatter(JsonFormatter())
             else:
                 console_format = config.get("console_format", self.log_format)
-                console_formatter = ColorFormatter(console_format) if self.use_colors else logging.Formatter(console_format)
+                console_formatter = (
+                    ColorFormatter(console_format)
+                    if self.use_colors
+                    else logging.Formatter(console_format)
+                )
                 console_handler.setFormatter(console_formatter)
 
             handlers["console"] = console_handler
@@ -440,7 +477,8 @@ class LoggerFactory:
             max_bytes = config.get("max_file_size", 10 * 1024 * 1024)  # 10 MB
             backup_count = config.get("backup_count", 5)
             file_handler = logging.handlers.RotatingFileHandler(
-                log_file, maxBytes=max_bytes, backupCount=backup_count)
+                log_file, maxBytes=max_bytes, backupCount=backup_count
+            )
 
             file_level = config.get("file_level", self.default_level)
             file_handler.setLevel(file_level)
@@ -616,6 +654,7 @@ def log_execution_time(logger: Optional[logging.Logger] = None, level: int = log
         logger: Logger to use (if None, a logger will be created based on the function's module)
         level: Log level
     """
+
     def decorator(func: F) -> F:
         # Get function metadata
         module_name = func.__module__
@@ -649,12 +688,9 @@ def log_execution_time(logger: Optional[logging.Logger] = None, level: int = log
                             "structured_data": {
                                 "metric": "execution_time",
                                 "value": execution_time,
-                                "tags": {
-                                    "function": function_name,
-                                    "module": module_name
-                                }
+                                "tags": {"function": function_name, "module": module_name},
                             }
-                        }
+                        },
                     )
                 else:
                     logger.log(level, f"Completed {function_name} in {execution_time:.3f} seconds")
@@ -666,7 +702,9 @@ def log_execution_time(logger: Optional[logging.Logger] = None, level: int = log
                 end_time = time.time()
                 execution_time = end_time - start_time
 
-                logger.exception(f"Error in {function_name} after {execution_time:.3f} seconds: {e}")
+                logger.exception(
+                    f"Error in {function_name} after {execution_time:.3f} seconds: {e}"
+                )
 
                 # Re-raise
                 raise
@@ -684,6 +722,7 @@ def log_method_calls(logger: Optional[logging.Logger] = None, level: int = loggi
         logger: Logger to use (if None, a logger will be created for each method)
         level: Log level
     """
+
     def decorator(cls):
         # Get class metadata
         module_name = cls.__module__
@@ -697,7 +736,7 @@ def log_method_calls(logger: Optional[logging.Logger] = None, level: int = loggi
         # For each method in the class
         for attr_name, attr_value in cls.__dict__.items():
             # Skip special methods and non-callables
-            if attr_name.startswith('__') or not callable(attr_value):
+            if attr_name.startswith("__") or not callable(attr_value):
                 continue
 
             # Get method
@@ -781,12 +820,7 @@ class RequestLogger:
             current_operation.set(self.operation)
 
         # Log request start
-        extra = {
-            "structured_data": {
-                **context,
-                "event": "request_start"
-            }
-        }
+        extra = {"structured_data": {**context, "event": "request_start"}}
 
         self.logger.info(f"Request started: {operation}", extra=extra)
 
@@ -799,13 +833,7 @@ class RequestLogger:
             **context: Additional context variables
         """
         # Log request end
-        extra = {
-            "structured_data": {
-                **context,
-                "event": "request_end",
-                "status": status
-            }
-        }
+        extra = {"structured_data": {**context, "event": "request_end", "status": status}}
 
         self.logger.info(f"Request completed: {self.operation} - {status}", extra=extra)
 
@@ -821,7 +849,9 @@ class RequestLogger:
         # Convert string levels to integers
         if isinstance(level, str):
             level_name = level.upper()
-            level = LogLevel[level_name].value if level_name in LogLevel.__members__ else logging.INFO
+            level = (
+                LogLevel[level_name].value if level_name in LogLevel.__members__ else logging.INFO
+            )
 
         # Log message
         extra = {"structured_data": context} if context else None

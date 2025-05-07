@@ -8,16 +8,17 @@ related previous results.
 """
 
 import datetime
+from difflib import SequenceMatcher
 import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import time
+from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
-from difflib import SequenceMatcher
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, Set
+
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -67,7 +68,7 @@ class VersionManager(BaseComponent):
         # Create index file if it doesn't exist
         index_path = os.path.join(self.storage_path, "index.json")
         if not os.path.exists(index_path):
-            with open(index_path, 'w') as f:
+            with open(index_path, "w") as f:
                 json.dump({"versions": {}}, f)
 
     def _load_version_index(self) -> None:
@@ -75,7 +76,7 @@ class VersionManager(BaseComponent):
         try:
             index_path = os.path.join(self.storage_path, "index.json")
             if os.path.exists(index_path):
-                with open(index_path, 'r') as f:
+                with open(index_path, "r") as f:
                     index_data = json.load(f)
                     self.version_index = index_data.get("versions", {})
 
@@ -94,15 +95,16 @@ class VersionManager(BaseComponent):
             # Ensure the directory exists
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
 
-            with open(index_path, 'w') as f:
+            with open(index_path, "w") as f:
                 json.dump({"versions": self.version_index}, f, indent=2)
 
             self.logger.debug("Saved version index")
         except Exception as e:
             self.logger.error(f"Failed to save version index: {e}")
 
-    def record_new_version(self, version_id: str, specification: str,
-                           context: Dict[str, Any], metadata: Dict[str, Any]) -> None:
+    def record_new_version(
+        self, version_id: str, specification: str, context: Dict[str, Any], metadata: Dict[str, Any]
+    ) -> None:
         """
         Record a new version of a specification and its synthesis result.
 
@@ -132,38 +134,40 @@ class VersionManager(BaseComponent):
                 "timestamp": timestamp,
                 "function_name": function_name,
                 "domain": domain,
-                "metadata": metadata
+                "metadata": metadata,
             }
 
             # Store specification
             spec_path = os.path.join(self.storage_path, "specifications", f"{version_id}.txt")
-            with open(spec_path, 'w') as f:
+            with open(spec_path, "w") as f:
                 f.write(specification)
 
             # Store code if available
             if "code" in metadata:
                 code_path = os.path.join(self.storage_path, "code", f"{version_id}.py")
-                with open(code_path, 'w') as f:
+                with open(code_path, "w") as f:
                     f.write(metadata["code"])
 
             # Store full metadata
             combined_metadata = {
                 "version": version_record,
                 "context": context,
-                "synthesis_metadata": metadata
+                "synthesis_metadata": metadata,
             }
 
             metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(combined_metadata, f, indent=2)
 
             # Find related versions
-            related_versions = self._find_related_versions(specification, fingerprint, function_name, domain)
+            related_versions = self._find_related_versions(
+                specification, fingerprint, function_name, domain
+            )
 
             # Store relations
             if related_versions:
                 relations_path = os.path.join(self.storage_path, "relations", f"{version_id}.json")
-                with open(relations_path, 'w') as f:
+                with open(relations_path, "w") as f:
                     json.dump({"related_versions": related_versions}, f, indent=2)
 
             # Update version index
@@ -172,7 +176,7 @@ class VersionManager(BaseComponent):
                 "timestamp": timestamp,
                 "function_name": function_name,
                 "domain": domain,
-                "related_versions": [rv["id"] for rv in related_versions]
+                "related_versions": [rv["id"] for rv in related_versions],
             }
 
             # Save updated index
@@ -209,22 +213,19 @@ class VersionManager(BaseComponent):
                 self.logger.warning(f"Metadata file not found for version {version_id}")
                 return
 
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path, "r") as f:
                 metadata = json.load(f)
 
             # Update usage information
             if "usage" not in metadata:
                 metadata["usage"] = []
 
-            usage_entry = {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "data": usage_data
-            }
+            usage_entry = {"timestamp": datetime.datetime.now().isoformat(), "data": usage_data}
 
             metadata["usage"].append(usage_entry)
 
             # Save updated metadata
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
             self.logger.info(f"Recorded usage of version {version_id}")
@@ -232,7 +233,9 @@ class VersionManager(BaseComponent):
         except Exception as e:
             self.logger.error(f"Failed to record usage of version {version_id}: {e}")
 
-    def find_prior_versions(self, specification: str, context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def find_prior_versions(
+        self, specification: str, context: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Find prior versions related to a specification.
 
@@ -257,7 +260,9 @@ class VersionManager(BaseComponent):
         fingerprint = self._compute_fingerprint(specification)
 
         # Find related versions
-        related_versions = self._find_related_versions(specification, fingerprint, function_name, domain)
+        related_versions = self._find_related_versions(
+            specification, fingerprint, function_name, domain
+        )
 
         return related_versions
 
@@ -286,14 +291,16 @@ class VersionManager(BaseComponent):
             try:
                 metadata_path = os.path.join(self.storage_path, "metadata", f"{related_id}.json")
                 if os.path.exists(metadata_path):
-                    with open(metadata_path, 'r') as f:
+                    with open(metadata_path, "r") as f:
                         metadata = json.load(f)
 
-                    history.append({
-                        "id": related_id,
-                        "timestamp": metadata["version"]["timestamp"],
-                        "metadata": metadata["version"]["metadata"]
-                    })
+                    history.append(
+                        {
+                            "id": related_id,
+                            "timestamp": metadata["version"]["timestamp"],
+                            "metadata": metadata["version"]["metadata"],
+                        }
+                    )
             except Exception as e:
                 self.logger.warning(f"Failed to load metadata for version {related_id}: {e}")
 
@@ -314,10 +321,7 @@ class VersionManager(BaseComponent):
         """
         self.logger.info(f"Getting details for version {version_id}")
 
-        result = {
-            "id": version_id,
-            "exists": False
-        }
+        result = {"id": version_id, "exists": False}
 
         try:
             # Check if version exists in index
@@ -332,25 +336,25 @@ class VersionManager(BaseComponent):
             # Load specification
             spec_path = os.path.join(self.storage_path, "specifications", f"{version_id}.txt")
             if os.path.exists(spec_path):
-                with open(spec_path, 'r') as f:
+                with open(spec_path, "r") as f:
                     result["specification"] = f.read()
 
             # Load code
             code_path = os.path.join(self.storage_path, "code", f"{version_id}.py")
             if os.path.exists(code_path):
-                with open(code_path, 'r') as f:
+                with open(code_path, "r") as f:
                     result["code"] = f.read()
 
             # Load full metadata
             metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
             if os.path.exists(metadata_path):
-                with open(metadata_path, 'r') as f:
+                with open(metadata_path, "r") as f:
                     result["full_metadata"] = json.load(f)
 
             # Load relations
             relations_path = os.path.join(self.storage_path, "relations", f"{version_id}.json")
             if os.path.exists(relations_path):
-                with open(relations_path, 'r') as f:
+                with open(relations_path, "r") as f:
                     result["relations"] = json.load(f)
 
             return result
@@ -372,11 +376,7 @@ class VersionManager(BaseComponent):
         """
         self.logger.info(f"Comparing versions {version_id1} and {version_id2}")
 
-        comparison = {
-            "version1": version_id1,
-            "version2": version_id2,
-            "differences": {}
-        }
+        comparison = {"version1": version_id1, "version2": version_id2, "differences": {}}
 
         try:
             # Load details for both versions
@@ -391,7 +391,9 @@ class VersionManager(BaseComponent):
 
             # Compare specifications
             if "specification" in details1 and "specification" in details2:
-                spec_diff = self._compute_text_diff(details1["specification"], details2["specification"])
+                spec_diff = self._compute_text_diff(
+                    details1["specification"], details2["specification"]
+                )
                 comparison["differences"]["specification"] = spec_diff
 
             # Compare code
@@ -403,7 +405,7 @@ class VersionManager(BaseComponent):
             if "full_metadata" in details1 and "full_metadata" in details2:
                 metadata_diff = self._compare_metadata(
                     details1["full_metadata"]["synthesis_metadata"],
-                    details2["full_metadata"]["synthesis_metadata"]
+                    details2["full_metadata"]["synthesis_metadata"],
                 )
                 comparison["differences"]["metadata"] = metadata_diff
 
@@ -421,7 +423,7 @@ class VersionManager(BaseComponent):
     def _compute_fingerprint(self, text: str) -> str:
         """Compute a fingerprint for a text to enable quick similarity checks."""
         # Normalize text: lowercase, remove whitespace and punctuation
-        normalized = re.sub(r'[\s\n\r\t.,;:!?()]+', '', text.lower())
+        normalized = re.sub(r"[\s\n\r\t.,;:!?()]+", "", text.lower())
 
         # Use selected algorithm to create fingerprint
         if self.fingerprint_algorithm == "sha256":
@@ -432,14 +434,16 @@ class VersionManager(BaseComponent):
             # Default to SHA-256
             return hashlib.sha256(normalized.encode()).hexdigest()
 
-    def _find_related_versions(self, specification: str, fingerprint: str,
-                               function_name: str, domain: str) -> List[Dict[str, Any]]:
+    def _find_related_versions(
+        self, specification: str, fingerprint: str, function_name: str, domain: str
+    ) -> List[Dict[str, Any]]:
         """Find versions related to a specification based on similarity."""
         related_versions = []
 
         # First, check for exact fingerprint matches
         exact_matches = [
-            version_id for version_id, version_data in self.version_index.items()
+            version_id
+            for version_id, version_data in self.version_index.items()
             if version_data.get("fingerprint") == fingerprint
         ]
 
@@ -447,25 +451,31 @@ class VersionManager(BaseComponent):
             for version_id in exact_matches:
                 # Load full metadata for exact matches
                 try:
-                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
+                    metadata_path = os.path.join(
+                        self.storage_path, "metadata", f"{version_id}.json"
+                    )
                     if os.path.exists(metadata_path):
-                        with open(metadata_path, 'r') as f:
+                        with open(metadata_path, "r") as f:
                             metadata = json.load(f)
 
-                        related_versions.append({
-                            "id": version_id,
-                            "similarity": 1.0,
-                            "relationship": "exact_match",
-                            "timestamp": metadata["version"]["timestamp"],
-                            "metadata": metadata["version"]["metadata"]
-                        })
+                        related_versions.append(
+                            {
+                                "id": version_id,
+                                "similarity": 1.0,
+                                "relationship": "exact_match",
+                                "timestamp": metadata["version"]["timestamp"],
+                                "metadata": metadata["version"]["metadata"],
+                            }
+                        )
                 except Exception as e:
                     self.logger.warning(f"Failed to load metadata for version {version_id}: {e}")
 
         # Next, look for function name matches
         function_matches = [
-            version_id for version_id, version_data in self.version_index.items()
-            if version_data.get("function_name") == function_name and version_id not in exact_matches
+            version_id
+            for version_id, version_data in self.version_index.items()
+            if version_data.get("function_name") == function_name
+            and version_id not in exact_matches
         ]
 
         # For function matches, compute text similarity
@@ -476,7 +486,7 @@ class VersionManager(BaseComponent):
                 if not os.path.exists(spec_path):
                     continue
 
-                with open(spec_path, 'r') as f:
+                with open(spec_path, "r") as f:
                     other_spec = f.read()
 
                 # Compute similarity
@@ -485,45 +495,54 @@ class VersionManager(BaseComponent):
                 # Include if similarity is above threshold
                 if similarity >= self.similarity_threshold:
                     # Load metadata
-                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
+                    metadata_path = os.path.join(
+                        self.storage_path, "metadata", f"{version_id}.json"
+                    )
                     if os.path.exists(metadata_path):
-                        with open(metadata_path, 'r') as f:
+                        with open(metadata_path, "r") as f:
                             metadata = json.load(f)
 
-                        related_versions.append({
-                            "id": version_id,
-                            "similarity": similarity,
-                            "relationship": "similar_function",
-                            "timestamp": metadata["version"]["timestamp"],
-                            "metadata": metadata["version"]["metadata"]
-                        })
+                        related_versions.append(
+                            {
+                                "id": version_id,
+                                "similarity": similarity,
+                                "relationship": "similar_function",
+                                "timestamp": metadata["version"]["timestamp"],
+                                "metadata": metadata["version"]["metadata"],
+                            }
+                        )
             except Exception as e:
                 self.logger.warning(f"Failed to process version {version_id}: {e}")
 
         # Finally, check domain matches (if not enough results yet)
         if len(related_versions) < 3:
             domain_matches = [
-                version_id for version_id, version_data in self.version_index.items()
-                if version_data.get("domain") == domain and
-                   version_id not in exact_matches and
-                   version_id not in function_matches
+                version_id
+                for version_id, version_data in self.version_index.items()
+                if version_data.get("domain") == domain
+                and version_id not in exact_matches
+                and version_id not in function_matches
             ]
 
             # Add up to 3 domain matches without detailed similarity check
             for version_id in domain_matches[:3]:
                 try:
-                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
+                    metadata_path = os.path.join(
+                        self.storage_path, "metadata", f"{version_id}.json"
+                    )
                     if os.path.exists(metadata_path):
-                        with open(metadata_path, 'r') as f:
+                        with open(metadata_path, "r") as f:
                             metadata = json.load(f)
 
-                        related_versions.append({
-                            "id": version_id,
-                            "similarity": 0.5,  # Arbitrary similarity for domain matches
-                            "relationship": "same_domain",
-                            "timestamp": metadata["version"]["timestamp"],
-                            "metadata": metadata["version"]["metadata"]
-                        })
+                        related_versions.append(
+                            {
+                                "id": version_id,
+                                "similarity": 0.5,  # Arbitrary similarity for domain matches
+                                "relationship": "same_domain",
+                                "timestamp": metadata["version"]["timestamp"],
+                                "metadata": metadata["version"]["metadata"],
+                            }
+                        )
                 except Exception as e:
                     self.logger.warning(f"Failed to load metadata for version {version_id}: {e}")
 
@@ -543,35 +562,34 @@ class VersionManager(BaseComponent):
         # Use SequenceMatcher to compute differences
         matcher = SequenceMatcher(None, text1, text2)
 
-        diff = {
-            "similarity": matcher.ratio(),
-            "changes": []
-        }
+        diff = {"similarity": matcher.ratio(), "changes": []}
 
         # Extract opcodes (operations needed to transform text1 into text2)
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag != 'equal':
+            if tag != "equal":
                 change = {
                     "operation": tag,
                     "text1_start": i1,
                     "text1_end": i2,
                     "text2_start": j1,
-                    "text2_end": j2
+                    "text2_end": j2,
                 }
 
-                if tag == 'replace':
+                if tag == "replace":
                     change["text1"] = text1[i1:i2]
                     change["text2"] = text2[j1:j2]
-                elif tag == 'delete':
+                elif tag == "delete":
                     change["text1"] = text1[i1:i2]
-                elif tag == 'insert':
+                elif tag == "insert":
                     change["text2"] = text2[j1:j2]
 
                 diff["changes"].append(change)
 
         return diff
 
-    def _compare_metadata(self, metadata1: Dict[str, Any], metadata2: Dict[str, Any]) -> Dict[str, Any]:
+    def _compare_metadata(
+        self, metadata1: Dict[str, Any], metadata2: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Compare two metadata dictionaries and identify differences."""
         diff = {}
 
@@ -589,18 +607,22 @@ class VersionManager(BaseComponent):
                 diff[key] = {
                     "status": "different",
                     "value1": metadata1[key],
-                    "value2": metadata2[key]
+                    "value2": metadata2[key],
                 }
 
         return diff
 
-    def _calculate_version_similarity(self, details1: Dict[str, Any], details2: Dict[str, Any]) -> float:
+    def _calculate_version_similarity(
+        self, details1: Dict[str, Any], details2: Dict[str, Any]
+    ) -> float:
         """Calculate overall similarity between two versions."""
         similarity_components = []
 
         # Include specification similarity if available
         if "specification" in details1 and "specification" in details2:
-            spec_similarity = self._compute_text_similarity(details1["specification"], details2["specification"])
+            spec_similarity = self._compute_text_similarity(
+                details1["specification"], details2["specification"]
+            )
             similarity_components.append(spec_similarity * 0.5)  # Weight: 50%
 
         # Include code similarity if available
@@ -619,7 +641,9 @@ class VersionManager(BaseComponent):
 
         # Calculate overall similarity (or default to 0)
         if similarity_components:
-            return sum(similarity_components) / sum(0.5 if i == 0 else 0.3 if i == 1 else 0.2 for i in range(len(similarity_components)))
+            return sum(similarity_components) / sum(
+                0.5 if i == 0 else 0.3 if i == 1 else 0.2 for i in range(len(similarity_components))
+            )
         else:
             return 0.0
 
@@ -696,7 +720,7 @@ class VersionManager(BaseComponent):
             "versions_by_strategy": {},
             "versions_by_month": {},
             "average_similarity": 0.0,
-            "most_revised_functions": []
+            "most_revised_functions": [],
         }
 
         try:
@@ -727,9 +751,11 @@ class VersionManager(BaseComponent):
 
                 # Get synthesis strategy
                 try:
-                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
+                    metadata_path = os.path.join(
+                        self.storage_path, "metadata", f"{version_id}.json"
+                    )
                     if os.path.exists(metadata_path):
-                        with open(metadata_path, 'r') as f:
+                        with open(metadata_path, "r") as f:
                             metadata = json.load(f)
 
                         strategy = metadata["version"]["metadata"].get("strategy", "unknown")
@@ -737,13 +763,17 @@ class VersionManager(BaseComponent):
 
                         # Get similarity scores from relations
                         if "related_versions" in version_data and version_data["related_versions"]:
-                            relations_path = os.path.join(self.storage_path, "relations", f"{version_id}.json")
+                            relations_path = os.path.join(
+                                self.storage_path, "relations", f"{version_id}.json"
+                            )
                             if os.path.exists(relations_path):
-                                with open(relations_path, 'r') as f:
+                                with open(relations_path, "r") as f:
                                     relations = json.load(f)
 
                                 for related in relations.get("related_versions", []):
-                                    if "similarity" in related and related["similarity"] < 1.0:  # Exclude exact matches
+                                    if (
+                                        "similarity" in related and related["similarity"] < 1.0
+                                    ):  # Exclude exact matches
                                         similarities.append(related["similarity"])
                 except Exception as e:
                     self.logger.warning(f"Failed to load metadata for version {version_id}: {e}")
@@ -760,7 +790,9 @@ class VersionManager(BaseComponent):
                         # Extract year and month from timestamp
                         date = datetime.datetime.fromisoformat(timestamp)
                         month_key = f"{date.year}-{date.month:02d}"
-                        stats["versions_by_month"][month_key] = stats["versions_by_month"].get(month_key, 0) + 1
+                        stats["versions_by_month"][month_key] = (
+                            stats["versions_by_month"].get(month_key, 0) + 1
+                        )
                     except Exception:
                         pass
 
@@ -770,7 +802,9 @@ class VersionManager(BaseComponent):
 
             # Find most revised functions (functions with most versions)
             most_revised = sorted(function_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-            stats["most_revised_functions"] = [{"name": name, "count": count} for name, count in most_revised]
+            stats["most_revised_functions"] = [
+                {"name": name, "count": count} for name, count in most_revised
+            ]
 
             return stats
 

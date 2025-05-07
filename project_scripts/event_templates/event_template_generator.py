@@ -3,21 +3,21 @@
 Event-Driven Template Generator
 Creates templates based on events received from Pulsar
 """
-import os
-import json
-import uuid
 import argparse
 import asyncio
+from datetime import datetime
+import json
 import logging
+import os
 import signal
 import sys
-from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+import uuid
+
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("event_template_generator")
 
@@ -27,6 +27,7 @@ try:
 except ImportError:
     logger.error("Pulsar client not installed. Run: pip install pulsar-client")
     sys.exit(1)
+
 
 class EventTemplateGenerator:
     """Generate templates based on events from Pulsar"""
@@ -47,15 +48,13 @@ class EventTemplateGenerator:
 
             # Create consumer for template generation requests
             self.consumer = self.client.subscribe(
-                topic='template.generation.request',
-                subscription_name='template-generator',
-                consumer_type=pulsar.ConsumerType.Shared
+                topic="template.generation.request",
+                subscription_name="template-generator",
+                consumer_type=pulsar.ConsumerType.Shared,
             )
 
             # Create producer for template generation responses
-            self.producer = self.client.create_producer(
-                topic='template.generation.response'
-            )
+            self.producer = self.client.create_producer(topic="template.generation.response")
 
             logger.info(f"Connected to Pulsar broker at {self.broker_url}")
             logger.info("Listening for template generation requests...")
@@ -91,14 +90,16 @@ class EventTemplateGenerator:
                 # Process message
                 try:
                     # Parse message data
-                    data = json.loads(msg.data().decode('utf-8'))
-                    logger.info(f"Received template generation request: {data.get('request_id', 'unknown')}")
+                    data = json.loads(msg.data().decode("utf-8"))
+                    logger.info(
+                        f"Received template generation request: {data.get('request_id', 'unknown')}"
+                    )
 
                     # Generate template
                     result = await self.generate_template(data)
 
                     # Send response
-                    self._send_response(data.get('request_id'), result)
+                    self._send_response(data.get("request_id"), result)
 
                     # Acknowledge message
                     self.consumer.acknowledge(msg)
@@ -119,27 +120,27 @@ class EventTemplateGenerator:
         response = {
             "request_id": request_id,
             "timestamp": datetime.utcnow().isoformat(),
-            "result": result
+            "result": result,
         }
 
-        self.producer.send(json.dumps(response).encode('utf-8'))
+        self.producer.send(json.dumps(response).encode("utf-8"))
         logger.info(f"Sent response for request {request_id}")
 
     async def generate_template(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate template based on request data"""
         try:
             # Extract template details from request
-            category = request_data.get('category', '')
-            name = request_data.get('name', '')
-            description = request_data.get('description', '')
-            components = request_data.get('services', [])
-            audience = request_data.get('audience', 'system')
+            category = request_data.get("category", "")
+            name = request_data.get("name", "")
+            description = request_data.get("description", "")
+            components = request_data.get("services", [])
+            audience = request_data.get("audience", "system")
 
             # Validate required fields
             if not category or not name or not description or not components:
                 return {
                     "status": "error",
-                    "message": "Missing required fields: category, name, description, services"
+                    "message": "Missing required fields: category, name, description, services",
                 }
 
             # Create template ID
@@ -153,10 +154,10 @@ class EventTemplateGenerator:
                 "created_at": datetime.utcnow().isoformat(),
                 "updated_at": datetime.utcnow().isoformat(),
                 "category": category,
-                "subcategory": request_data.get('subcategory', ''),
+                "subcategory": request_data.get("subcategory", ""),
                 "audience": audience,
-                "tags": request_data.get('tags', [category, "event-generated"]),
-                "complexity": self._calculate_complexity(components)
+                "tags": request_data.get("tags", [category, "event-generated"]),
+                "complexity": self._calculate_complexity(components),
             }
 
             # Create template
@@ -167,9 +168,9 @@ class EventTemplateGenerator:
                 "source_location": "",
                 "relationships": [],
                 "services": components,
-                "variables": request_data.get('variables', []),
+                "variables": request_data.get("variables", []),
                 "is_cached": False,
-                "cache_path": ""
+                "cache_path": "",
             }
 
             # Save template to appropriate directory
@@ -179,15 +180,12 @@ class EventTemplateGenerator:
                 "status": "success",
                 "template_id": template_id,
                 "template": template,
-                "template_path": template_path
+                "template_path": template_path,
             }
 
         except Exception as e:
             logger.error(f"Template generation error: {str(e)}")
-            return {
-                "status": "error",
-                "message": f"Failed to generate template: {str(e)}"
-            }
+            return {"status": "error", "message": f"Failed to generate template: {str(e)}"}
 
     def _calculate_complexity(self, components: List[Dict[str, Any]]) -> int:
         """Calculate template complexity based on services"""
@@ -204,11 +202,12 @@ class EventTemplateGenerator:
         os.makedirs(category_dir, exist_ok=True)
 
         template_path = os.path.join(category_dir, f"{template['id']}.json")
-        with open(template_path, 'w') as f:
+        with open(template_path, "w") as f:
             json.dump(template, f, indent=2)
 
         logger.info(f"Template saved to: {template_path}")
         return template_path
+
 
 async def run_service(generator):
     """Run the template generator service"""
@@ -218,6 +217,7 @@ async def run_service(generator):
 
     # Process events until shutdown
     await generator.process_events()
+
 
 def main():
     parser = argparse.ArgumentParser(description="Event-driven template generator service")
@@ -245,6 +245,7 @@ def main():
         loop.run_until_complete(run_service(generator))
     finally:
         loop.close()
+
 
 if __name__ == "__main__":
     main()

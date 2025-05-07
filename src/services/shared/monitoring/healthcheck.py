@@ -5,24 +5,28 @@ This module provides a simple HTTP server for container health checks
 and basic monitoring of the Neural Code Generator.
 """
 
+import asyncio
+import json
+import logging
 import os
 import sys
-import json
-import time
-import asyncio
-import logging
-import psutil
 import threading
-import torch
-from typing import Dict, Any
-import uvicorn
-from fastapi import FastAPI, HTTPException, Response
+import time
+from typing import Any, Dict
+
+from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi import Response
+import psutil
 from pydantic import BaseModel
+import torch
+import uvicorn
+
 
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("health_check")
 
@@ -30,7 +34,7 @@ logger = logging.getLogger("health_check")
 app = FastAPI(
     title="Neural Code Generator Health Check",
     description="Health check and monitoring API for the Neural Code Generator service",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Define global variables for status tracking
@@ -47,6 +51,7 @@ stats_lock = threading.Lock()
 
 class HealthStatus(BaseModel):
     """Health status response model."""
+
     status: str
     uptime: float
     memory_usage: Dict[str, float]
@@ -67,7 +72,7 @@ async def health_check():
         memory_usage = {
             "rss_mb": memory_info.rss / (1024 * 1024),
             "vms_mb": memory_info.vms / (1024 * 1024),
-            "percent": process.memory_percent()
+            "percent": process.memory_percent(),
         }
 
         # Get GPU usage if available
@@ -80,7 +85,7 @@ async def health_check():
                 "device_name": torch.cuda.get_device_name(0),
                 "memory_allocated_mb": torch.cuda.memory_allocated() / (1024 * 1024),
                 "memory_reserved_mb": torch.cuda.memory_reserved() / (1024 * 1024),
-                "max_memory_mb": torch.cuda.get_device_properties(0).total_memory / (1024 * 1024)
+                "max_memory_mb": torch.cuda.get_device_properties(0).total_memory / (1024 * 1024),
             }
 
         # Get request statistics
@@ -90,7 +95,7 @@ async def health_check():
                 "successful_requests": success_count,
                 "error_requests": error_count,
                 "avg_processing_time": avg_processing_time,
-                "last_activity": time.time() - last_activity
+                "last_activity": time.time() - last_activity,
             }
 
         # Return the health status
@@ -99,7 +104,7 @@ async def health_check():
             uptime=uptime,
             memory_usage=memory_usage,
             gpu_usage=gpu_usage,
-            request_stats=request_stats
+            request_stats=request_stats,
         )
     except Exception as e:
         logger.error(f"Error in health check: {e}")
@@ -122,7 +127,10 @@ async def readiness_check():
             return Response(content="Low memory", status_code=503)
 
         # Check if GPU is available when required
-        if os.environ.get("REQUIRE_GPU", "false").lower() == "true" and not torch.cuda.is_available():
+        if (
+            os.environ.get("REQUIRE_GPU", "false").lower() == "true"
+            and not torch.cuda.is_available()
+        ):
             return Response(content="GPU not available", status_code=503)
 
         # Check for recent activity (if service has been running for a while)

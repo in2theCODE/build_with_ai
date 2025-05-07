@@ -1,12 +1,15 @@
-from pydantic import BaseModel, Field
-from typing import Dict, List, Any, Optional
 from enum import Enum
-import time
 import json
+import time
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class EvolutionSuggestionType(str, Enum):
     """Types of spec sheet definition evolution suggestions"""
+
     ADD_FIELD = "add_field"
     REMOVE_FIELD = "remove_field"
     MODIFY_FIELD = "modify_field"
@@ -24,6 +27,7 @@ class EvolutionSuggestionType(str, Enum):
 
 class EvolutionSuggestion(BaseModel):
     """A suggestion for evolving a spec sheet definition"""
+
     suggestion_id: str
     suggestion_type: EvolutionSuggestionType
     spec_sheet_definition_id: str
@@ -50,7 +54,7 @@ class EvolutionSuggestion(BaseModel):
 
     # You can still have custom factory methods
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'EvolutionSuggestion':
+    def from_dict(cls, data: Dict[str, Any]) -> "EvolutionSuggestion":
         """Create from dictionary"""
         # Handle legacy field names
         if "template_id" in data and "spec_sheet_definition_id" not in data:
@@ -61,7 +65,7 @@ class EvolutionSuggestion(BaseModel):
         return cls(**data)
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'EvolutionSuggestion':
+    def from_json(cls, json_str: str) -> "EvolutionSuggestion":
         """Create from JSON string"""
         data = json.loads(json_str)
         return cls.from_dict(data)
@@ -69,6 +73,7 @@ class EvolutionSuggestion(BaseModel):
 
 class FieldEvolutionData(BaseModel):
     """Evolution data for a field"""
+
     field_path: str
     field_name: str
     section_name: str
@@ -85,13 +90,14 @@ class FieldEvolutionData(BaseModel):
         return self.model_dump()
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'FieldEvolutionData':
+    def from_dict(cls, data: Dict[str, Any]) -> "FieldEvolutionData":
         """Create from dictionary"""
         return cls(**data)
 
 
 class SectionEvolutionData(BaseModel):
     """Evolution data for a section"""
+
     section_name: str
     usage_count: int = 0
     completion_rate: float = 0.0
@@ -104,7 +110,7 @@ class SectionEvolutionData(BaseModel):
         return self.model_dump()
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SectionEvolutionData':
+    def from_dict(cls, data: Dict[str, Any]) -> "SectionEvolutionData":
         """Create from dictionary"""
         field_evolution = {}
         for k, v in data.get("field_evolution", {}).items():
@@ -116,12 +122,13 @@ class SectionEvolutionData(BaseModel):
             completion_rate=data.get("completion_rate", 0.0),
             error_rate=data.get("error_rate", 0.0),
             avg_fill_time=data.get("avg_fill_time", 0.0),
-            field_evolution=field_evolution
+            field_evolution=field_evolution,
         )
 
 
 class SpecSheetDefinitionEvolutionAnalysis(BaseModel):
     """Comprehensive evolution analysis for a spec sheet definition"""
+
     spec_sheet_definition_id: str
     spec_sheet_definition_version: str
     analysis_timestamp: int = Field(default_factory=lambda: int(time.time()))
@@ -141,7 +148,7 @@ class SpecSheetDefinitionEvolutionAnalysis(BaseModel):
         return self.model_dump_json(indent=2)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SpecSheetDefinitionEvolutionAnalysis':
+    def from_dict(cls, data: Dict[str, Any]) -> "SpecSheetDefinitionEvolutionAnalysis":
         """Create from dictionary"""
         # Handle legacy field names
         if "template_id" in data and "spec_sheet_definition_id" not in data:
@@ -168,11 +175,11 @@ class SpecSheetDefinitionEvolutionAnalysis(BaseModel):
             section_evolution=section_evolution,
             field_correlations=data.get("field_correlations", {}),
             suggestions=suggestions,
-            common_patterns=data.get("common_patterns", {})
+            common_patterns=data.get("common_patterns", {}),
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'SpecSheetDefinitionEvolutionAnalysis':
+    def from_json(cls, json_str: str) -> "SpecSheetDefinitionEvolutionAnalysis":
         """Create from JSON string"""
         data = json.loads(json_str)
         return cls.from_dict(data)

@@ -6,14 +6,20 @@ This script demonstrates how to integrate and use the advanced neural
 code generation techniques with the existing program synthesis system.
 """
 
-import sys
-import logging
 import argparse
-import yaml
+import logging
 from pathlib import Path
+import sys
+
+from program_synthesis_system.src.components.component_factory import (
+    ComponentFactory,
+)
+from program_synthesis_system.src.components.neural_code_generator.neural_code_generator import (
+    NeuralCodeGenerator,
+)
 from program_synthesis_system.src.shared.enums import ComponentType
-from program_synthesis_system.src.components.component_factory import ComponentFactory
-from program_synthesis_system.src.components.neural_code_generator.neural_code_generator import NeuralCodeGenerator
+import yaml
+
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -26,26 +32,32 @@ default_config_path = project_root / "configs" / "neural_system_configs.yaml"
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Neural Code Generator Integration")
-    parser.add_argument("--config", "-c", default="configs/system_config.yaml",
-                        help="Path to system configuration file")
-    parser.add_argument("--spec", "-s", required=True,
-                        help="Path to specification file or specification string")
-    parser.add_argument("--output", "-o",
-                        help="Output file for generated code (default: stdout)")
-    parser.add_argument("--language", "-l", default="python",
-                        help="Target programming language")
-    parser.add_argument("--technique", "-t",
-                        choices=["attention", "tree", "hierarchical", "hybrid", "all"],
-                        default="all",
-                        help="Neural generation technique to use")
-    parser.add_argument("--beam-width", "-b", type=int, default=5,
-                        help="Beam width for syntax-aware search")
-    parser.add_argument("--kb-path", "-k",
-                        help="Path to knowledge base for retrieval-augmented generation")
-    parser.add_argument("--model-path", "-m",
-                        help="Path to pre-trained models")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                        help="Enable verbose output")
+    parser.add_argument(
+        "--config",
+        "-c",
+        default="configs/system_config.yaml",
+        help="Path to system configuration file",
+    )
+    parser.add_argument(
+        "--spec", "-s", required=True, help="Path to specification file or specification string"
+    )
+    parser.add_argument("--output", "-o", help="Output file for generated code (default: stdout)")
+    parser.add_argument("--language", "-l", default="python", help="Target programming language")
+    parser.add_argument(
+        "--technique",
+        "-t",
+        choices=["attention", "tree", "hierarchical", "hybrid", "all"],
+        default="all",
+        help="Neural generation technique to use",
+    )
+    parser.add_argument(
+        "--beam-width", "-b", type=int, default=5, help="Beam width for syntax-aware search"
+    )
+    parser.add_argument(
+        "--kb-path", "-k", help="Path to knowledge base for retrieval-augmented generation"
+    )
+    parser.add_argument("--model-path", "-m", help="Path to pre-trained models")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
 
     return parser.parse_args()
 
@@ -67,13 +79,14 @@ def load_configuration(config_path):
             if alt_path.exists():
                 config_path = alt_path
 
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         return yaml.safe_load(f)
+
 
 def load_specification(spec_path_or_string):
     """Load specification from a file or use it directly as a string."""
     try:
-        with open(spec_path_or_string, 'r') as f:
+        with open(spec_path_or_string, "r") as f:
             return f.read()
     except FileNotFoundError:
         # If file not found, assume it's a direct specification string
@@ -102,9 +115,7 @@ def setup_neural_code_generator(args, config):
 
     # Create the neural code generator
     neural_generator = factory.create_component(
-        ComponentType.CODE_GENERATOR,
-        "neural_code_generator",
-        params
+        ComponentType.CODE_GENERATOR, "neural_code_generator", params
     )
 
     # If model path specified, load pre-trained models
@@ -122,8 +133,7 @@ def main():
     # Set up logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger("neural_integration")
 
@@ -185,6 +195,7 @@ def main():
             # Fallback: Just print the AST
             logger.warning("AST code generator not found, printing AST structure")
             import json
+
             code = json.dumps(synthesis_result.program_ast, indent=2)
     except Exception as e:
         logger.error(f"Failed to convert AST to code: {e}")
@@ -193,7 +204,7 @@ def main():
     # Output the generated code
     if args.output:
         try:
-            with open(args.output, 'w') as f:
+            with open(args.output, "w") as f:
                 f.write(code)
             logger.info(f"Code written to {args.output}")
         except Exception as e:

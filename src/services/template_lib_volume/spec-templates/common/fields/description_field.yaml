@@ -1,9 +1,0 @@
-name: description
-type: STRING
-description: Detailed description
-required: false
-default_value: ""
-validation_rules:
-  - rule_type: MAX_LENGTH
-    expression: "1000"
-    error_message: "Description cannot exceed 1000 characters"

@@ -8,15 +8,21 @@ import logging
 
 from prometheus_client.context_managers import Timer
 
+
 try:
     import prometheus_client
-    from prometheus_client import Counter, Gauge, Histogram, Summary
+    from prometheus_client import Counter
+    from prometheus_client import Gauge
+    from prometheus_client import Histogram
+    from prometheus_client import Summary
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
     logging.warning("Prometheus client not available. Install with: pip install prometheus-client")
 
 logger = logging.getLogger(__name__)
+
 
 class MetricsCollector:
     """
@@ -26,12 +32,14 @@ class MetricsCollector:
     suitable for containerized deployment with Kubernetes.
     """
 
-    def __init__(self,
-                 component_name: str,
-                 metrics_port: int = 8081,
-                 metrics_endpoint: str = "/metrics",
-                 collect_process_metrics: bool = True,
-                 enabled: bool = True):
+    def __init__(
+        self,
+        component_name: str,
+        metrics_port: int = 8081,
+        metrics_endpoint: str = "/metrics",
+        collect_process_metrics: bool = True,
+        enabled: bool = True,
+    ):
         """
         Initialize the metrics collector.
 
@@ -61,7 +69,9 @@ class MetricsCollector:
         # Start Prometheus HTTP server
         try:
             prometheus_client.start_http_server(self.metrics_port)
-            logger.info(f"Prometheus metrics available at :{self.metrics_port}{self.metrics_endpoint}")
+            logger.info(
+                f"Prometheus metrics available at :{self.metrics_port}{self.metrics_endpoint}"
+            )
         except Exception as e:
             logger.error(f"Failed to start Prometheus HTTP server: {e}")
             self.enabled = False
@@ -70,112 +80,112 @@ class MetricsCollector:
         """Initialize Prometheus metrics."""
         # Request metrics
         self.requests_total = Counter(
-            'neural_code_generator_requests_total',
-            'Total number of code generation requests',
-            ['component', 'status', 'strategy']
+            "neural_code_generator_requests_total",
+            "Total number of code generation requests",
+            ["component", "status", "strategy"],
         )
 
         self.request_duration = Histogram(
-            'neural_code_generator_request_duration_seconds',
-            'Duration of code generation requests',
-            ['component', 'strategy'],
-            buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0)
+            "neural_code_generator_request_duration_seconds",
+            "Duration of code generation requests",
+            ["component", "strategy"],
+            buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
         )
 
         self.request_tokens = Histogram(
-            'neural_code_generator_request_tokens',
-            'Number of tokens in code generation requests',
-            ['component', 'token_type'],
-            buckets=(100, 500, 1000, 2000, 5000, 10000, 15000)
+            "neural_code_generator_request_tokens",
+            "Number of tokens in code generation requests",
+            ["component", "token_type"],
+            buckets=(100, 500, 1000, 2000, 5000, 10000, 15000),
         )
 
         # Result metrics
         self.result_confidence = Histogram(
-            'neural_code_generator_result_confidence',
-            'Confidence scores of code generation results',
-            ['component', 'strategy'],
-            buckets=(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0)
+            "neural_code_generator_result_confidence",
+            "Confidence scores of code generation results",
+            ["component", "strategy"],
+            buckets=(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0),
         )
 
         self.generated_code_length = Histogram(
-            'neural_code_generator_generated_code_length',
-            'Length of generated code in characters',
-            ['component', 'language'],
-            buckets=(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)
+            "neural_code_generator_generated_code_length",
+            "Length of generated code in characters",
+            ["component", "language"],
+            buckets=(100, 500, 1000, 2500, 5000, 10000, 25000, 50000),
         )
 
         # Cache metrics
         self.cache_hits = Counter(
-            'neural_code_generator_cache_hits_total',
-            'Total number of cache hits',
-            ['component', 'cache_type']
+            "neural_code_generator_cache_hits_total",
+            "Total number of cache hits",
+            ["component", "cache_type"],
         )
 
         self.cache_misses = Counter(
-            'neural_code_generator_cache_misses_total',
-            'Total number of cache misses',
-            ['component', 'cache_type']
+            "neural_code_generator_cache_misses_total",
+            "Total number of cache misses",
+            ["component", "cache_type"],
         )
 
         # Resource metrics
         self.gpu_memory_usage = Gauge(
-            'neural_code_generator_gpu_memory_bytes',
-            'GPU memory usage in bytes',
-            ['component', 'gpu_id']
+            "neural_code_generator_gpu_memory_bytes",
+            "GPU memory usage in bytes",
+            ["component", "gpu_id"],
         )
 
         self.model_loading_time = Histogram(
-            'neural_code_generator_model_loading_time_seconds',
-            'Time taken to load models',
-            ['component', 'model_type'],
-            buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0)
+            "neural_code_generator_model_loading_time_seconds",
+            "Time taken to load models",
+            ["component", "model_type"],
+            buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
         )
 
         # Event system metrics
         self.events_emitted = Counter(
-            'neural_code_generator_events_emitted_total',
-            'Total number of events emitted',
-            ['component', 'event_type']
+            "neural_code_generator_events_emitted_total",
+            "Total number of events emitted",
+            ["component", "event_type"],
         )
 
         self.events_received = Counter(
-            'neural_code_generator_events_received_total',
-            'Total number of events received',
-            ['component', 'event_type']
+            "neural_code_generator_events_received_total",
+            "Total number of events received",
+            ["component", "event_type"],
         )
 
         self.event_processing_time = Histogram(
-            'neural_code_generator_event_processing_time_seconds',
-            'Time taken to process events',
-            ['component', 'event_type'],
-            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0)
+            "neural_code_generator_event_processing_time_seconds",
+            "Time taken to process events",
+            ["component", "event_type"],
+            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0),
         )
 
         # Health metrics
         self.component_up = Gauge(
-            'neural_code_generator_component_up',
-            'Whether the component is running properly',
-            ['component']
+            "neural_code_generator_component_up",
+            "Whether the component is running properly",
+            ["component"],
         )
 
         self.errors_total = Counter(
-            'neural_code_generator_errors_total',
-            'Total number of errors encountered',
-            ['component', 'error_type']
+            "neural_code_generator_errors_total",
+            "Total number of errors encountered",
+            ["component", "error_type"],
         )
 
         # Vector database metrics
         self.vector_db_query_time = Histogram(
-            'neural_code_generator_vector_db_query_time_seconds',
-            'Time taken for vector database queries',
-            ['component', 'operation'],
-            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0)
+            "neural_code_generator_vector_db_query_time_seconds",
+            "Time taken for vector database queries",
+            ["component", "operation"],
+            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0),
         )
 
         self.vector_db_operations = Counter(
-            'neural_code_generator_vector_db_operations_total',
-            'Total number of vector database operations',
-            ['component', 'operation', 'status']
+            "neural_code_generator_vector_db_operations_total",
+            "Total number of vector database operations",
+            ["component", "operation", "status"],
         )
 
         # Set component as up
@@ -198,9 +208,7 @@ class MetricsCollector:
             return
 
         self.requests_total.labels(
-            component=self.component_name,
-            status=status,
-            strategy=strategy
+            component=self.component_name, status=status, strategy=strategy
         ).inc()
 
     def start_request_timer(self, strategy: str = "default") -> Timer | None:
@@ -216,10 +224,7 @@ class MetricsCollector:
         if not self.enabled:
             return None
 
-        return self.request_duration.labels(
-            component=self.component_name,
-            strategy=strategy
-        ).time()
+        return self.request_duration.labels(component=self.component_name, strategy=strategy).time()
 
     def record_tokens(self, token_type: str, count: int):
         """
@@ -232,10 +237,9 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.request_tokens.labels(
-            component=self.component_name,
-            token_type=token_type
-        ).observe(count)
+        self.request_tokens.labels(component=self.component_name, token_type=token_type).observe(
+            count
+        )
 
     # Result metrics methods
     def record_confidence(self, confidence: float, strategy: str = "default"):
@@ -249,10 +253,9 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.result_confidence.labels(
-            component=self.component_name,
-            strategy=strategy
-        ).observe(confidence)
+        self.result_confidence.labels(component=self.component_name, strategy=strategy).observe(
+            confidence
+        )
 
     def record_code_length(self, length: int, language: str = "python"):
         """
@@ -265,10 +268,9 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.generated_code_length.labels(
-            component=self.component_name,
-            language=language
-        ).observe(length)
+        self.generated_code_length.labels(component=self.component_name, language=language).observe(
+            length
+        )
 
     # Cache metrics methods
     def record_cache_hit(self, cache_type: str = "knowledge_base"):
@@ -281,10 +283,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.cache_hits.labels(
-            component=self.component_name,
-            cache_type=cache_type
-        ).inc()
+        self.cache_hits.labels(component=self.component_name, cache_type=cache_type).inc()
 
     def record_cache_miss(self, cache_type: str = "knowledge_base"):
         """
@@ -296,10 +295,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.cache_misses.labels(
-            component=self.component_name,
-            cache_type=cache_type
-        ).inc()
+        self.cache_misses.labels(component=self.component_name, cache_type=cache_type).inc()
 
     # Resource metrics methods
     def update_gpu_memory_usage(self, gpu_id: str, memory_bytes: float):
@@ -313,10 +309,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.gpu_memory_usage.labels(
-            component=self.component_name,
-            gpu_id=gpu_id
-        ).set(memory_bytes)
+        self.gpu_memory_usage.labels(component=self.component_name, gpu_id=gpu_id).set(memory_bytes)
 
     def start_model_loading_timer(self, model_type: str) -> Timer | None:
         """
@@ -332,8 +325,7 @@ class MetricsCollector:
             return None
 
         return self.model_loading_time.labels(
-            component=self.component_name,
-            model_type=model_type
+            component=self.component_name, model_type=model_type
         ).time()
 
     # Event system metrics methods
@@ -347,10 +339,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.events_emitted.labels(
-            component=self.component_name,
-            event_type=event_type
-        ).inc()
+        self.events_emitted.labels(component=self.component_name, event_type=event_type).inc()
 
     def record_event_received(self, event_type: str):
         """
@@ -362,10 +351,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.events_received.labels(
-            component=self.component_name,
-            event_type=event_type
-        ).inc()
+        self.events_received.labels(component=self.component_name, event_type=event_type).inc()
 
     def start_event_processing_timer(self, event_type: str) -> Timer | None:
         """
@@ -381,8 +367,7 @@ class MetricsCollector:
             return None
 
         return self.event_processing_time.labels(
-            component=self.component_name,
-            event_type=event_type
+            component=self.component_name, event_type=event_type
         ).time()
 
     # Health metrics methods
@@ -396,9 +381,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.component_up.labels(
-            component=self.component_name
-        ).set(1 if up else 0)
+        self.component_up.labels(component=self.component_name).set(1 if up else 0)
 
     def record_error(self, error_type: str):
         """
@@ -410,10 +393,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.errors_total.labels(
-            component=self.component_name,
-            error_type=error_type
-        ).inc()
+        self.errors_total.labels(component=self.component_name, error_type=error_type).inc()
 
     # Vector database metrics methods
     def start_vector_db_timer(self, operation: str) -> Timer | None:
@@ -430,8 +410,7 @@ class MetricsCollector:
             return None
 
         return self.vector_db_query_time.labels(
-            component=self.component_name,
-            operation=operation
+            component=self.component_name, operation=operation
         ).time()
 
     def record_vector_db_operation(self, operation: str, status: str = "success"):
@@ -446,7 +425,5 @@ class MetricsCollector:
             return
 
         self.vector_db_operations.labels(
-            component=self.component_name,
-            operation=operation,
-            status=status
+            component=self.component_name, operation=operation, status=status
         ).inc()

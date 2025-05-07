@@ -9,27 +9,38 @@ The configuration is designed to be environment-aware, loading different setting
 on the deployment environment (development, staging, production).
 """
 
-import os
-import yaml
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
 import logging
+import os
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+from pydantic import Field
+import yaml
+
 
 logger = logging.getLogger(__name__)
 
 
 class PulsarAuthConfig(BaseModel):
     """Pulsar authentication configuration."""
+
     auth_type: str = Field(default="none", description="Authentication type (none, token, oauth2)")
-    token: Optional[str] = Field(default=None, description="Authentication token if using token auth")
-    oauth_params: Optional[Dict[str, str]] = Field(default=None, description="OAuth2 parameters if using oauth2")
+    token: Optional[str] = Field(
+        default=None, description="Authentication token if using token auth"
+    )
+    oauth_params: Optional[Dict[str, str]] = Field(
+        default=None, description="OAuth2 parameters if using oauth2"
+    )
 
 
 class PulsarTopicConfig(BaseModel):
     """Configuration for a single Pulsar topic."""
+
     name: str = Field(..., description="Topic name")
     subscription_name: str = Field(..., description="Subscription name for this consumer")
-    subscription_type: str = Field(default="Exclusive", description="Subscription type (Exclusive, Shared, Failover)")
+    subscription_type: str = Field(
+        default="Exclusive", description="Subscription type (Exclusive, Shared, Failover)"
+    )
     schema_type: str = Field(default="JSON", description="Message schema type")
     batch_size: int = Field(default=100, description="Consumer batch size")
     consumer_type: str = Field(default="Listener", description="Consumer implementation type")
@@ -40,18 +51,37 @@ class PulsarTopicConfig(BaseModel):
 
 class PulsarConfig(BaseModel):
     """Pulsar client and topic configuration."""
+
     service_url: str = Field(..., description="Pulsar service URL")
-    connection_timeout_ms: int = Field(default=30000, description="Connection timeout in milliseconds")
-    operation_timeout_ms: int = Field(default=30000, description="Operation timeout in milliseconds")
+    connection_timeout_ms: int = Field(
+        default=30000, description="Connection timeout in milliseconds"
+    )
+    operation_timeout_ms: int = Field(
+        default=30000, description="Operation timeout in milliseconds"
+    )
     io_threads: int = Field(default=1, description="Number of IO threads")
-    message_listener_threads: int = Field(default=1, description="Number of message listener threads")
-    concurrent_lookup_requests: int = Field(default=50000, description="Max concurrent lookup requests")
-    auth: PulsarAuthConfig = Field(default_factory=PulsarAuthConfig, description="Authentication configuration")
+    message_listener_threads: int = Field(
+        default=1, description="Number of message listener threads"
+    )
+    concurrent_lookup_requests: int = Field(
+        default=50000, description="Max concurrent lookup requests"
+    )
+    auth: PulsarAuthConfig = Field(
+        default_factory=PulsarAuthConfig, description="Authentication configuration"
+    )
     use_tls: bool = Field(default=False, description="Whether to use TLS for connection")
-    tls_trust_certs_file_path: Optional[str] = Field(default=None, description="TLS trust certs file path if using TLS")
-    tls_allow_insecure_connection: bool = Field(default=False, description="Allow insecure TLS connection")
-    consumer_topics: List[PulsarTopicConfig] = Field(default_factory=list, description="List of topics to consume from")
-    producer_topics: List[PulsarTopicConfig] = Field(default_factory=list, description="List of topics to produce to")
+    tls_trust_certs_file_path: Optional[str] = Field(
+        default=None, description="TLS trust certs file path if using TLS"
+    )
+    tls_allow_insecure_connection: bool = Field(
+        default=False, description="Allow insecure TLS connection"
+    )
+    consumer_topics: List[PulsarTopicConfig] = Field(
+        default_factory=list, description="List of topics to consume from"
+    )
+    producer_topics: List[PulsarTopicConfig] = Field(
+        default_factory=list, description="List of topics to produce to"
+    )
 
 
 class PulsarConfigManager:
@@ -73,7 +103,9 @@ class PulsarConfigManager:
             config_path: Path to the Pulsar configuration YAML file.
                          If None, will try to load from environment variable or default location.
         """
-        self.config_path = config_path or os.environ.get("PULSAR_CONFIG_PATH") or "config/pulsar_topics.yaml"
+        self.config_path = (
+            config_path or os.environ.get("PULSAR_CONFIG_PATH") or "config/pulsar_topics.yaml"
+        )
         self.config: Optional[PulsarConfig] = None
 
     def load(self) -> PulsarConfig:
@@ -88,7 +120,7 @@ class PulsarConfigManager:
             ValidationError: If the configuration file contains invalid values.
         """
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, "r") as f:
                 config_data = yaml.safe_load(f)
 
             self.config = PulsarConfig(**config_data)
@@ -122,7 +154,9 @@ class PulsarConfigManager:
             client_config["use_tls"] = True
             if self.config.tls_trust_certs_file_path:
                 client_config["tls_trust_certs_file_path"] = self.config.tls_trust_certs_file_path
-            client_config["tls_allow_insecure_connection"] = self.config.tls_allow_insecure_connection
+            client_config["tls_allow_insecure_connection"] = (
+                self.config.tls_allow_insecure_connection
+            )
 
         # Add authentication if configured
         auth_params = self.get_auth_params()
@@ -148,16 +182,13 @@ class PulsarConfigManager:
         if self.config.auth.auth_type == "token":
             if not self.config.auth.token:
                 raise ValueError("Token authentication specified but no token provided")
-            auth_params["authentication"] = {
-                "type": "token",
-                "token": self.config.auth.token
-            }
+            auth_params["authentication"] = {"type": "token", "token": self.config.auth.token}
         elif self.config.auth.auth_type == "oauth2":
             if not self.config.auth.oauth_params:
                 raise ValueError("OAuth2 authentication specified but no parameters provided")
             auth_params["authentication"] = {
                 "type": "oauth2",
-                "params": self.config.auth.oauth_params
+                "params": self.config.auth.oauth_params,
             }
 
         return auth_params
@@ -183,4 +214,3 @@ class PulsarConfigManager:
         if not self.config:
             self.load()
         return self.config.producer_topics
-

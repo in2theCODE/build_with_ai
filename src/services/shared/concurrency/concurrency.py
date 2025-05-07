@@ -9,18 +9,32 @@ of program synthesis.
 
 import asyncio
 import concurrent.futures
+from contextlib import contextmanager
+from dataclasses import dataclass
+from enum import Enum
 import functools
 import logging
 import os
 import time
-from contextlib import contextmanager
-from dataclasses import dataclass
-from enum import Enum
-from typing import Dict, Any, List, Optional, Callable, TypeVar, Generic, Awaitable, Tuple, Union, Set, Coroutine
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
 
 # Define type variables for generic typing
-T = TypeVar('T')
-R = TypeVar('R')
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 class TaskPriority(Enum):
@@ -66,20 +80,27 @@ class TaskPool:
         if use_processes:
             self.executor = concurrent.futures.ProcessPoolExecutor(max_workers=self.max_workers)
         else:
-            self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers,
-                                                                  thread_name_prefix="synthesis-worker")
+            self.executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.max_workers, thread_name_prefix="synthesis-worker"
+            )
 
         # Task tracking
         self.tasks: Dict[str, TaskInfo] = {}
         self.futures: Dict[str, concurrent.futures.Future] = {}
 
-        self.logger.info(f"Initialized task pool with {self.max_workers} workers (using {'processes' if use_processes else 'threads'})")
+        self.logger.info(
+            f"Initialized task pool with {self.max_workers} workers (using {'processes' if use_processes else 'threads'})"
+        )
 
-    def submit(self, func: Callable[..., T], *args: Any,
-               task_id: Optional[str] = None,
-               task_name: Optional[str] = None,
-               priority: TaskPriority = TaskPriority.MEDIUM,
-               **kwargs: Any) -> str:
+    def submit(
+        self,
+        func: Callable[..., T],
+        *args: Any,
+        task_id: Optional[str] = None,
+        task_name: Optional[str] = None,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+        **kwargs: Any,
+    ) -> str:
         """
         Submit a task to the pool.
 
@@ -103,12 +124,7 @@ class TaskPool:
             task_name = func.__name__
 
         # Create task info
-        task_info = TaskInfo(
-            id=task_id,
-            name=task_name,
-            priority=priority,
-            created_at=time.time()
-        )
+        task_info = TaskInfo(id=task_id, name=task_name, priority=priority, created_at=time.time())
 
         # Store task info
         self.tasks[task_id] = task_info
@@ -202,7 +218,9 @@ class TaskPool:
 
         return canceled
 
-    def wait_for_tasks(self, task_ids: List[str], timeout: Optional[float] = None) -> Dict[str, str]:
+    def wait_for_tasks(
+        self, task_ids: List[str], timeout: Optional[float] = None
+    ) -> Dict[str, str]:
         """
         Wait for multiple tasks to complete.
 
@@ -214,7 +232,9 @@ class TaskPool:
             Dictionary mapping task IDs to status
         """
         # Get futures for all valid task IDs
-        futures_to_wait = {self.futures[task_id]: task_id for task_id in task_ids if task_id in self.futures}
+        futures_to_wait = {
+            self.futures[task_id]: task_id for task_id in task_ids if task_id in self.futures
+        }
 
         if not futures_to_wait:
             return {}
@@ -362,10 +382,13 @@ class AsyncTaskManager:
             # Update completion time
             task_info.completed_at = time.time()
 
-    async def submit(self, coro: Coroutine[Any, Any, T],
-                     task_id: Optional[str] = None,
-                     task_name: Optional[str] = None,
-                     priority: TaskPriority = TaskPriority.MEDIUM) -> str:
+    async def submit(
+        self,
+        coro: Coroutine[Any, Any, T],
+        task_id: Optional[str] = None,
+        task_name: Optional[str] = None,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+    ) -> str:
         """
         Submit a coroutine to be executed.
 
@@ -387,12 +410,7 @@ class AsyncTaskManager:
             task_name = f"async-task-{task_id}"
 
         # Create task info
-        task_info = TaskInfo(
-            id=task_id,
-            name=task_name,
-            priority=priority,
-            created_at=time.time()
-        )
+        task_info = TaskInfo(id=task_id, name=task_name, priority=priority, created_at=time.time())
 
         # Store task info
         self.tasks[task_id] = task_info
@@ -400,7 +418,9 @@ class AsyncTaskManager:
         # Add task to appropriate queue
         await self.task_queues[priority].put((task_id, coro))
 
-        self.logger.debug(f"Submitted async task {task_id} ({task_name}) with priority {priority.name}")
+        self.logger.debug(
+            f"Submitted async task {task_id} ({task_name}) with priority {priority.name}"
+        )
 
         return task_id
 
@@ -495,7 +515,9 @@ class AsyncTaskManager:
 
         return True
 
-    async def wait_for_tasks(self, task_ids: List[str], timeout: Optional[float] = None) -> Dict[str, str]:
+    async def wait_for_tasks(
+        self, task_ids: List[str], timeout: Optional[float] = None
+    ) -> Dict[str, str]:
         """
         Wait for multiple tasks to complete.
 
@@ -595,8 +617,9 @@ class ParallelExecutor:
 
         self.logger.info(f"Initialized parallel executor with {self.max_workers} workers")
 
-    def map(self, func: Callable[[T], R], items: List[T],
-            chunk_size: Optional[int] = None) -> List[R]:
+    def map(
+        self, func: Callable[[T], R], items: List[T], chunk_size: Optional[int] = None
+    ) -> List[R]:
         """
         Apply a function to each item in a list in parallel.
 
@@ -616,7 +639,7 @@ class ParallelExecutor:
             chunk_size = max(1, min(100, len(items) // (self.max_workers * 2)))
 
         # Create chunks
-        chunks = [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+        chunks = [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
 
         # Define function to process a chunk
         def process_chunk(chunk: List[T]) -> List[R]:
@@ -637,7 +660,9 @@ class ParallelExecutor:
         # Flatten results
         return [result for chunk_result in results for result in chunk_result]
 
-    def execute_all(self, tasks: List[Tuple[Callable[..., R], List[Any], Dict[str, Any]]]) -> List[R]:
+    def execute_all(
+        self, tasks: List[Tuple[Callable[..., R], List[Any], Dict[str, Any]]]
+    ) -> List[R]:
         """
         Execute a list of tasks in parallel.
 
@@ -692,10 +717,13 @@ def parallel_context(max_workers: Optional[int] = None, use_processes: bool = Fa
         executor.shutdown()
 
 
-def run_parallel(func: Callable[[T], R], items: List[T],
-                 max_workers: Optional[int] = None,
-                 use_processes: bool = False,
-                 chunk_size: Optional[int] = None) -> List[R]:
+def run_parallel(
+    func: Callable[[T], R],
+    items: List[T],
+    max_workers: Optional[int] = None,
+    use_processes: bool = False,
+    chunk_size: Optional[int] = None,
+) -> List[R]:
     """
     Run a function on a list of items in parallel.
 

@@ -208,14 +208,7 @@ services:
     early_stopping: true
     max_retries: 3
 
-  # Template Discovery
-  template_discovery:
-    enabled: true
-    app_path: "/app"
 
-  # Template Library Volume
-  template_lib_volume:
-    spec_templates_path: "/app/spec-templates"
 
   # Verifier
   verifier:

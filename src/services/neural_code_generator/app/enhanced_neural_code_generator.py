@@ -14,20 +14,23 @@ The component is optimized for DeepSeek 8B model and containerized deployment
 with Apache Pulsar integration for event-driven architecture.
 """
 
-import logging
-import time
 import json
+import logging
 from pathlib import Path
-from typing import Dict, Any, Union
 import platform
-import numpy as np
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from sentence_transformers import SentenceTransformer
+import time
+from typing import Any, Dict, Union
 
-from src.services.shared.models.base import BaseComponent
+import numpy as np
+from sentence_transformers import SentenceTransformer
 from src.services.shared import SynthesisResult
-from src.services.shared.pulsar import PulsarConnection, MessageProcessor
+from src.services.shared.models.base import BaseComponent
+from src.services.shared.pulsar import MessageProcessor
+from src.services.shared.pulsar import PulsarConnection
+import torch
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
+
 
 def _initialize_base_model(self):
     """Initialize the base DeepSeek model with optimizations."""
@@ -55,10 +58,7 @@ def _initialize_base_model(self):
             load_kwargs["device_map"] = "auto"
 
         # Load the model with optimized parameters
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_path,
-            **load_kwargs
-        )
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_path, **load_kwargs)
 
         # Set model to evaluation mode
         self.model.eval()
@@ -68,6 +68,7 @@ def _initialize_base_model(self):
         raise
     finally:
         self.logger.info("Base model initialization complete")
+
 
 class EnhancedNeuralCodeGenerator(BaseComponent):
     """
@@ -167,9 +168,15 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
     def _initialize_models(self):
         """Initialize the neural models and other services."""
         try:
-            self.logger.info(f"Initializing neural code generator with {self.num_attention_heads} attention heads")
-            self.logger.info(f"Context length: {self.max_context_length}, Target language: {self.target_language}")
-            self.logger.info(f"Using DeepSeek-Coder 8B model with quantization: {self.quantization}")
+            self.logger.info(
+                f"Initializing neural code generator with {self.num_attention_heads} attention heads"
+            )
+            self.logger.info(
+                f"Context length: {self.max_context_length}, Target language: {self.target_language}"
+            )
+            self.logger.info(
+                f"Using DeepSeek-Coder 8B model with quantization: {self.quantization}"
+            )
 
             # Initialize tokenizer
             self._initialize_tokenizer()
@@ -206,9 +213,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         try:
             self.logger.info(f"Loading tokenizer from {self.model_path}")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                trust_remote_code=True,
-                use_fast=True
+                self.model_path, trust_remote_code=True, use_fast=True
             )
             self.tokenizer.padding_side = "left"
             self.logger.info(f"Tokenizer vocabulary size: {len(self.tokenizer)}")
@@ -238,10 +243,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 load_kwargs["bnb_4bit_quant_type"] = "nf4"
 
             # Load the model with optimized parameters
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                **load_kwargs
-            )
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_path, **load_kwargs)
 
             # Enable FlashAttention if available and requested
             if self.use_flash_attention and hasattr(self.model.config, "attn_implementation"):
@@ -252,7 +254,9 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 self.model.config.attention_mode = "sliding_window"
                 self.model.config.window_size = self.attention_window_size
 
-            self.logger.info(f"Model loaded successfully with {self.model.config.num_attention_heads} attention heads")
+            self.logger.info(
+                f"Model loaded successfully with {self.model.config.num_attention_heads} attention heads"
+            )
 
             # Optimize for generation
             self.model.eval()
@@ -284,12 +288,15 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         try:
             # First try to import from local modules
             try:
-                from program_synthesis_system.src.components.knowledge_base.vector_knowledge_base import VectorKnowledgeBase
+                from program_synthesis_system.src.components.knowledge_base.vector_knowledge_base import (
+                    VectorKnowledgeBase,
+                )
+
                 self.knowledge_base = VectorKnowledgeBase(
                     storage_type="file",
                     file_storage_path=self.file_storage_path,
                     embedding_model=self.embedding_model,
-                    similarity_threshold=self.similarity_threshold
+                    similarity_threshold=self.similarity_threshold,
                 )
             except ImportError:
                 # Fall back to a basic implementation
@@ -302,6 +309,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
 
     def _initialize_simple_knowledge_base(self):
         """Initialize a simplified knowledge base using local file storage."""
+
         # This is a simplified implementation for when the full knowledge base isn't available
         class SimpleKnowledgeBase:
             def __init__(self, path, embedding_model, threshold):
@@ -315,7 +323,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             def _load_index(self):
                 index_path = self.path / "index.json"
                 if index_path.exists():
-                    with open(index_path, 'r') as f:
+                    with open(index_path, "r") as f:
                         self.index = json.load(f)
 
             def search(self, query, limit=5):
@@ -328,25 +336,25 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 # Simple vector similarity search
                 results = []
                 for item_id, item_data in self.index.items():
-                    if 'embedding' in item_data:
-                        item_embedding = np.array(item_data['embedding'])
+                    if "embedding" in item_data:
+                        item_embedding = np.array(item_data["embedding"])
                         similarity = np.dot(query_embedding, item_embedding)
 
                         if similarity >= self.threshold:
-                            results.append({
-                                'id': item_id,
-                                'code': item_data.get('code', ''),
-                                'score': float(similarity)
-                            })
+                            results.append(
+                                {
+                                    "id": item_id,
+                                    "code": item_data.get("code", ""),
+                                    "score": float(similarity),
+                                }
+                            )
 
                 # Sort by similarity and return top results
-                results.sort(key=lambda x: x['score'], reverse=True)
+                results.sort(key=lambda x: x["score"], reverse=True)
                 return results[:limit]
 
         self.knowledge_base = SimpleKnowledgeBase(
-            self.file_storage_path,
-            self.embedding_model_instance,
-            self.similarity_threshold
+            self.file_storage_path, self.embedding_model_instance, self.similarity_threshold
         )
 
     def _initialize_tree_transformer(self):
@@ -359,6 +367,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
 
             # Import AST utilities
             import ast
+
             import astunparse
 
             # Store the utilities for later use
@@ -415,7 +424,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         grammar_path = Path(f"grammars/{self.target_language}.json")
         if grammar_path.exists():
             try:
-                with open(grammar_path, 'r') as f:
+                with open(grammar_path, "r") as f:
                     self.language_grammar = json.load(f)
                 self.syntax_beam_search_ready = True
                 self.logger.info(f"Loaded grammar for {self.target_language}")
@@ -438,6 +447,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         """Basic Python syntax checker using ast.parse."""
         try:
             import ast
+
             ast.parse(code)
             return True
         except SyntaxError:
@@ -453,7 +463,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         # with neural generation
 
         # Check if we have a working syntax checker
-        if hasattr(self, 'syntax_checker') and callable(self.syntax_checker):
+        if hasattr(self, "syntax_checker") and callable(self.syntax_checker):
             self.hybrid_model_ready = True
             self.logger.info("Hybrid grammar-neural model initialized successfully")
         else:
@@ -477,7 +487,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 service_url=self.pulsar_service_url,
                 consumer_topic=self.input_topic,
                 producer_topic=self.output_topic,
-                subscription_name=self.subscription_name
+                subscription_name=self.subscription_name,
             )
 
             self.logger.info("Pulsar connection initialized successfully")
@@ -490,6 +500,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
 
     def _implement_basic_pulsar(self):
         """Implement a basic version of PulsarConnection for testing."""
+
         class BasicPulsarConnection:
             def __init__(self, service_url, consumer_topic, producer_topic, subscription_name):
                 self.service_url = service_url
@@ -521,7 +532,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             service_url=self.pulsar_service_url,
             consumer_topic=self.input_topic,
             producer_topic=self.output_topic,
-            subscription_name=self.subscription_name
+            subscription_name=self.subscription_name,
         )
 
     async def start_service(self):
@@ -559,7 +570,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         """Process an incoming message from Pulsar."""
         try:
             # Parse the message
-            payload = json.loads(message.data().decode('utf-8'))
+            payload = json.loads(message.data().decode("utf-8"))
 
             # Extract the specification
             formal_spec = self._parse_specification(payload)
@@ -571,7 +582,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             response = {
                 "request_id": payload.get("request_id"),
                 "status": "success",
-                "result": result.to_dict()  # Convert result to dictionary
+                "result": result.to_dict(),  # Convert result to dictionary
             }
 
             await self.pulsar_connection.produce(json.dumps(response))
@@ -587,9 +598,9 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             # Send error response
             try:
                 error_response = {
-                    "request_id": payload.get("request_id") if 'payload' in locals() else "unknown",
+                    "request_id": payload.get("request_id") if "payload" in locals() else "unknown",
                     "status": "error",
-                    "error": str(e)
+                    "error": str(e),
                 }
                 await self.pulsar_connection.produce(json.dumps(error_response))
             except:
@@ -608,7 +619,9 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         # Check if the payload contains a raw specification string
         if "specification" in payload:
             try:
-                from program_synthesis_system.src.shared import FormalSpecification
+                from program_synthesis_system.src.shared import (
+                    FormalSpecification,
+                )
 
                 # Create a basic FormalSpecification object
                 spec = FormalSpecification(
@@ -616,7 +629,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                     types=payload.get("types", {}),
                     constraints=payload.get("constraints", []),
                     examples=payload.get("examples", []),
-                    ast=payload.get("ast", {})
+                    ast=payload.get("ast", {}),
                 )
 
                 return spec
@@ -651,7 +664,11 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         prompt = self._create_generation_prompt(formal_spec)
 
         # Augment with retrieved examples if enabled
-        if self.use_retrieval_augmentation and hasattr(self, 'knowledge_base') and self.knowledge_base:
+        if (
+            self.use_retrieval_augmentation
+            and hasattr(self, "knowledge_base")
+            and self.knowledge_base
+        ):
             prompt = self._augment_with_retrievals(prompt, formal_spec)
 
         # Select the appropriate generation strategy based on enabled techniques
@@ -659,15 +676,17 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         confidence_score = 0.0
         strategy_used = "neural"
 
-        if self.use_tree_transformers and getattr(self, 'tree_transformer_ready', False):
-            program_ast, confidence_score = self._generate_with_tree_transformer(prompt, formal_spec)
+        if self.use_tree_transformers and getattr(self, "tree_transformer_ready", False):
+            program_ast, confidence_score = self._generate_with_tree_transformer(
+                prompt, formal_spec
+            )
             strategy_used = "tree_transformer"
 
-        elif self.use_hierarchical_generation and getattr(self, 'hierarchical_model_ready', False):
+        elif self.use_hierarchical_generation and getattr(self, "hierarchical_model_ready", False):
             program_ast, confidence_score = self._generate_hierarchically(prompt, formal_spec)
             strategy_used = "hierarchical"
 
-        elif self.use_hybrid_grammar_neural and getattr(self, 'hybrid_model_ready', False):
+        elif self.use_hybrid_grammar_neural and getattr(self, "hybrid_model_ready", False):
             program_ast, confidence_score = self._generate_with_hybrid_model(prompt, formal_spec)
             strategy_used = "hybrid_grammar_neural"
 
@@ -679,19 +698,22 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         end_time = time.time()
         time_taken = end_time - start_time
 
-        self.logger.info(f"Code generation completed in {time_taken:.2f} seconds using {strategy_used} strategy")
+        self.logger.info(
+            f"Code generation completed in {time_taken:.2f} seconds using {strategy_used} strategy"
+        )
         self.logger.info(f"Confidence score: {confidence_score:.4f}")
 
         # Create the result object
         try:
             # Try to import the SynthesisResult class
             from program_synthesis_system.src.shared import SynthesisResult
+
             result = SynthesisResult(
                 program_ast=program_ast,
                 confidence_score=confidence_score,
                 time_taken=time_taken,
                 strategy=strategy_used,
-                trace_id=trace_id
+                trace_id=trace_id,
             )
         except ImportError:
             # Create a simple dictionary result if the class is not available
@@ -700,7 +722,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 "confidence_score": confidence_score,
                 "time_taken": time_taken,
                 "strategy": strategy_used,
-                "trace_id": trace_id
+                "trace_id": trace_id,
             }
 
         return result
@@ -708,18 +730,18 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
     def _create_generation_prompt(self, formal_spec: Union[Dict[str, Any], Any]) -> str:
         """Create a suitable prompt for code generation from the formal specification."""
         # Handle different types of formal specification objects
-        if hasattr(formal_spec, 'types') and hasattr(formal_spec, 'constraints'):
+        if hasattr(formal_spec, "types") and hasattr(formal_spec, "constraints"):
             # It's a FormalSpecification object
             types = formal_spec.types
             constraints = formal_spec.constraints
-            examples = formal_spec.examples if hasattr(formal_spec, 'examples') else []
-            ast_info = formal_spec.ast if hasattr(formal_spec, 'ast') else {}
+            examples = formal_spec.examples if hasattr(formal_spec, "examples") else []
+            ast_info = formal_spec.ast if hasattr(formal_spec, "ast") else {}
         elif isinstance(formal_spec, dict):
             # It's a dictionary
-            types = formal_spec.get('types', {})
-            constraints = formal_spec.get('constraints', [])
-            examples = formal_spec.get('examples', [])
-            ast_info = formal_spec.get('ast', {})
+            types = formal_spec.get("types", {})
+            constraints = formal_spec.get("constraints", [])
+            examples = formal_spec.get("examples", [])
+            ast_info = formal_spec.get("ast", {})
         else:
             # Unknown type, use empty values
             types = {}
@@ -736,8 +758,8 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             # Handle different constraint formats
             if isinstance(constraint, str):
                 constraints_text.append(constraint)
-            elif isinstance(constraint, dict) and 'description' in constraint:
-                constraints_text.append(constraint['description'])
+            elif isinstance(constraint, dict) and "description" in constraint:
+                constraints_text.append(constraint["description"])
             else:
                 constraints_text.append(str(constraint))
 
@@ -747,20 +769,22 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         examples_info = ""
         for i, example in enumerate(examples):
             if isinstance(example, dict):
-                input_values = ", ".join([f"{k}={v}" for k, v in example.get('input', {}).items()])
-                output_value = example.get('output', '')
-                examples_info += f"Example {i+1}: For input {input_values}, output should be {output_value}\n"
+                input_values = ", ".join([f"{k}={v}" for k, v in example.get("input", {}).items()])
+                output_value = example.get("output", "")
+                examples_info += (
+                    f"Example {i+1}: For input {input_values}, output should be {output_value}\n"
+                )
 
         # Extract function name and parameters
-        function_name = ast_info.get('name', 'generated_function')
+        function_name = ast_info.get("name", "generated_function")
         parameters = []
 
         # Extract parameters from AST if available
-        if 'parameters' in ast_info:
-            for param in ast_info['parameters']:
-                if isinstance(param, dict) and 'name' in param:
-                    param_name = param['name']
-                    param_type = param.get('type', '')
+        if "parameters" in ast_info:
+            for param in ast_info["parameters"]:
+                if isinstance(param, dict) and "name" in param:
+                    param_name = param["name"]
+                    param_type = param.get("type", "")
                     if param_type:
                         parameters.append(f"{param_name}: {param_type}")
                     else:
@@ -769,7 +793,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                     parameters.append(param)
 
         params_str = ", ".join(parameters)
-        return_type = ast_info.get('return_type', '')
+        return_type = ast_info.get("return_type", "")
 
         # Format return type
         return_type_str = f" -> {return_type}" if return_type else ""

@@ -1,11 +1,13 @@
 # test_event_converter.py
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 from enum import Enum
 
-from src.services.shared.models.events.events import BaseEvent
-from src.services.shared.models.events.events import EventType, EventPriority
-from src.services.shared.models.event_avro import EventAvro
 from infra.registration.event_converter import EventConverter
+from src.services.shared.models.event_avro import EventAvro
+from src.services.shared.models.events import BaseEvent
+from src.services.shared.models.events import EventPriority
+from src.services.shared.models.events import EventType
 
 
 class TestEnum(str, Enum):
@@ -56,9 +58,7 @@ def test_ensure_avro_compatible():
     complex_data = {
         "enum": TestEnum.VALUE1,
         "date": datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
-        "nested": {
-            "list": [TestEnum.VALUE2, datetime(2023, 1, 2, tzinfo=timezone.utc)]
-        },
+        "nested": {"list": [TestEnum.VALUE2, datetime(2023, 1, 2, tzinfo=timezone.utc)]},
     }
 
     avro_data = EventConverter._ensure_avro_compatible(complex_data)

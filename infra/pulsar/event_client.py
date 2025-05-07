@@ -1,11 +1,13 @@
 """Apache Pulsar event client for the program synthesis system."""
 
-from typing import Optional, Callable
 import logging
+from typing import Callable, Optional
 
-from src.services.shared.models import BaseEvent, load_avro_schema
-from src.services.shared.models.events.events import EventType
 from infra.registration.schema_registry import SchemaRegistryClient
+from src.services.shared.models import BaseEvent
+from src.services.shared.models import load_avro_schema
+from src.services.shared.models.events import EventType
+
 
 logger = logging.getLogger(__name__)
 
@@ -139,9 +141,7 @@ class PulsarEventClient:
             )
             thread.start()
 
-            logger.info(
-                f"Subscribed to topic {full_topic} with subscription {subscription_name}"
-            )
+            logger.info(f"Subscribed to topic {full_topic} with subscription {subscription_name}")
 
     def _receive_loop(self, consumer, topic, subscription_name):
         """Continuous loop to receive messages."""

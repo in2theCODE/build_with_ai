@@ -1,9 +1,0 @@
-name: id
-type: STRING
-description: Unique identifier
-required: true
-default_value: ""
-validation_rules:
-  - rule_type: PATTERN
-    expression: "^[a-zA-Z0-9_-]+$"
-    error_message: "ID must contain only alphanumeric characters, underscores, and hyphens"

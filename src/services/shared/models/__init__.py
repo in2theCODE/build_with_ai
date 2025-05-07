@@ -1,122 +1,150 @@
-"""Event models and schema registration for Apache Pulsar."""
+"""
+Event models and schema registration for Apache Pulsar.
+
+This module provides a centralized import point for all models used in the system,
+as well as functionality for registering schemas with Apache Pulsar's schema registry.
+It handles serialization and deserialization of events and messages using Avro.
+"""
+
 import os
-# Import existing models
-from src.services.shared.models.events.events import (
-    BaseEvent,
-    CodeGenerationRequestedEvent,
-    CodeGenerationCompletedEvent,
-    CodeGenerationFailedEvent,
-    KnowledgeQueryRequestedEvent,
-    KnowledgeQueryCompletedEvent,
-    KnowledgeUpdatedEvent,
-    SpecSheetCreatedEvent,
-    SpecSheetUpdatedEvent,
-    SpecSheetDeletedEvent,
-    # Add other event types
-    EventType,
-    EventPriority,
-    SpecSheetEvent,
-    SpecInstanceEvent,
-    # Add payload models
-    CodeGenerationRequestPayload,
-    CodeGenerationCompletedPayload,
-    CodeGenerationFailedPayload,
-    KnowledgeQueryPayload,
-    KnowledgeQueryCompletedPayload,
-    KnowledgeUpdatedPayload
-)
-from src.services.shared.models.event_avro import EventAvro
+from typing import Any, Dict, Type
+
 from infra.registration.event_converter import EventConverter
-from infra.registration.schema_registry import SchemaRegistryClient, register_pydantic_model
-from src.services.shared.models.schema_init import load_avro_schema, get_schema_registry
-from src.services.shared.models.base import (
-    BaseMessage,
-    ProcessingMode,
-    TaskStatus,
-    TaskPriority,
-    EventPriority as BaseEventPriority
-)
-from src.services.shared.models.base import BaseComponent, ConfigurableComponent
-from src.services.shared.models.enums import (
-    Components,
-    Events,
-    Database,
-    DatabaseConfig,
-    Paths,
-    Techniques,
-    ModelConfig,
-    Metrics,
-    MetricsConfig,
-    DeploymentConfig,
-    ErrorCodes,
-    Constants
-)
-from src.services.shared.models.messages import (
-    SynthesisStrategy,
-    DisclosureLevel,
-    ProjectStatus,
-    ProjectType,
-    Pattern,
-    IntentAnalysis,
-    ErrorResponse,
-    QueryResponse,
-    QueryRequest,
-    PatternResponse,
-    HealthResponse,
-    PatternListResponse,
-    PatternCreateRequest,
-    Task,
-    SymbolicTestResult,
-    InterfaceVerificationResult
-)
+from infra.registration.schema_registry import register_pydantic_model
+from infra.registration.schema_registry import SchemaRegistryClient
 
-# Import from types.py
-from src.services.shared.models.types import (
-    VerificationResult,
-    FormalSpecification,
-    VerificationReport,
-    ConstraintRelaxationRequest,
-    ConstraintRelaxationResponse
-)
+# Base models
+from src.services.shared.models.base import BaseComponent
+from src.services.shared.models.base import BaseMessage
+from src.services.shared.models.base import ConfigurableComponent
+from src.services.shared.models.base import EventPriority as BaseEventPriority
 
-# Import from specifications.py
+# Enumerations
+from src.services.shared.models.enums import Components
+from src.services.shared.models.enums import Constants
+from src.services.shared.models.enums import Database
+from src.services.shared.models.enums import DatabaseConfig
+from src.services.shared.models.enums import DeploymentConfig
+from src.services.shared.models.enums import DisclosureLevel
+from src.services.shared.models.enums import ErrorCodes
+from src.services.shared.models.enums import Events
+from src.services.shared.models.enums import Metrics
+from src.services.shared.models.enums import MetricsConfig
+from src.services.shared.models.enums import ModelConfig
+from src.services.shared.models.enums import Paths
+from src.services.shared.models.enums import ProcessingMode
+from src.services.shared.models.enums import ProjectStatus
+from src.services.shared.models.enums import ProjectType
+from src.services.shared.models.enums import SynthesisStrategy
+from src.services.shared.models.enums import TaskPriority
+from src.services.shared.models.enums import TaskStatus
+from src.services.shared.models.enums import Techniques
+
+# Avro event model
+from src.services.shared.models.event_avro import EventAvro
+
+# Event models
+from src.services.shared.models.events import (
+    BaseEvent,  # Base event classes; Event implementations; Payload models
+)
+from src.services.shared.models.events import CodeGenerationCompletedEvent
+from src.services.shared.models.events import CodeGenerationCompletedPayload
+from src.services.shared.models.events import CodeGenerationFailedEvent
+from src.services.shared.models.events import CodeGenerationFailedPayload
+from src.services.shared.models.events import CodeGenerationRequestedEvent
+from src.services.shared.models.events import CodeGenerationRequestPayload
+from src.services.shared.models.events import EventPriority
+from src.services.shared.models.events import EventType
+from src.services.shared.models.events import KnowledgeQueryCompletedEvent
+from src.services.shared.models.events import KnowledgeQueryCompletedPayload
+from src.services.shared.models.events import KnowledgeQueryPayload
+from src.services.shared.models.events import KnowledgeQueryRequestedEvent
+from src.services.shared.models.events import KnowledgeUpdatedEvent
+from src.services.shared.models.events import KnowledgeUpdatedPayload
+from src.services.shared.models.events import SpecInstanceEvent
+from src.services.shared.models.events import SpecSheetCreatedEvent
+from src.services.shared.models.events import SpecSheetDeletedEvent
+from src.services.shared.models.events import SpecSheetEvent
+from src.services.shared.models.events import SpecSheetUpdatedEvent
+
+# Message models
+from src.services.shared.models.messages import ErrorResponse
+from src.services.shared.models.messages import HealthResponse
+from src.services.shared.models.messages import IntentAnalysis
+from src.services.shared.models.messages import InterfaceVerificationResult
+from src.services.shared.models.messages import Pattern
+from src.services.shared.models.messages import PatternCreateRequest
+from src.services.shared.models.messages import PatternListResponse
+from src.services.shared.models.messages import PatternResponse
+from src.services.shared.models.messages import QueryRequest
+from src.services.shared.models.messages import QueryResponse
+from src.services.shared.models.messages import SymbolicTestResult
+from src.services.shared.models.messages import Task
+
+# Project models
+from src.services.shared.models.projects import ProjectAnalysisRequestMessage
+from src.services.shared.models.projects import ProjectCreatedMessage
+from src.services.shared.models.projects import Requirement
+from src.services.shared.models.projects import TechnologyStack
 from src.services.shared.models.specifications import (
-    FieldDefinition,
-    SectionDefinition,
-    SpecSheetDefinition,
-    FieldValue,
-    SectionValues,
-    SpecSheet,
-    SpecSheetGenerationRequestMessage,
     SpecSheetCompletionRequestMessage,
-    TemplateRequest,
-    TemplateResponse
+)
+from src.services.shared.models.specifications import (
+    SpecSheetGenerationRequestMessage,
 )
 
-# Import from projects.py
-from src.services.shared.models.projects import (
-    TechnologyStack,
-    Requirement,
-    ProjectCreatedMessage,
-    ProjectAnalysisRequestMessage
-)
+# Specifications
+from src.services.shared.models.specifications import FieldDefinition
+from src.services.shared.models.specifications import FieldValue
+from src.services.shared.models.specifications import SectionDefinition
+from src.services.shared.models.specifications import SectionValues
+from src.services.shared.models.specifications import SpecSheet
+from src.services.shared.models.specifications import SpecSheetDefinition
 
-# Import telemetry manager if needed
+# Telemetry
 from src.services.shared.models.telemetry import TelemetryManager
+
+# Types
+from src.services.shared.models.types import ConstraintRelaxationRequest
+from src.services.shared.models.types import ConstraintRelaxationResponse
+from src.services.shared.models.types import FormalSpecification
+from src.services.shared.models.types import VerificationReport
+from src.services.shared.models.types import VerificationResult
+
+
+# Schema registry
+
 
 # Registry client instance
 _schema_registry = None
 
 
 def init_schema_registry(url: str, auth_token: str = None):
-    """Initialize the schema registry client."""
+    """
+    Initialize the schema registry client.
+
+    Args:
+        url: The base URL of the schema registry
+        auth_token: Optional authentication token
+
+    Returns:
+        A dictionary mapping schema names to their IDs
+    """
     global _schema_registry
     _schema_registry = SchemaRegistryClient(url=url, auth_token=auth_token)
     return register_event_schemas()
 
 
 def register_event_schemas():
-    """Register all event schemas with the schema registry."""
+    """
+    Register all event schemas with the schema registry.
+
+    Returns:
+        A dictionary mapping schema names to their IDs
+
+    Raises:
+        RuntimeError: If the schema registry is not initialized
+    """
     if _schema_registry is None:
         raise RuntimeError("Schema registry client not initialized")
 
@@ -133,7 +161,7 @@ def register_event_schemas():
         KnowledgeUpdatedEvent,
         SpecSheetCreatedEvent,
         SpecSheetUpdatedEvent,
-        SpecSheetDeletedEvent
+        SpecSheetDeletedEvent,
     ]
 
     for model_class in event_models:
@@ -147,133 +175,71 @@ def register_event_schemas():
     return registered_schemas
 
 
-# Convenience serialization functions
 def serialize_event(event: BaseEvent) -> bytes:
-    """Serialize an event to Avro format."""
+    """
+    Serialize an event to Avro format.
+
+    Args:
+        event: The event to serialize
+
+    Returns:
+        The serialized event as bytes
+    """
     avro_event = EventConverter.to_avro(event)
-    return avro_event.model_dump_json().encode('utf-8')
+    return avro_event.model_dump_json().encode("utf-8")
 
 
 def deserialize_event(data: bytes) -> BaseEvent:
-    """Deserialize an event from Avro format."""
-    avro_data = EventAvro.model_validate_json(data.decode('utf-8'))
+    """
+    Deserialize an event from Avro format.
+
+    Args:
+        data: The serialized event data
+
+    Returns:
+        The deserialized event
+    """
+    avro_data = EventAvro.model_validate_json(data.decode("utf-8"))
     return EventConverter.from_avro(avro_data)
 
 
-# Export needed symbols
+# Export symbols
 __all__ = [
     # Models
-    'BaseEvent',
-    'EventType',
-    'EventPriority',
-    'BaseEventPriority',  # From base.py
-    'CodeGenerationRequestedEvent',
-    'CodeGenerationCompletedEvent',
-    'CodeGenerationFailedEvent',
-    'KnowledgeQueryRequestedEvent',
-    'KnowledgeQueryCompletedEvent',
-    'KnowledgeUpdatedEvent',
-    'SpecSheetCreatedEvent',
-    'SpecSheetUpdatedEvent',
-    'SpecSheetDeletedEvent',
-    'SpecSheetEvent',
-    'SpecInstanceEvent',
-    'EventAvro',
-    'BaseMessage',
-    'VerificationResult',
-
+    "BaseEvent",
+    "EventType",
+    "EventPriority",
+    "BaseEventPriority",
+    "CodeGenerationRequestedEvent",
+    "CodeGenerationCompletedEvent",
+    "CodeGenerationFailedEvent",
+    "KnowledgeQueryRequestedEvent",
+    "KnowledgeQueryCompletedEvent",
+    "KnowledgeUpdatedEvent",
+    "SpecSheetCreatedEvent",
+    "SpecSheetUpdatedEvent",
+    "SpecSheetDeletedEvent",
+    "SpecSheetEvent",
+    "SpecInstanceEvent",
+    "EventAvro",
+    "BaseMessage",
+    "VerificationResult",
     # From types.py
-    'FormalSpecification',
-    'VerificationReport',
-    'ConstraintRelaxationRequest',
-    'ConstraintRelaxationResponse',
-
+    "FormalSpecification",
+    "VerificationReport",
+    "ConstraintRelaxationRequest",
+    "ConstraintRelaxationResponse",
     # From specifications.py
-    'FieldDefinition',
-    'SectionDefinition',
-    'SpecSheetDefinition',
-    'FieldValue',
-    'SectionValues',
-    'SpecSheet',
-    'SpecSheetGenerationRequestMessage',
-    'SpecSheetCompletionRequestMessage',
-    'TemplateRequest',
-    'TemplateResponse',
-
+    "FieldDefinition",
+    "SectionDefinition",
+    "SpecSheetDefinition",
+    "FieldValue",
+    "SectionValues",
+    "SpecSheet",
+    "SpecSheetGenerationRequestMessage",
+    "SpecSheetCompletionRequestMessage",
     # From projects.py
-    'TechnologyStack',
-    'Requirement',
-    'ProjectCreatedMessage',
-    'ProjectAnalysisRequestMessage',
-
-    # Payload models
-    'CodeGenerationRequestPayload',
-    'CodeGenerationCompletedPayload',
-    'CodeGenerationFailedPayload',
-    'KnowledgeQueryPayload',
-    'KnowledgeQueryCompletedPayload',
-    'KnowledgeUpdatedPayload',
-
-    # From base.py
-    'ProcessingMode',
-    'TaskStatus',
-    'TaskPriority',
-
-    # From base_component.py
-    'BaseComponent',
-    'ConfigurableComponent',
-
-    # From enums.py
-    'Components',
-    'Events',
-    'Database',
-    'DatabaseConfig',
-    'Paths',
-    'Techniques',
-    'ModelConfig',
-    'Metrics',
-    'MetricsConfig',
-    'DeploymentConfig',
-    'ErrorCodes',
-    'Constants',
-
-    # From messages.py
-    'SynthesisStrategy',
-    'DisclosureLevel',
-    'ProjectStatus',
-    'ProjectType',
-    'Pattern',
-    'IntentAnalysis',
-    'ErrorResponse',
-    'QueryResponse',
-    'QueryRequest',
-    'PatternResponse',
-    'HealthResponse',
-    'PatternListResponse',
-    'PatternCreateRequest',
-    'Task',
-    'SymbolicTestResult',
-    'InterfaceVerificationResult',
-
-    # From telemetry.py
-    'TelemetryManager',
-
-    # Functions
-    'init_schema_registry',
-    'register_event_schemas',
-    'get_schema_registry',
-    'load_avro_schema',
-    'serialize_event',
-    'deserialize_event'
+    "TechnologyStack",
+    "Requirement",
+    "ProjectCreatedMessage",
 ]
-
-# Auto-initialize if environment variables are set
-if os.environ.get("SCHEMA_REGISTRY_URL") and os.environ.get("AUTO_REGISTER_SCHEMAS", "").lower() == "true":
-    try:
-        init_schema_registry(
-            os.environ.get("SCHEMA_REGISTRY_URL"),
-            os.environ.get("SCHEMA_REGISTRY_TOKEN")
-        )
-        print("Successfully registered event schemas with Schema Registry")
-    except Exception as e:
-        print(f"Failed to initialize schema registry: {e}")

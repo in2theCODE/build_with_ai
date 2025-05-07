@@ -4,20 +4,22 @@ This module provides a secure event listener that verifies and processes
 events from Apache Pulsar, implementing the zero-trust security model.
 """
 
-import os
-import json
-import hmac
-import time
+import asyncio
 import base64
 import hashlib
-import asyncio
+import hmac
+import json
 import logging
-from typing import Dict, Any, Optional, Callable, List, Union, Awaitable
+import os
+import time
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
 import pulsar
 from pulsar.schema import *
 
-from program_synthesis_system.src.events.base_event import BaseEvent, EventType
+from ..models import BaseEvent
+from ..models import EventType
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ EventHandlerType = Callable[[BaseEvent], Union[None, Awaitable[None]]]
 
 class EventVerificationError(Exception):
     """Exception raised when event verification fails."""
+
     pass
 
 
@@ -38,16 +41,18 @@ class SecureEventListener:
     with support for HMAC-based message verification for the zero-trust security model.
     """
 
-    def __init__(self,
-                 service_url: str,
-                 subscription_name: str,
-                 event_types: List[EventType],
-                 secret_key: Optional[str] = None,
-                 tenant: str = "public",
-                 namespace: str = "code-generator",
-                 consumer_type: str = "Shared",
-                 ssl_cert_path: Optional[str] = None,
-                 max_retry_attempts: int = 3):
+    def __init__(
+        self,
+        service_url: str,
+        subscription_name: str,
+        event_types: List[EventType],
+        secret_key: Optional[str] = None,
+        tenant: str = "public",
+        namespace: str = "code-generator",
+        consumer_type: str = "Shared",
+        ssl_cert_path: Optional[str] = None,
+        max_retry_attempts: int = 3,
+    ):
         """
         Initialize the secure event listener.
 
@@ -74,7 +79,7 @@ class SecureEventListener:
         consumer_type_map = {
             "Exclusive": pulsar.ConsumerType.Exclusive,
             "Shared": pulsar.ConsumerType.Shared,
-            "Failover": pulsar.ConsumerType.Failover
+            "Failover": pulsar.ConsumerType.Failover,
         }
         self.consumer_type = consumer_type_map.get(consumer_type, pulsar.ConsumerType.Shared)
 
@@ -84,9 +89,7 @@ class SecureEventListener:
             logger.warning("Using default secret key for HMAC verification. This is insecure!")
 
         # Create Pulsar client
-        client_config = {
-            "service_url": service_url
-        }
+        client_config = {"service_url": service_url}
 
         # Add SSL configuration if specified
         if self.ssl_cert_path:
@@ -118,13 +121,16 @@ class SecureEventListener:
         categories = set()
         for event_type in self.event_types:
             if isinstance(event_type, EventType):
-                category = event_type.value.split('.')[0]
+                category = event_type.value.split(".")[0]
             else:
-                category = event_type.split('.')[0]
+                category = event_type.split(".")[0]
             categories.add(category)
 
         # Create topic names for each category
-        return [f"persistent://{self.tenant}/{self.namespace}/{category}-events" for category in categories]
+        return [
+            f"persistent://{self.tenant}/{self.namespace}/{category}-events"
+            for category in categories
+        ]
 
     def _verify_signature(self, data: Dict[str, Any]) -> bool:
         """
@@ -147,9 +153,7 @@ class SecureEventListener:
 
         # Generate expected signature
         expected_signature = hmac.new(
-            key=self.secret_key.encode(),
-            msg=canonical.encode(),
-            digestmod=hashlib.sha256
+            key=self.secret_key.encode(), msg=canonical.encode(), digestmod=hashlib.sha256
         ).digest()
         expected_signature_b64 = base64.b64encode(expected_signature).decode()
 
@@ -199,7 +203,7 @@ class SecureEventListener:
                     subscription_name=self.subscription_name,
                     consumer_type=self.consumer_type,
                     max_pending_messages=1000,
-                    receiver_queue_size=1000
+                    receiver_queue_size=1000,
                 )
                 self.consumers[topic] = consumer
                 logger.info(f"Subscribed to topic {topic}")
@@ -272,9 +276,7 @@ class SecureEventListener:
                             task = asyncio.create_task(handler(event))
                         else:
                             # Sync handler
-                            task = asyncio.create_task(
-                                asyncio.to_thread(handler, event)
-                            )
+                            task = asyncio.create_task(asyncio.to_thread(handler, event))
                         handler_tasks.append(task)
                     except Exception as e:
                         logger.error(f"Error calling handler for event {event.event_id}: {e}")

@@ -1,9 +1,10 @@
-import pytest
 from pydantic import ValidationError
-
+import pytest
 from src.services.shared.models.event_avro import EventAvro
-from src.services.shared.models.event_avro_converter import event_to_avro, avro_to_event
-from src.services.shared.models.events.events import BaseEvent as Event
+from src.services.shared.models.event_avro_converter import avro_to_event
+from src.services.shared.models.event_avro_converter import event_to_avro
+from src.services.shared.models.events import BaseEvent as Event
+
 
 # Import all your models
 

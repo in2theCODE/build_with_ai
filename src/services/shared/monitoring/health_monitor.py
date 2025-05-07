@@ -5,10 +5,11 @@ This module provides health monitoring capabilities for microservices,
 working with both the healthcheck API and circuit breaker pattern.
 """
 
+import asyncio
 import logging
 import time
-import asyncio
-from typing import Dict, Any, Optional, List, Callable
+from typing import Any, Callable, Dict, List, Optional
+
 
 # Try to import the metrics collector
 try:
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class HealthStatus:
     """Health status constants."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -37,10 +39,10 @@ class HealthMonitor:
     """
 
     def __init__(
-            self,
-            service_name: str,
-            metrics_collector: Optional[Any] = None,
-            initial_status: str = HealthStatus.STARTING
+        self,
+        service_name: str,
+        metrics_collector: Optional[Any] = None,
+        initial_status: str = HealthStatus.STARTING,
     ):
         """
         Initialize the health monitor.
@@ -60,11 +62,14 @@ class HealthMonitor:
         self.subsystems = {}
 
         # Register with metrics if available
-        if self.metrics_collector and hasattr(self.metrics_collector, 'component_up'):
-            self.metrics_collector.component_up.labels(
-                component=self.service_name).set(1 if initial_status == HealthStatus.HEALTHY else 0)
+        if self.metrics_collector and hasattr(self.metrics_collector, "component_up"):
+            self.metrics_collector.component_up.labels(component=self.service_name).set(
+                1 if initial_status == HealthStatus.HEALTHY else 0
+            )
 
-        logger.info(f"Health monitor initialized for service '{service_name}' with status '{initial_status}'")
+        logger.info(
+            f"Health monitor initialized for service '{service_name}' with status '{initial_status}'"
+        )
 
     def register_dependency(self, name: str, check_function: Callable[[], bool]) -> None:
         """
@@ -78,7 +83,7 @@ class HealthMonitor:
             "check_function": check_function,
             "status": HealthStatus.STARTING,
             "last_check_time": 0,
-            "error_count": 0
+            "error_count": 0,
         }
         logger.debug(f"Registered dependency '{name}' for service '{self.service_name}'")
 
@@ -94,7 +99,7 @@ class HealthMonitor:
             "check_function": check_function,
             "status": HealthStatus.STARTING,
             "last_check_time": 0,
-            "error_count": 0
+            "error_count": 0,
         }
         logger.debug(f"Registered subsystem '{name}' for service '{self.service_name}'")
 
@@ -120,7 +125,9 @@ class HealthMonitor:
                 if not healthy:
                     all_healthy = False
                     info["error_count"] += 1
-                    logger.warning(f"Dependency '{name}' for service '{self.service_name}' is unhealthy")
+                    logger.warning(
+                        f"Dependency '{name}' for service '{self.service_name}' is unhealthy"
+                    )
 
                     # Dependencies are critical
                     critical_failure = True
@@ -133,7 +140,9 @@ class HealthMonitor:
                 info["status"] = HealthStatus.UNHEALTHY
                 info["error_count"] += 1
                 info["last_check_time"] = time.time()
-                logger.error(f"Error checking dependency '{name}' for service '{self.service_name}': {e}")
+                logger.error(
+                    f"Error checking dependency '{name}' for service '{self.service_name}': {e}"
+                )
 
         # Check subsystems
         for name, info in self.subsystems.items():
@@ -145,7 +154,9 @@ class HealthMonitor:
                 if not healthy:
                     all_healthy = False
                     info["error_count"] += 1
-                    logger.warning(f"Subsystem '{name}' for service '{self.service_name}' is unhealthy")
+                    logger.warning(
+                        f"Subsystem '{name}' for service '{self.service_name}' is unhealthy"
+                    )
                 else:
                     info["error_count"] = 0
 
@@ -154,7 +165,9 @@ class HealthMonitor:
                 info["status"] = HealthStatus.UNHEALTHY
                 info["error_count"] += 1
                 info["last_check_time"] = time.time()
-                logger.error(f"Error checking subsystem '{name}' for service '{self.service_name}': {e}")
+                logger.error(
+                    f"Error checking subsystem '{name}' for service '{self.service_name}': {e}"
+                )
 
         # Update service status
         old_status = self.status
@@ -170,12 +183,15 @@ class HealthMonitor:
 
         # Log status change
         if old_status != self.status:
-            logger.info(f"Service '{self.service_name}' health status changed: {old_status} -> {self.status}")
+            logger.info(
+                f"Service '{self.service_name}' health status changed: {old_status} -> {self.status}"
+            )
 
             # Update metrics if available
-            if self.metrics_collector and hasattr(self.metrics_collector, 'component_up'):
-                self.metrics_collector.component_up.labels(
-                    component=self.service_name).set(1 if self.status == HealthStatus.HEALTHY else 0)
+            if self.metrics_collector and hasattr(self.metrics_collector, "component_up"):
+                self.metrics_collector.component_up.labels(component=self.service_name).set(
+                    1 if self.status == HealthStatus.HEALTHY else 0
+                )
 
         return self.status
 
@@ -192,22 +208,24 @@ class HealthMonitor:
                 "status": self.status,
                 "last_check_time": self.last_check_time,
                 "check_count": self.check_count,
-                "error_count": self.error_count
+                "error_count": self.error_count,
             },
             "dependencies": {
                 name: {
                     "status": info["status"],
                     "last_check_time": info["last_check_time"],
-                    "error_count": info["error_count"]
-                } for name, info in self.dependencies.items()
+                    "error_count": info["error_count"],
+                }
+                for name, info in self.dependencies.items()
             },
             "subsystems": {
                 name: {
                     "status": info["status"],
                     "last_check_time": info["last_check_time"],
-                    "error_count": info["error_count"]
-                } for name, info in self.subsystems.items()
-            }
+                    "error_count": info["error_count"],
+                }
+                for name, info in self.subsystems.items()
+            },
         }
 
     def is_healthy(self) -> bool:
@@ -236,13 +254,15 @@ def start_server(registry=None):
     Args:
         registry: Optional service registry for additional health checks
     """
-    from src.services.shared.health.healthcheck import start_server as start_healthcheck_server
+    from src.services.shared.health.healthcheck import (
+        start_server as start_healthcheck_server,
+    )
 
     # If registry is provided, integrate health checks
-    if registry and hasattr(registry, 'health_check'):
+    if registry and hasattr(registry, "health_check"):
         # Modify the health check endpoint to include registry health
-        from src.services.shared.health.healthcheck import app
         from fastapi import Response
+        from src.services.shared.health.healthcheck import app
 
         @app.get("/service-health")
         async def service_health():

@@ -5,28 +5,37 @@ Validation utility for the Program Synthesis System.
 This module provides comprehensive validation tools for inputs, outputs,
 data structures, and program behavior in the context of program synthesis.
 """
+from functools import wraps
 import inspect
+from pathlib import Path
 import re
 import sys
-from functools import wraps
-from pathlib import Path
 from typing import (
-    Any, Callable, Dict, List, Optional, Pattern,
- Type, TypeVar, Union,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Pattern,
+    Type,
+    TypeVar,
+    Union,
 )
+
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Import advanced logger
-from src.services.shared.logging.logger import get_logger
+from ..logging.logger import get_logger
+
 
 # Setup logger
 logger = get_logger(__name__)
 
 # Type variables for generics
-T = TypeVar('T')
-R = TypeVar('R')
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 class ValidationResult:
@@ -68,7 +77,7 @@ class ValidationResult:
             self.errors.extend(errors)
             self.valid = False
 
-    def merge(self, other: 'ValidationResult') -> None:
+    def merge(self, other: "ValidationResult") -> None:
         """
         Merge with another validation result.
 
@@ -172,9 +181,13 @@ class TypeValidator(Validator):
 class StringValidator(Validator):
     """Validates string values."""
 
-    def __init__(self, min_length: int = 0, max_length: Optional[int] = None,
-                 pattern: Optional[Union[str, Pattern]] = None,
-                 field_name: Optional[str] = None):
+    def __init__(
+        self,
+        min_length: int = 0,
+        max_length: Optional[int] = None,
+        pattern: Optional[Union[str, Pattern]] = None,
+        field_name: Optional[str] = None,
+    ):
         """
         Initialize the validator.
 
@@ -226,7 +239,12 @@ class StringValidator(Validator):
 class NumberValidator(Validator):
     """Validates numeric values."""
 
-    def __init__(self, min_: Union[int, float], max_: Optional[Union[int, float]] = None, field_name: Optional[str] = None):
+    def __init__(
+        self,
+        min_: Union[int, float],
+        max_: Optional[Union[int, float]] = None,
+        field_name: Optional[str] = None,
+    ):
         """
         Initialize the validator.
 
@@ -273,6 +291,7 @@ def validate_input(validators: Dict[str, Validator]) -> Callable:
     Args:
         validators: Dictionary mapping argument names to Validator instances.
     """
+
     def decorator(func: Callable[..., R]) -> Callable[..., R]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> R:
@@ -287,7 +306,9 @@ def validate_input(validators: Dict[str, Validator]) -> Callable:
             if errors:
                 raise ValidationError(ValidationResult(valid=False, errors=errors))
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -302,10 +323,15 @@ if __name__ == "__main__":
         print("TypeValidator result for '25':", type_validator.validate("25").error_message)
 
         # Test StringValidator
-        string_validator = StringValidator(min_length=3, max_length=10, pattern=r"^[A-Za-z]+$", field_name="username")
+        string_validator = StringValidator(
+            min_length=3, max_length=10, pattern=r"^[A-Za-z]+$", field_name="username"
+        )
         print("StringValidator result for 'John':", string_validator.validate("John").valid)
         print("StringValidator result for 'Jo':", string_validator.validate("Jo").error_message)
-        print("StringValidator result for 'John123':", string_validator.validate("John123").error_message)
+        print(
+            "StringValidator result for 'John123':",
+            string_validator.validate("John123").error_message,
+        )
 
         # Test NumberValidator
         number_validator = NumberValidator(0, 100, field_name="score")

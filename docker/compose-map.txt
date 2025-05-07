@@ -1,0 +1,29 @@
+compose 3
+api-gateway
+  neural interpretor
+  traefik
+  auth sidecar
+  pulsar
+  specregistry
+  project manager
+  neural code generator
+  template discovery
+  postgre
+  quadrant
+  workflow orchestrator
+  metalerner
+  prometheus
+  grafana
+  alertmanager
+  event aggregator
+  prom node exporter
+
+  Based on your question mentioning registration, API gateway, and Pulsar (a messaging system), it sounds like you're building a distributed application. Here's what I'd recommend:
+The components that typically need a "map" or service registry in a distributed application are:
+
+API Gateway - This is the most common component that needs a comprehensive service map. The gateway needs to know where to route requests to different microservices.
+Service Discovery System - Often implemented with tools like Consul, etcd, or ZooKeeper, this maintains the dynamic mapping of services.
+Load Balancers - They need service maps to properly distribute traffic.
+Service Mesh (if used) - Solutions like Istio or Linkerd maintain detailed service maps.
+
+Would you like me to help you implement a specific part of this system for your application? I can provide code examples for any of these components.

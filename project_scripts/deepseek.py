@@ -1,7 +1,10 @@
 # Download to a specific path with MPS support
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 import os
+
+import torch
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
+
 
 # Set your desired download path
 download_path = "/Users/justinrussell/.models"
@@ -11,9 +14,7 @@ os.makedirs(download_path, exist_ok=True)
 
 # Download tokenizer to the specific path
 tokenizer = AutoTokenizer.from_pretrained(
-    "deepseek-ai/deepseek-coder-6.7b-base",
-    cache_dir=download_path,
-    trust_remote_code=True
+    "deepseek-ai/deepseek-coder-6.7b-base", cache_dir=download_path, trust_remote_code=True
 )
 
 # Check if MPS is available
@@ -25,7 +26,7 @@ model = AutoModelForCausalLM.from_pretrained(
     "deepseek-ai/deepseek-coder-6.7b-base",
     cache_dir=download_path,
     torch_dtype=torch.float16,  # Use half precision for better performance
-    trust_remote_code=True
+    trust_remote_code=True,
 )
 
 # Move model to MPS device
