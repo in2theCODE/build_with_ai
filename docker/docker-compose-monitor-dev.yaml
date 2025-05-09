@@ -13,7 +13,7 @@
 # - Define resource limits
 # ===============================================================================
 
-version: '3.7'
+version: '3.8'
 
 services:
   prometheus:
@@ -122,3 +122,64 @@ volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
+
+
+    # Monitoring Setup
+    prometheus:
+      image: prom/prometheus:v2.35.0
+      container_name: prometheus
+      volumes:
+        - ./services/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+        - ./services/prometheus/prometheus_rules.yaml:/etc/prometheus/prometheus_rules.yml
+        - prometheus_data:/prometheus
+      command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+        - '--web.console.templates=/usr/share/prometheus/consoles'
+        - '--web.enable-lifecycle'
+      ports:
+        - "127.0.0.1:9090:9090"
+      restart: unless-stopped
+      networks:
+        - monitoring
+      depends_on:
+        - pulsar
+
+    alertmanager:
+      image: prom/alertmanager:v0.24.0
+      container_name: alertmanager
+      volumes:
+        - ./services/prometheus/alert_manager.yaml:/etc/alertmanager/alertmanager.yml
+        - alertmanager_data:/alertmanager
+      command:
+        - '--config.file=/etc/alertmanager/alertmanager.yml'
+        - '--storage.path=/alertmanager'
+      ports:
+        - "127.0.0.1:9093:9093"
+      restart: unless-stopped
+      networks:
+        - monitoring
+      depends_on:
+        - prometheus
+
+    grafana:
+      image: grafana/grafana:8.5.2
+      container_name: grafana
+      volumes:
+        - ../src/services/grafana/app/provisioning/datasource:/etc/grafana/provisioning/datasources
+        - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+        - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
+        - grafana_data:/var/lib/grafana
+      environment:
+        - GF_SECURITY_ADMIN_USER=admin
+        - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
+        - GF_USERS_ALLOW_SIGN_UP=false
+        - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      ports:
+        - "127.0.0.1:3000:3000"
+      restart: unless-stopped
+      networks:
+        - monitoring
+      depends_on:
+        - prometheus

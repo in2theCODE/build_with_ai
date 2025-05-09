@@ -15,7 +15,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /Users/justinrussell/.traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
-      - /Users/justinrussell/.traefik/certs:/etc/traefik/certs:ro
+      - /Users/justinrussell/.tra1  qefik/certs:/etc/traefik/certs:ro
       - /Users/justinrussell/.traefik/dynamic:/etc/traefik/dynamic:ro
       - /Users/justinrussell/.traefik/acme:/etc/traefik/acme
     networks:
@@ -42,8 +42,8 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000,https://buildwithai.cloud
     volumes:
       # Mount the secrets directory as read-only files
-      - Users/justinrussell/.docker-secrets/NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:/run/secrets/clerk_publishable_key:ro
-      - Users/justinrussell/.docker-secrets/CLERK_SECRET_KEY:/run/secrets/clerk_secret_key:ro
+      - /Users/justinrussell/.docker-secrets-codegen/NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:/run/secrets/clerk_publishable_key:ro
+      - /Users/justinrussell/.docker-secrets-codegen/CLERK_SECRET_KEY:/run/secrets/clerk_secret_key:ro
       # Configuration volume if needed
       - ./config:/etc/auth-sidecar:ro
     networks:
@@ -54,19 +54,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
   # Neural Interpreter
   neural-interpreter:
     build:
-      context: ./services/api_gateway/neural_interpretor
+      context: ../src/api_gateway/neural_interpretor
     container_name: neural-interpreter
     restart: unless-stopped
     volumes:
       - ../src/services/api_gateway/neural_interpretor/app/config:/app/config
-      - ../certs/neural_interpretor://config/certs
+      - ../certs/neural_interpretor:/app/config/certs
     environment:
       - CONFIG_PATH=/app/config/config.yaml
       - LOG_LEVEL=INFO
+      - NEO4J_URI=neo4j://neo4j-vector:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=yourpassword
     networks:
+      - api-network
       - pulsar-network
     healthcheck:
       test: [ "CMD", "test", "-e", "/tmp/agent-health.txt" ]
@@ -77,6 +82,7 @@ services:
     depends_on:
       - pulsar
       - auth-sidecar
+      - neo4j-vector
 
   # Pulsar - Event Bus
   pulsar:
@@ -84,8 +90,8 @@ services:
     container_name: pulsar
     restart: unless-stopped
     ports:
-      - "6650:6650"  # Pulsar binary protocol port
-      - "8080:8080"  # Pulsar web service port
+      - "127.0.0.1:6650:6650"  # Pulsar binary protocol port
+      - "127.0.0.1:8080:8080"  # Pulsar web service port
     volumes:
       - pulsar-data:/pulsar/data
       - ./certs:/pulsar/certs
@@ -97,13 +103,14 @@ services:
       - PULSAR_MEM=-Xms1g -Xmx1g
       - webServicePortTls=8443
       - tlsEnabled=true
-      - tlsCertificateFilePath=Users/justinrussell/.pulsar/certs/pulsar.crt
+      - tlsCertificateFilePath=/Users/justinrussell/.pulsar/certs/pulsar.crt
       - tlsKeyFilePath=/pulsar/certs/pulsar.key
       - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
       - authenticationEnabled=true
       - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
       - webSocketServiceEnabled=true
     networks:
+      - api-network
       - pulsar-network
     healthcheck:
       test: [ "CMD", "bin/pulsar-admin", "brokers", "healthcheck" ]
@@ -117,25 +124,24 @@ services:
     build:
       context: ../src/services/project_manager
     environment:
-      - SPEC_REGISTRY=http://template-service:3001
-      - POSTGRE_SERVICE=http://postgre-service:3002
+      - SPEC_REGISTRY_URL=http://spec-registry:8000
       - EVENT_BUS_URL=pulsar://pulsar:6650
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
     depends_on:
-      - spec_registry
-      - postgre_service
+      - spec-registry
       - pulsar
+      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
 
-  # Spec Generator - AI-assisted spec completion
-    # Spec Registry Service
+  # Spec Registry Service
   spec-registry:
     build:
-      context: ../src/services.spec-registry
+      context: ../src/services/spec_registry
       dockerfile: Dockerfile
       args:
-        - SCHEMAS_VERSION=1.0.0
+      
     container_name: spec-registry
     restart: unless-stopped
     environment:
@@ -144,11 +150,20 @@ services:
       - PULSAR_SERVICE_URL=pulsar://pulsar:6650
       - ENABLE_EVENTS=true
       - BASE_DIR=/app/storage
+      - DB_CONNECTION_STRING=postgresql://database:5432/specdb
+      - DB_SCHEMA=public
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
     volumes:
       - spec_registry_data:/app/storage
     secrets:
       - source: pulsar_secret_key
         target: /run/secrets/pulsar_secret_key
+        mode: 0400
+      - source: db_user
+        target: /run/secrets/db_user
+        mode: 0400
+      - source: db_password
+        target: /run/secrets/db_password
         mode: 0400
     networks:
       - spec-template-network
@@ -156,15 +171,14 @@ services:
     depends_on:
       pulsar:
         condition: service_healthy
+      database:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-
-  # Storage Service - Handles persistence
-
 
   # Database - PostgreSQL for storing projects and completed specs
   database:
@@ -176,11 +190,12 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_DB=specdb
-      - POSTGRES_USER_FILE=/
+      - POSTGRES_USER_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - spec-template-network
     healthcheck:
@@ -189,11 +204,49 @@ services:
       timeout: 5s
       retries: 5
 
+  neo4j-vector:
+    image: neo4j:5.6.0-community
+    container_name: neo4j-vector
+    restart: unless-stopped
+    user: "1000:1000"  # Run as non-root user (use appropriate UID:GID)
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - NEO4J_AUTH=neo4j/yourpassword  # Change this to a secure password
+      - NEO4J_dbms_memory_pagecache_size=1G
+      - NEO4J_dbms_memory_heap_initial__size=1G
+      - NEO4J_dbms_memory_heap_max__size=2G
+      # Enable vector search plugin
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*
+      - NEO4J_dbms_security_procedures_allowlist=gds.*
+      # Security settings
+      - NEO4J_dbms_security_auth__enabled=true
+      - NEO4J_dbms_ssl_policy_bolt_enabled=true
+      - NEO4J_dbms_ssl_policy_https_enabled=true
+      - NEO4J_dbms_connector_bolt_tls__level=OPTIONAL
+    ports:
+      - "127.0.0.1:7474:7474"  # Browser interface - localhost only
+      - "127.0.0.1:7687:7687"  # Bolt protocol - localhost only
+    volumes:
+      - neo4j-vector-data:/data
+      - neo4j-vector-logs:/logs
+      - neo4j-vector-plugins:/plugins
+    networks:
+      - api-network
+      - spec-template-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7474/browser/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   # Vector Database - For template similarity search
   vector-db:
-    image: qdrant/qdrant:2.31.0
+    image: qdrant/qdrant:v1.9.6
+    container_name: qdrant
     ports:
-      - "6333:6333"
+      - "127.0.0.1:6333:6333"
     volumes:
       - vector-db-data:/qdrant/storage
     networks:
@@ -209,13 +262,15 @@ services:
     build:
       context: ./services/workflow_orchestrator
     environment:
-      - PROJECT_SERVICE_URL=http://project-service:3003
-      - SPEC_GENERATOR_URL=http://spec-generator:3004
+      - PROJECT_SERVICE_URL=http://project_manager:8000
+      - SPEC_REGISTRY_URL=http://spec-registry:8000
       - EVENT_BUS_URL=pulsar://pulsar:6650
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
     depends_on:
-      - project-service
-      - spec-generator
+      - spec-registry
       - pulsar
+      - project_manager
+      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
@@ -223,18 +278,18 @@ services:
   # Evolution Analyzer - Tracks template usage and suggests improvements
   evolution-analyzer:
     build:
-      context: ./services/meta_learner
+      context: ../src/services/meta_learner
     environment:
-      - TEMPLATE_SERVICE_URL=http://template-service:3001
-      - STORAGE_URL=http://storage-service:3002
+      - SPEC_REGISTRY_URL=http://spec-registry:8000
       - VECTOR_DB_HOST=vector-db
       - VECTOR_DB_PORT=6333
       - EVENT_BUS_URL=pulsar://pulsar:6650
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
     depends_on:
-      - template-service
-      - storage-service
+      - spec-registry
       - vector-db
       - pulsar
+      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
@@ -254,7 +309,7 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     restart: unless-stopped
     networks:
       - monitoring
@@ -271,7 +326,7 @@ services:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     restart: unless-stopped
     networks:
       - monitoring
@@ -292,7 +347,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     restart: unless-stopped
     networks:
       - monitoring
@@ -300,27 +355,30 @@ services:
       - prometheus
 
   event-aggregator:
-    build: .
+    build:
+      context: ../src/services/aggregators
     container_name: event-aggregator
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       - EVENT_SYSTEM_DATABASE_TYPE=mongodb
-      - EVENT_SYSTEM_DATABASE_URI=mongodb://mongodb:27017
+      - EVENT_SYSTEM_DATABASE_URI=mongodb://admin:${MONGODB_PASSWORD}@mongodb:27017/event_system?authSource=admin
       - EVENT_SYSTEM_DATABASE_NAME=event_system
       - EVENT_SYSTEM_EVENTS_PROVIDER=pulsar
       - EVENT_SYSTEM_EVENTS_SERVICE_URL=pulsar://pulsar:6650
       - EVENT_SYSTEM_VECTOR_DB_ENABLED=true
       - EVENT_SYSTEM_VECTOR_DB_TYPE=qdrant
-      - EVENT_SYSTEM_VECTOR_DB_HOST=qdrant
+      - EVENT_SYSTEM_VECTOR_DB_HOST=vector-db
+      - DB_CONNECTION_STRING=postgresql://database:5432/specdb
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs
     depends_on:
       - mongodb
       - pulsar
-      - qdrant
+      - vector-db
+      - database
     networks:
       - spec-template-network
       - pulsar-network
@@ -330,6 +388,33 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+    secrets:
+      - mongodb_root_password
+      - db_user
+      - db_password
+
+  # MongoDB for Event Aggregator
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongodb_root_password
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"  # Only accessible from localhost
+    networks:
+      - spec-template-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    secrets:
+      - mongodb_root_password
 
   node-exporter:
     image: prom/node-exporter:v1.3.1
@@ -344,7 +429,7 @@ services:
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
-      - "9100:9100"
+      - "127.0.0.1:9100:9100"
     restart: unless-stopped
     networks:
       - monitoring
@@ -365,6 +450,10 @@ secrets:
     file: /Users/justinrussell/.docker-secrets-codegen/anthropic_api_key
   pinecone_api_key:
     file: /Users/justinrussell/.docker-secrets-codegen/pinecone_api_key
+  mongodb_root_password:
+    file: /Users/justinrussell/.docker-secrets-codegen/mongodb_root_password
+  pulsar_secret_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/pulsar_secret_key
 
 
 networks:
@@ -385,3 +474,8 @@ volumes:
   db-data:
   vector-db-data:
   storage-data:
+  neo4j-vector-data:
+  neo4j-vector-logs:
+  neo4j-vector-plugins:
+  spec_registry_data:
+  mongodb_data:
