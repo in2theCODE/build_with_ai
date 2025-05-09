@@ -4,18 +4,19 @@ services:
   # API Gateway (Traefik)
   traefik:
     image: traefik:v2.10
+    platform: linux/arm64  # Add if using Apple Silicon
     container_name: traefik
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    user: "1000:1000"  # Run as non-root user (use an appropriate UID:GID)
+    user: "1000:1000"  # Run as non-root user
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /Users/justinrussell/.traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
-      - /Users/justinrussell/.tra1  qefik/certs:/etc/traefik/certs:ro
+      - /Users/justinrussell/.traefik/certs:/etc/traefik/certs:ro  # Fixed typo in path
       - /Users/justinrussell/.traefik/dynamic:/etc/traefik/dynamic:ro
       - /Users/justinrussell/.traefik/acme:/etc/traefik/acme
     networks:
@@ -31,10 +32,8 @@ services:
   auth-sidecar:
     build:
       context: ../src/api_gateway/auth-sidecar
+      dockerfile: Dockerfile
     container_name: auth-sidecar
-    secrets:
-      - clerk_public_key
-      - clerk_secret_key
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -42,8 +41,8 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000,https://buildwithai.cloud
     volumes:
       # Mount the secrets directory as read-only files
-      - /Users/justinrussell/.docker-secrets-codegen/NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:/run/secrets/clerk_publishable_key:ro
-      - /Users/justinrussell/.docker-secrets-codegen/CLERK_SECRET_KEY:/run/secrets/clerk_secret_key:ro
+      - /Users/justinrussell/.docker-secrets-codegen/next_public_clerk_publishable_key:/run/secrets/clerk_publishable_key:ro
+      - /Users/justinrussell/.docker-secrets-codegen/clerk_secret_key:/run/secrets/clerk_secret_key:ro
       # Configuration volume if needed
       - ./config:/etc/auth-sidecar:ro
     networks:
@@ -54,161 +53,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-
-  # Neural Interpreter
-  neural-interpreter:
-    build:
-      context: ../src/api_gateway/neural_interpretor
-    container_name: neural-interpreter
-    restart: unless-stopped
-    volumes:
-      - ../src/services/api_gateway/neural_interpretor/app/config:/app/config
-      - ../certs/neural_interpretor:/app/config/certs
-    environment:
-      - CONFIG_PATH=/app/config/config.yaml
-      - LOG_LEVEL=INFO
-      - NEO4J_URI=neo4j://neo4j-vector:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=yourpassword
-    networks:
-      - api-network
-      - pulsar-network
-    healthcheck:
-      test: [ "CMD", "test", "-e", "/tmp/agent-health.txt" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      - pulsar
-      - auth-sidecar
-      - neo4j-vector
-
-  # Pulsar - Event Bus
-  pulsar:
-    image: apachepulsar/pulsar:4.0.3
-    container_name: pulsar
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6650:6650"  # Pulsar binary protocol port
-      - "127.0.0.1:8080:8080"  # Pulsar web service port
-    volumes:
-      - pulsar-data:/pulsar/data
-      - ./certs:/pulsar/certs
-      - ./infra/configs/pulsar:/pulsar/conf
-      - ./bin/pulsar/setup.py:/pulsar/setup.py
-    command: >
-      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone -nss -nfw"
-    environment:
-      - PULSAR_MEM=-Xms1g -Xmx1g
-      - webServicePortTls=8443
-      - tlsEnabled=true
-      - tlsCertificateFilePath=/Users/justinrussell/.pulsar/certs/pulsar.crt
-      - tlsKeyFilePath=/pulsar/certs/pulsar.key
-      - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
-      - authenticationEnabled=true
-      - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
-      - webSocketServiceEnabled=true
-    networks:
-      - api-network
-      - pulsar-network
-    healthcheck:
-      test: [ "CMD", "bin/pulsar-admin", "brokers", "healthcheck" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # Project Service - Manages projects and spec sheets
-  project_manager:
-    build:
-      context: ../src/services/project_manager
-    environment:
-      - SPEC_REGISTRY_URL=http://spec-registry:8000
-      - EVENT_BUS_URL=pulsar://pulsar:6650
-      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
-    depends_on:
-      - spec-registry
-      - pulsar
-      - event-aggregator
-    networks:
-      - spec-template-network
-      - pulsar-network
-
-  # Spec Registry Service
-  spec-registry:
-    build:
-      context: ../src/services/spec_registry
-      dockerfile: Dockerfile
-      args:
-      
-    container_name: spec-registry
-    restart: unless-stopped
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=INFO
-      - PULSAR_SERVICE_URL=pulsar://pulsar:6650
-      - ENABLE_EVENTS=true
-      - BASE_DIR=/app/storage
-      - DB_CONNECTION_STRING=postgresql://database:5432/specdb
-      - DB_SCHEMA=public
-      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
-    volumes:
-      - spec_registry_data:/app/storage
     secrets:
-      - source: pulsar_secret_key
-        target: /run/secrets/pulsar_secret_key
-        mode: 0400
-      - source: db_user
-        target: /run/secrets/db_user
-        mode: 0400
-      - source: db_password
-        target: /run/secrets/db_password
-        mode: 0400
-    networks:
-      - spec-template-network
-      - pulsar-network
-    depends_on:
-      pulsar:
-        condition: service_healthy
-      database:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      - clerk_public_key
+      - clerk_secret_key
 
-  # Database - PostgreSQL for storing projects and completed specs
-  database:
-    image: postgres:17-bookworm
-    secrets:
-      - db_user
-      - db_password
-    container_name: specdb
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=specdb
-      - POSTGRES_USER_FILE=/run/secrets/db_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
-    networks:
-      - spec-template-network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+  # Neo4j Vector Database
   neo4j-vector:
     image: neo4j:5.6.0-community
+    platform: linux/arm64  # Add if using Apple Silicon
     container_name: neo4j-vector
     restart: unless-stopped
-    user: "1000:1000"  # Run as non-root user (use appropriate UID:GID)
+    user: "1000:1000"  # Run as non-root user
     security_opt:
       - no-new-privileges:true
     environment:
@@ -241,9 +96,75 @@ services:
       retries: 3
       start_period: 30s
 
+  # Neural Interpreter
+  neural-interpreter:
+    build:
+      context: ../src/api_gateway/neural_interpretor
+    container_name: neural-interpreter
+    restart: unless-stopped
+    volumes:
+      - ../src/services/api_gateway/neural_interpretor/app/config:/app/config
+      - ../certs/neural_interpretor:/app/config/certs
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+      - NEO4J_URI=neo4j://neo4j-vector:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=6115530825
+    networks:
+      - spec-template-network
+      - pulsar-network
+    healthcheck:
+      test: [ "CMD", "test", "-e", "/tmp/agent-health.txt" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - pulsar
+      - auth-sidecar
+      - neo4j-vector
+
+  # Pulsar - Event Bus
+  pulsar:
+    image: apachepulsar/pulsar:4.0.3
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: pulsar
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6650:6650"  # Pulsar binary protocol port
+      - "127.0.0.1:8080:8080"  # Pulsar web service port
+    volumes:
+      - pulsar-data:/pulsar/data
+      - ./certs:/pulsar/certs
+      - ./infra/configs/pulsar:/pulsar/conf
+      - ./bin/pulsar/setup.py:/pulsar/setup.py
+    command: >
+      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone -nss -nfw"
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g
+      - webServicePortTls=8443
+      - tlsEnabled=true
+      - tlsCertificateFilePath=/pulsar/certs/pulsar.crt
+      - tlsKeyFilePath=/pulsar/certs/pulsar.key
+      - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
+      - authenticationEnabled=true
+      - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
+      - webSocketServiceEnabled=true
+    networks:
+      - spec-template-network
+      - pulsar-network
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-admin", "brokers", "healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # Vector Database - For template similarity search
   vector-db:
     image: qdrant/qdrant:v1.9.6
+    platform: linux/arm64  # Add if using Apple Silicon
     container_name: qdrant
     ports:
       - "127.0.0.1:6333:6333"
@@ -257,10 +178,116 @@ services:
       timeout: 5s
       retries: 3
 
+  # PostgreSQL Database
+  database:
+    image: postgres:15
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_DB=specdb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - spec-template-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    secrets:
+      - db_user
+      - db_password
+
+  # MongoDB for Event Aggregator
+  mongodb:
+    image: mongo:6.0
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongodb_root_password
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"  # Only accessible from localhost
+    networks:
+      - spec-template-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    secrets:
+      - mongodb_root_password
+
+  # Project Service - Manages projects and spec sheets
+  project_manager:
+    build:
+      context: ../src/services/project_manager
+    container_name: project-manager
+    restart: unless-stopped
+    environment:
+      - SPEC_REGISTRY_URL=http://spec-registry:8000
+      - EVENT_BUS_URL=pulsar://pulsar:6650
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
+    depends_on:
+      - spec-registry
+      - pulsar
+      - event-aggregator
+    networks:
+      - spec-template-network
+      - pulsar-network
+
+  # Spec Registry Service
+  spec-registry:
+    build:
+      context: ../src/services/spec_registry
+      dockerfile: Dockerfile
+    container_name: spec-registry
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - PULSAR_SERVICE_URL=pulsar://pulsar:6650
+      - ENABLE_EVENTS=true
+      - BASE_DIR=/app/storage
+      - DB_CONNECTION_STRING=postgresql://database:5432/specdb
+      - DB_SCHEMA=public
+      - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
+    volumes:
+      - spec_registry_data:/app/storage
+    networks:
+      - spec-template-network
+      - pulsar-network
+    depends_on:
+      pulsar:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    secrets:
+      - pulsar_secret_key
+      - db_user
+      - db_password
+
   # Workflow Engine - Orchestrates the entire flow
   workflow-engine:
     build:
-      context: ./services/workflow_orchestrator
+      context: ../src/services/workflow_orchestrator
+    container_name: workflow-engine
+    restart: unless-stopped
     environment:
       - PROJECT_SERVICE_URL=http://project_manager:8000
       - SPEC_REGISTRY_URL=http://spec-registry:8000
@@ -279,6 +306,8 @@ services:
   evolution-analyzer:
     build:
       context: ../src/services/meta_learner
+    container_name: evolution-analyzer
+    restart: unless-stopped
     environment:
       - SPEC_REGISTRY_URL=http://spec-registry:8000
       - VECTOR_DB_HOST=vector-db
@@ -294,66 +323,7 @@ services:
       - spec-template-network
       - pulsar-network
 
-  # Monitoring Setup
-  prometheus:
-    image: prom/prometheus:v2.35.0
-    container_name: prometheus
-    volumes:
-      - ./services/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
-      - ./services/prometheus/prometheus_rules.yaml:/etc/prometheus/prometheus_rules.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    ports:
-      - "127.0.0.1:9090:9090"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - pulsar
-
-  alertmanager:
-    image: prom/alertmanager:v0.24.0
-    container_name: alertmanager
-    volumes:
-      - ./services/prometheus/alert_manager.yaml:/etc/alertmanager/alertmanager.yml
-      - alertmanager_data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    ports:
-      - "127.0.0.1:9093:9093"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
-
-  grafana:
-    image: grafana/grafana:8.5.2
-    container_name: grafana
-    volumes:
-      - ../src/services/grafana/app/provisioning/datasource:/etc/grafana/provisioning/datasources
-      - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    ports:
-      - "127.0.0.1:3000:3000"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
-
+  # Event Aggregator
   event-aggregator:
     build:
       context: ../src/services/aggregators
@@ -393,31 +363,72 @@ services:
       - db_user
       - db_password
 
-  # MongoDB for Event Aggregator
-  mongodb:
-    image: mongo:6.0
-    container_name: mongodb
-    restart: unless-stopped
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongodb_root_password
+  # Monitoring section - should be in a separate file for cleaner organization
+  prometheus:
+    image: prom/prometheus:v2.35.0
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: prometheus
     volumes:
-      - mongodb_data:/data/db
+      - ./services/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./services/prometheus/prometheus_rules.yaml:/etc/prometheus/prometheus_rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
     ports:
-      - "127.0.0.1:27017:27017"  # Only accessible from localhost
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
     networks:
-      - spec-template-network
-    healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    secrets:
-      - mongodb_root_password
+      - monitoring
+    depends_on:
+      - pulsar
+
+  alertmanager:
+    image: prom/alertmanager:v0.24.0
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: alertmanager
+    volumes:
+      - ./services/prometheus/alert_manager.yaml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "127.0.0.1:9093:9093"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+  grafana:
+    image: grafana/grafana:8.5.2
+    platform: linux/arm64  # Add if using Apple Silicon
+    container_name: grafana
+    volumes:
+      - ../src/services/grafana/app/provisioning/datasource:/etc/grafana/provisioning/datasources
+      - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
 
   node-exporter:
     image: prom/node-exporter:v1.3.1
+    platform: linux/arm64  # Add if using Apple Silicon
     container_name: node-exporter
     volumes:
       - /proc:/host/proc:ro
@@ -433,7 +444,6 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
-
 
 secrets:
   clerk_public_key:
@@ -455,15 +465,18 @@ secrets:
   pulsar_secret_key:
     file: /Users/justinrussell/.docker-secrets-codegen/pulsar_secret_key
 
-
 networks:
   api-network:
+    name: api-network
     driver: bridge
   pulsar-network:
+    name: pulsar-network
     driver: bridge
   spec-template-network:
+    name: spec-template-network
     driver: bridge
   monitoring:
+    name: monitoring
     driver: bridge
 
 volumes:
@@ -473,7 +486,6 @@ volumes:
   grafana_data:
   db-data:
   vector-db-data:
-  storage-data:
   neo4j-vector-data:
   neo4j-vector-logs:
   neo4j-vector-plugins:

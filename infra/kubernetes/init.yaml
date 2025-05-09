@@ -8,38 +8,38 @@ spec:
   template:
     spec:
       containers:
-      - name: knowledge-base-initializer
-        image: ${REGISTRY}/program-synthesis/neural-code-generator:${TAG}
-        command: ["/bin/bash", "-c"]
-        args:
-        - |
-          echo "Initializing knowledge base with code examples..."
-          python3 -m program_synthesis_system.components.knowledge_base.initializer \
-            --source-dir=/app/code-examples \
-            --output-dir=/app/knowledge_base \
-            --embedding-model=${EMBEDDING_MODEL:-all-mpnet-base-v2} \
-            --batch-size=${BATCH_SIZE:-32} \
-            --file-types=py,js,ts,java,cpp,c,go,rs \
-            --verbose
-          echo "Knowledge base initialization completed"
-        volumeMounts:
-        - name: code-examples-volume
-          mountPath: /app/code-examples
-          readOnly: true
-        - name: knowledge-base-volume
-          mountPath: /app/knowledge_base
-        resources:
-          requests:
-            cpu: "2"
-            memory: "8Gi"
-          limits:
-            cpu: "4"
-            memory: "16Gi"
+        - name: knowledge-base-initializer
+          image: ${REGISTRY}/program-synthesis/neural-code-generator:${TAG}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Initializing knowledge base with code examples..."
+              python3 -m program_synthesis_system.components.knowledge_base.initializer \
+                --source-dir=/app/code-examples \
+                --output-dir=/app/knowledge_base \
+                --embedding-model=${EMBEDDING_MODEL:-all-mpnet-base-v2} \
+                --batch-size=${BATCH_SIZE:-32} \
+                --file-types=py,js,ts,java,cpp,c,go,rs \
+                --verbose
+              echo "Knowledge base initialization completed"
+          volumeMounts:
+            - name: code-examples-volume
+              mountPath: /app/code-examples
+              readOnly: true
+            - name: knowledge-base-volume
+              mountPath: /app/knowledge_base
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
       restartPolicy: OnFailure
       volumes:
-      - name: code-examples-volume
-        configMap:
-          name: code-examples-config
-      - name: knowledge-base-volume
-        persistentVolumeClaim:
-          claimName: knowledge-base-pvc
+        - name: code-examples-volume
+          configMap:
+            name: code-examples-config
+        - name: knowledge-base-volume
+          persistentVolumeClaim:
+            claimName: knowledge-base-pvc

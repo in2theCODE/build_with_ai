@@ -163,12 +163,12 @@ class CodeGenerationRequestedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        spec_sheet: Dict[str, Any],
-        target_language: str = "python",
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            spec_sheet: Dict[str, Any],
+            target_language: str = "python",
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationRequestedEvent":
         """Factory method to create a code generation request event."""
         return cls(
@@ -191,15 +191,15 @@ class CodeGenerationCompletedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        generated_code: str,
-        program_ast: Dict[str, Any],
-        confidence_score: float,
-        strategy_used: str,
-        time_taken: float,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            generated_code: str,
+            program_ast: Dict[str, Any],
+            confidence_score: float,
+            strategy_used: str,
+            time_taken: float,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationCompletedEvent":
         """Factory method to create a code generation completed event."""
         return cls(
@@ -227,13 +227,13 @@ class CodeGenerationFailedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        error_message: str,
-        error_type: str,
-        partial_result: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            error_message: str,
+            error_type: str,
+            partial_result: Optional[Dict[str, Any]] = None,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationFailedEvent":
         """Factory method to create a code generation failed event."""
         return cls(
@@ -256,12 +256,12 @@ class KnowledgeQueryRequestedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        query: str,
-        limit: int = 5,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            query: str,
+            limit: int = 5,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeQueryRequestedEvent":
         """Factory method to create a knowledge query request event."""
         return cls(
@@ -282,13 +282,13 @@ class KnowledgeQueryCompletedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        results: List[Dict[str, Any]],
-        query: str,
-        time_taken: float,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            results: List[Dict[str, Any]],
+            query: str,
+            time_taken: float,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeQueryCompletedEvent":
         """Factory method to create a knowledge query completed event."""
         return cls(
@@ -311,11 +311,11 @@ class KnowledgeUpdatedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        key: str,
-        update_type: str,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            key: str,
+            update_type: str,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeUpdatedEvent":
         """Factory method to create a knowledge updated event."""
         return cls(

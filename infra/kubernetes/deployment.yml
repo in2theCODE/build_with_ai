@@ -28,86 +28,86 @@ spec:
     spec:
       terminationGracePeriodSeconds: 60
       containers:
-      - name: neural-code-generator
-        image: ${REGISTRY}/program-synthesis/neural-code-generator:${TAG}
-        imagePullPolicy: Always
-        env:
-        - name: PULSAR_SERVICE_URL
-          value: "pulsar://pulsar-broker.pulsar.svc.cluster.local:6650"
-        - name: INPUT_TOPIC
-          value: "persistent://public/default/code-generation-requests"
-        - name: OUTPUT_TOPIC
-          value: "persistent://public/default/code-generation-results"
-        - name: SUBSCRIPTION_NAME
-          value: "code-generator-worker"
-        - name: LOG_LEVEL
-          value: "INFO"
-        - name: MODEL_PATH
-          value: "/app/models/deepseek-coder-8b-instruct"
-        - name: QUANTIZATION
-          value: "int8"
-        - name: USE_FLASH_ATTENTION
-          value: "true"
-        - name: BATCH_SIZE
-          value: "1"
-        - name: MAX_CONTEXT_LENGTH
-          value: "8192"
-        - name: ENABLE_HEALTH_CHECK
-          value: "true"
-        - name: HEALTH_CHECK_PORT
-          value: "8000"
-        - name: REQUIRE_GPU
-          value: "true"
-        - name: ENABLE_TRACING
-          value: "true"
-        - name: TRACE_SAMPLE_RATE
-          value: "0.1"
-        ports:
-        - name: http
-          containerPort: 8000
-          protocol: TCP
-        resources:
-          requests:
-            cpu: "2"
-            memory: "16Gi"
-            nvidia.com/gpu: "1"
-          limits:
-            cpu: "4"
-            memory: "24Gi"
-            nvidia.com/gpu: "1"
-        volumeMounts:
-        - name: models-volume
-          mountPath: /app/models
-        - name: knowledge-base-volume
-          mountPath: /app/knowledge_base
-        readinessProbe:
-          httpGet:
-            path: /readiness
-            port: 8000
-          initialDelaySeconds: 120
-          periodSeconds: 10
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
-        livenessProbe:
-          httpGet:
-            path: /liveness
-            port: 8000
-          initialDelaySeconds: 300
-          periodSeconds: 30
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
+        - name: neural-code-generator
+          image: "docker.io/synthesis/neural-code-generator:latest"
+          imagePullPolicy: Always
+          env:
+            - name: PULSAR_SERVICE_URL
+              value: "pulsar://pulsar-broker.pulsar.svc.cluster.local:6650"
+            - name: INPUT_TOPIC
+              value: "persistent://public/default/code-generation-requests"
+            - name: OUTPUT_TOPIC
+              value: "persistent://public/default/code-generation-results"
+            - name: SUBSCRIPTION_NAME
+              value: "code-generator-worker"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: MODEL_PATH
+              value: "/app/models/deepseek-coder-8b-instruct"
+            - name: QUANTIZATION
+              value: "int8"
+            - name: USE_FLASH_ATTENTION
+              value: "true"
+            - name: BATCH_SIZE
+              value: "1"
+            - name: MAX_CONTEXT_LENGTH
+              value: "8192"
+            - name: ENABLE_HEALTH_CHECK
+              value: "true"
+            - name: HEALTH_CHECK_PORT
+              value: "8000"
+            - name: REQUIRE_GPU
+              value: "true"
+            - name: ENABLE_TRACING
+              value: "true"
+            - name: TRACE_SAMPLE_RATE
+              value: "0.1"
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "2"
+              memory: "16Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: models-volume
+              mountPath: /app/models
+            - name: knowledge-base-volume
+              mountPath: /app/knowledge_base
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8000
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
       volumes:
-      - name: models-volume
-        persistentVolumeClaim:
-          claimName: neural-models-pvc
-      - name: knowledge-base-volume
-        persistentVolumeClaim:
-          claimName: knowledge-base-pvc
+        - name: models-volume
+          persistentVolumeClaim:
+            claimName: neural-models-pvc
+        - name: knowledge-base-volume
+          persistentVolumeClaim:
+            claimName: knowledge-base-pvc
       nodeSelector:
         accelerator: gpu
       tolerations:
-      - key: "nvidia.com/gpu"
-        operator: "Exists"
-        effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"

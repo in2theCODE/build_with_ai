@@ -1,0 +1,76 @@
+# auth-sidecar/config.yaml
+# Auth Sidecar Configuration
+# Last updated: May 7, 2025
+
+# Server configuration
+server:
+  port: 3000
+  environment: production
+  allowed_origins:
+    - https://buildwithai.cloud
+    - https://dashboard.buildwithai.cloud
+
+# Authentication configuration
+auth:
+  # JWT verification settings
+  jwt:
+    public_key_path: /run/secrets/clerk_public_key
+    algorithms:
+      - RS256
+    issuer: clerk.buildwithai.cloud
+    audience: buildwithai-api
+    expiry_margin_seconds: 30  # Buffer time before actual expiry
+
+  # Role-based access control
+  rbac:
+    role_hierarchy:
+      admin: 3
+      developer: 2
+      viewer: 1
+    endpoint_permissions:
+      /api/admin:
+        - admin
+      /api/workflow:
+        - admin
+        - developer
+      /api/generate:
+        - admin
+        - developer
+      /api/brainstorm:
+        - admin
+        - developer
+      /api/status:
+        - admin
+        - developer
+        - viewer
+
+# HMAC verification (for internal service communication)
+hmac:
+  enabled: true
+  key_id: neural-api-client  # Must match what's in middlewares.toml
+  secret_key_path: /run/secrets/hmac_secret_key
+  expiry_seconds: 300
+
+# Logging
+logging:
+  level: info
+  format: json
+  request_logging: true
+  sensitive_headers:
+    - authorization
+    - x-user-id
+    - x-user-role
+  mask_sensitive_data: true
+
+# Metrics
+metrics:
+  enabled: true
+  endpoint: /metrics
+  default_labels:
+    service: auth-sidecar
+
+# Circuit breaker for external service calls
+circuit_breaker:
+  enabled: true
+  failure_threshold: 5
+  reset_timeout_seconds: 30

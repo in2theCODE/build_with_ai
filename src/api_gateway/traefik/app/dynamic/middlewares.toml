@@ -1,25 +1,25 @@
 # Auth sources for HMAC
 [authSources]
-  [authSources.secure-users]
-    [authSources.secure-users.hmac]
-      [[authSources.secure-users.hmac.inline]]
-        id = "neural-api-client"
-        key = "${HMAC_SECRET_KEY}"
+[authSources.secure-users]
+[authSources.secure-users.hmac]
+[[authSources.secure-users.hmac.inline]]
+id = "neural-api-client"
+key = "${HMAC_SECRET_KEY}"
 
 # HMAC middleware
 [http.middlewares]
-  [http.middlewares.hmac-auth.plugin.hmacAuth]
-    source = "secure-users"
-    validateDigest = true
+[http.middlewares.hmac-auth.plugin.hmacAuth]
+source = "secure-users"
+validateDigest = true
 
 # Circuit breaker middleware for resilience
 [http.middlewares.api-circuit-breaker.circuitBreaker]
-  expression = "NetworkErrorRatio() > 0.25 || ResponseCodeRatio(500, 600, 0, 600) > 0.30 || LatencyAtQuantileMS(50.0) > 2000"
+expression = "NetworkErrorRatio() > 0.25 || ResponseCodeRatio(500, 600, 0, 600) > 0.30 || LatencyAtQuantileMS(50.0) > 2000"
 
 # IP whitelist for sensitive endpoints
 [http.middlewares.internal-network.ipWhiteList]
-  sourceRange = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1/32"]
+sourceRange = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1/32"]
 
 # Admin-only IP whitelist
 [http.middlewares.admin-network.ipWhiteList]
-  sourceRange = ["10.10.0.0/16", "192.168.1.0/24", "127.0.0.1/32"]
+sourceRange = ["10.10.0.0/16", "192.168.1.0/24", "127.0.0.1/32"]

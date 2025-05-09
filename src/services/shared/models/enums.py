@@ -33,10 +33,27 @@ Classes:
 
 from enum import auto
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+
+
+# Add these functions after your event type constants but before any class definitions
+
+def is_failure_event(event_type: str) -> bool:
+    """Check if an event type represents a failure."""
+    return event_type.endswith("_failed")
+
+def get_retry_event_type(event_type: str) -> whatever is doneOptional[str]:
+    """Get the retry event type for a failed event."""
+    if not is_failure_event(event_type):
+        return None
+    base_name = event_type.replace("_failed", "")
+    return f"{base_name}_retry"
+
+# Your existing class definitions would continue below
 
 
 class Components(str, Enum):
@@ -44,7 +61,7 @@ class Components(str, Enum):
 
     # Core services
 
-    SPEC_REGISTRY = None
+    SPEC_REGISTRY = "spec_registry"
     NEURAL_INTERPRETOR = "neural_interpretor"
     PROJECT_MANAGER = "project_manager"
     NEURAL_CODE_GENERATOR = "neural_code_generator"
@@ -134,6 +151,9 @@ class EventType(str, Enum):
     """Standardized event types for the system."""
 
     # Neural code generator events
+    AGGREGATION_COMPLETED = "aggregation_completed"
+    AGGREGATION_COMPLETED_PARTIAL = "aggregation_completed_partial"
+    LEARNING_DATA_RECORDED = "learning_data_recorded"
     CODE_GENERATION_REQUESTED = "ast_code_generator.generation_requested"
     CODE_GENERATION_COMPLETED = "ast_code_generator.generation_completed"
     CODE_GENERATION_FAILED = "ast_code_generator.generation_failed"

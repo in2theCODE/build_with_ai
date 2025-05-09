@@ -51,15 +51,15 @@ tls:
 
   # Fallback certificates - will be used until Let's Encrypt certs are issued
   certificates:
-    - certFile: "/etc/traefik/certs/yourdomain.crt"
-      keyFile: "/etc/traefik/certs/yourdomain.key"
+    - certFile: "/etc/traefik/certs/buildwithai.cloud.crt"
+      keyFile: "/etc/traefik/certs/buildwithai.cloud.key"
 
 # HTTP routing for API Gateway
 http:
   routers:
     # Workflow API router
     workflow-api:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/workflow`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/api/workflow`)"
       entryPoints: ["websecure"]
       service: "neural-interpreter"
       tls: {}
@@ -67,7 +67,7 @@ http:
 
     # One-off code generation API router
     generate-api:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/generate`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/api/generate`)"
       entryPoints: ["websecure"]
       service: "neural-interpreter"
       tls: {}
@@ -75,7 +75,7 @@ http:
 
     # Brainstorming API router
     brainstorm-api:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/brainstorm`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/api/brainstorm`)"
       entryPoints: ["websecure"]
       service: "neural-interpreter"
       tls: {}
@@ -83,7 +83,7 @@ http:
 
     # Status API router
     status-api:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/status`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/api/status`)"
       entryPoints: ["websecure"]
       service: "neural-interpreter"
       tls: {}
@@ -91,7 +91,7 @@ http:
 
     # WebSocket router for Pulsar
     pulsar-ws:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/pulsar/ws`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/pulsar/ws`)"
       entryPoints: ["websecure"]
       service: "pulsar-websocket"
       tls: {}
@@ -99,7 +99,7 @@ http:
 
     # Dashboard router
     dashboard:
-      rule: "Host(`dashboard.yourdomain.com`)"
+      rule: "Host(`dashboard.buildwithai.cloud`)"
       entryPoints: ["websecure"]
       service: "dashboard-service"
       tls: {}
@@ -107,7 +107,7 @@ http:
 
     # Admin API router with stricter security
     admin-api:
-      rule: "Host(`api.yourdomain.com`) && PathPrefix(`/api/admin`)"
+      rule: "Host(`api.buildwithai.cloud`) && PathPrefix(`/api/admin`)"
       entryPoints: ["websecure"]
       service: "neural-interpreter"
       tls: {}

@@ -17,7 +17,7 @@ import os
 from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 
-from core.spec_registry import SpecRegistry
+
 from infra.storage.repository import StorageRepository
 from models.project import Project
 from models.project import ProjectAnalysisResult

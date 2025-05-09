@@ -55,7 +55,6 @@ class MetricsCollector:
         self.metrics_endpoint = metrics_endpoint
         self.collect_process_metrics = collect_process_metrics
         self.enabled = enabled and PROMETHEUS_AVAILABLE
-
         if not self.enabled:
             if not PROMETHEUS_AVAILABLE:
                 logger.warning("Prometheus client not available. Metrics collection disabled.")
@@ -296,6 +295,41 @@ class MetricsCollector:
             return
 
         self.cache_misses.labels(component=self.component_name, cache_type=cache_type).inc()
+
+    def record_component_status(self, status: str, value: int = 1):
+        """
+        Record a component status (e.g., started, stopped, initializing).
+
+        This method creates a gauge metric to track the current state of a component,
+        which is useful for monitoring service lifecycle events.
+
+        Args:
+            status: Status name (e.g., "started", "stopped", "initializing")
+            value: Value to set (typically 1 for active, 0 for inactive)
+        """
+        if not self.enabled:
+            return
+
+        # Lazily create status gauges as needed
+        status_gauge_name = f"component_status_{status}"
+
+        # Check if we already have this gauge
+        if not hasattr(self, status_gauge_name):
+            # Create the gauge if it doesn't exist
+            setattr(
+                self,
+                status_gauge_name,
+                Gauge(
+                    f"neural_code_generator_{status}", f"Component {status} status", ["component"]
+                ),
+            )
+
+        # Get the gauge and set its value
+        gauge = getattr(self, status_gauge_name)
+        gauge.labels(component=self.component_name).set(value)
+
+        # Log the status change
+        logger.debug(f"Component {self.component_name} status '{status}' set to {value}")
 
     # Resource metrics methods
     def update_gpu_memory_usage(self, gpu_id: str, memory_bytes: float):

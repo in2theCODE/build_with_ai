@@ -1,0 +1,258 @@
+# docker-compose-pulsar-infra-dev.yml
+version: '3.8'
+
+networks:
+  pulsar-network:
+    name: pulsar-network
+    driver: bridge
+
+volumes:
+  zookeeper_data_1:
+  zookeeper_data_2:
+  zookeeper_data_3:
+  bookkeeper_data_1:
+  bookkeeper_data_2:
+  bookkeeper_data_3:
+  broker_data_1:
+  broker_data_2:
+  broker_data_3:
+  pulsar_manager_data:
+
+services:
+  # ZooKeeper Ensemble
+  zookeeper-1:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-zookeeper-1
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    volumes:
+      - zookeeper_data_1:/pulsar/data/zookeeper
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ZOOKEEPER_SERVERS=zookeeper-1,zookeeper-2,zookeeper-3
+      - ZOOKEEPER_SERVER_ID=1
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/zookeeper.conf &&
+               bin/generate-zookeeper-config.sh conf/zookeeper.conf &&
+               bin/pulsar zookeeper"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-zookeeper-ruok.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  zookeeper-2:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-zookeeper-2
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    volumes:
+      - zookeeper_data_2:/pulsar/data/zookeeper
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ZOOKEEPER_SERVERS=zookeeper-1,zookeeper-2,zookeeper-3
+      - ZOOKEEPER_SERVER_ID=2
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/zookeeper.conf &&
+               bin/generate-zookeeper-config.sh conf/zookeeper.conf &&
+               bin/pulsar zookeeper"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-zookeeper-ruok.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  zookeeper-3:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-zookeeper-3
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    volumes:
+      - zookeeper_data_3:/pulsar/data/zookeeper
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ZOOKEEPER_SERVERS=zookeeper-1,zookeeper-2,zookeeper-3
+      - ZOOKEEPER_SERVER_ID=3
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/zookeeper.conf &&
+               bin/generate-zookeeper-config.sh conf/zookeeper.conf &&
+               bin/pulsar zookeeper"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-zookeeper-ruok.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # BookKeeper Cluster
+  bookie-1:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-bookie-1
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    volumes:
+      - bookkeeper_data_1:/pulsar/data/bookkeeper
+    environment:
+      - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
+      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - advertisedAddress=bookie-1
+      - useHostNameAsBookieID=true
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
+               bin/pulsar bookie"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-bookie-healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  bookie-2:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-bookie-2
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    volumes:
+      - bookkeeper_data_2:/pulsar/data/bookkeeper
+    environment:
+      - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
+      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - advertisedAddress=bookie-2
+      - useHostNameAsBookieID=true
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
+               bin/pulsar bookie"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-bookie-healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  bookie-3:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-bookie-3
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    volumes:
+      - bookkeeper_data_3:/pulsar/data/bookkeeper
+    environment:
+      - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
+      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - advertisedAddress=bookie-3
+      - useHostNameAsBookieID=true
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
+               bin/pulsar bookie"
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-bookie-healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Pulsar Brokers
+  broker-1:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-broker-1
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+      - bookie-1
+      - bookie-2
+      - bookie-3
+    ports:
+      - "6650:6650"  # Pulsar binary protocol
+      - "8080:8080"  # Pulsar web service
+    volumes:
+      - broker_data_1:/pulsar/data
+    environment:
+      - PULSAR_MEM=-Xms4g -Xmx4g -XX:MaxDirectMemorySize=8g
+      - zookeeperServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - configurationStoreServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - clusterName=pulsar-cluster
+      - advertisedAddress=broker-1
+    command: >
+      bash -c "bin/apply-config-from-env.py conf/broker.conf &&
+               bin/pulsar broker"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/admin/v2/clusters/pulsar-cluster" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Pulsar Manager
+  pulsar-manager:
+    image: apachepulsar/pulsar-manager:v0.4.0
+    container_name: pulsar-manager
+    restart: unless-stopped
+    networks:
+      - pulsar-network
+    depends_on:
+      - broker-1
+    ports:
+      - "9527:9527"  # Web UI
+    volumes:
+      - pulsar_manager_data:/data
+    environment:
+      - SPRING_CONFIGURATION_FILE=/pulsar-manager/pulsar-manager/application.properties
+      - REDIRECT_HOST=http://localhost
+      - REDIRECT_PORT=9527
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9527" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Pulsar - Event Bus
+  pulsar:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6650:6650"  # Pulsar binary protocol port
+      - "127.0.0.1:8080:8080"  # Pulsar web service port
+    volumes:
+      - pulsar-data:/pulsar/data
+      - ..//.pulsar/certs:/pulsar/certs
+      - ./infra/configs/pulsar:/pulsar/conf
+      - ./bin/pulsar/setup.py:/pulsar/setup.py
+    command: >
+      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone -nss -nfw"
+    environment:
+      - PULSAR_MEM=-Xms1g -Xmx1g
+      - webServicePortTls=8443
+      - tlsEnabled=true
+      - tlsCertificateFilePath=/Users/justinrussell/.pulsar/certs/pulsar.crt
+      - tlsKeyFilePath=/pulsar/certs/pulsar.key
+      - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
+      - authenticationEnabled=true
+      - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
+      - webSocketServiceEnabled=true
+    networks:
+      - spec-template-network
+      - pulsar-network
+    healthcheck:
+      test: [ "CMD", "bin/pulsar-admin", "brokers", "healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

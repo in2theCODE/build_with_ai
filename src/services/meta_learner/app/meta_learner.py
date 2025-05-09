@@ -5,7 +5,7 @@ Meta learning component for the Program Synthesis System.
 This component analyzes synthesis results to learn more effective synthesis
 strategies over time, enabling the system to adapt to different problem domains.
 """
-
+import hashlib
 from collections import defaultdict
 import datetime
 import json
@@ -21,8 +21,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from program_synthesis_system.src.shared import BaseComponent
-from program_synthesis_system.src.shared.enums import SynthesisStrategy
+from src.services.shared.models.base import BaseComponent
+from src.services.shared.models.enums import SynthesisStrategy
 
 
 try:
@@ -356,10 +356,10 @@ class MetaLearner(BaseComponent):
 
             return max(success_rates.items(), key=lambda x: x[1])[0]
 
-        def _determine_problem_type(self, specification, context):
+        def _determine_problem_type(spec):
             """Determine the type of problem based on the specification and context."""
             # For simplicity, we'll just return a hash of the specification
-            return hashlib.md5(specification.encode()).hexdigest()[:8]
+            return hashlib.md5(spec.encode()).hexdigest()[:8]
 
         self.strategy_stats[strategy]["failure_count"] += 1
 

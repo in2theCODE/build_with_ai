@@ -4,26 +4,20 @@ global:
 scrape_configs:
   - job_name: 'pulsar'
     static_configs:
-      - targets: ['localhost:8080']  # Pulsar broker metrics
+      - targets: [ 'localhost:8080' ]  # Pulsar broker metrics
         labels:
           service: 'broker'
 
   - job_name: 'services'
     static_configs:
-      - targets: ['service1:8000', 'service2:8000']  # Your service metrics
+      - targets: [ 'service1:8000', 'service2:8000' ]  # Your service metrics
         labels:
-          cluster: 'development'global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'pulsar'
-    static_configs:
-      - targets: ['localhost:8080']  # Pulsar broker metrics
-        labels:
-          service: 'broker'
-
+          cluster:
+          service: 'development'
+          global:
   - job_name: 'services'
     static_configs:
-      - targets: ['service1:8000', 'service2:8000']  # Your service metrics
+      - targets: [ 'service1:8000', 'service2:8000' ]  # Your service metrics
         labels:
           cluster: 'development'
+    scrape_interval: 15s

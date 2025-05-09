@@ -1002,7 +1002,7 @@ class NeuralInterpreter:
         self._lock = asyncio.Lock()
 
         # Initialize task pool for concurrent processing
-        self.task_pool = AsyncTaskManager(max_concurrency=10)
+        self.task_pool = AsyncTaskManager()
 
         # Initialize validators
         self.prompt_validator = Validator()
@@ -1021,10 +1021,7 @@ class NeuralInterpreter:
 
             # Create producers
             self.producers["tasks"] = self.client.create_producer(
-                topic=self.tasks_topic,
-                block_if_queue_full=True,
-                batching_enabled=True,
-                batching_max_publish_delay_ms=10,
+                topic=self.tasks_topic, block_if_queue_full=True, batching_enabled=True
             )
 
             self.producers["metrics"] = self.client.create_producer(
@@ -1042,7 +1039,7 @@ class NeuralInterpreter:
             )
 
             logger.info(f"Initialized Pulsar connections to {self.pulsar_url}")
-            metrics_collector.record_request(status="success", strategy="pulsar_connection")
+            metrics_collector.record_request(strategy="pulsar_connection")
 
             # Publish system startup metrics
             await self.publish_metrics(

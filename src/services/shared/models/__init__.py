@@ -9,7 +9,7 @@ It handles serialization and deserialization of events and messages using Avro.
 import os
 from typing import Any, Dict, Type
 
-from infra.registration.event_converter import EventConverter
+from infra.registration.schema_registry import convert_pydantic_schema_to_avro
 from infra.registration.schema_registry import register_pydantic_model
 from infra.registration.schema_registry import SchemaRegistryClient
 
@@ -18,7 +18,9 @@ from src.services.shared.models.base import BaseComponent
 from src.services.shared.models.base import BaseMessage
 from src.services.shared.models.base import ConfigurableComponent
 from src.services.shared.models.base import EventPriority as BaseEventPriority
-
+from src.services.shared.models.base import EventType as BaseEventType
+from src.services.shared.models.base import
+from src.services.shared.models.enums import  Aggregation_Completed_Partial as EventType
 # Enumerations
 from src.services.shared.models.enums import Components
 from src.services.shared.models.enums import Constants
@@ -167,7 +169,7 @@ def register_event_schemas():
     for model_class in event_models:
         try:
             subject = f"{model_class.__name__}-value"
-            schema_id = register_pydantic_model(model_class, _schema_registry, subject)
+            schema_id = register_pydantic_model(model_class, SchemaRegistryClient, subject)
             registered_schemas[model_class.__name__] = schema_id
         except Exception as e:
             print(f"Failed to register schema for {model_class.__name__}: {e}")
@@ -185,7 +187,7 @@ def serialize_event(event: BaseEvent) -> bytes:
     Returns:
         The serialized event as bytes
     """
-    avro_event = EventConverter.to_avro(event)
+    avro_event = convert_pydantic_schema_to_avro(pydantic_schema=).to_avro(event)
     return avro_event.model_dump_json().encode("utf-8")
 
 
@@ -200,7 +202,7 @@ def deserialize_event(data: bytes) -> BaseEvent:
         The deserialized event
     """
     avro_data = EventAvro.model_validate_json(data.decode("utf-8"))
-    return EventConverter.from_avro(avro_data)
+    return convert_pydantic_schema_to_avro(   ).from_avro(avro_data)
 
 
 # Export symbols
@@ -209,6 +211,36 @@ __all__ = [
     "BaseEvent",
     "EventType",
     "EventPriority",
+    "BaseComponent",
+    "DatabaseConfig",
+    "DeploymentConfig",
+    "DisclosureLevel",
+    "ErrorCodes",
+    "Events",
+    "Metrics",
+    "MetricsConfig",
+    "ModelConfig",
+    "Paths",
+
+    "ProcessingMode",
+    "ProjectStatus",
+    "ProjectType",
+    "SynthesisStrategy",
+    "TaskPriority",
+    "TaskStatus",
+    "Techniques",
+    "CodeGenerationRequestPayload",
+    "CodeGenerationCompletedPayload",
+    "CodeGenerationFailedPayload",
+    "KnowledgeQueryPayload",
+    "KnowledgeUpdatedPayload",
+    "QueryRequest",
+    "QueryResponse",
+    "PatternCreateRequest",
+    "PatternListResponse",
+    "PatternResponse",
+    "ConfigurableComponent",
+    "TelemetryManager",
     "BaseEventPriority",
     "CodeGenerationRequestedEvent",
     "CodeGenerationCompletedEvent",
