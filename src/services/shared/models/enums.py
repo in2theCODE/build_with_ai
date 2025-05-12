@@ -48,7 +48,7 @@ def is_failure_event(event_type: str) -> bool:
     return event_type.endswith("_failed")
 
 
-def get_retry_event_type(event_type: str) -> whatever is doneOptional[str]:
+def get_retry_event_type(event_type: str) -> str | None:
     """Get the retry event type for a failed event."""
     if not is_failure_event(event_type):
         return None
@@ -221,21 +221,7 @@ class Database(str, Enum):
     CACHE_TYPE_MEMORY = "memory"
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration constants"""
 
-    DEFAULT_VECTOR_DIMENSION: int = Field(
-        1536, description="Default vector dimension for embeddings"
-    )
-    DEFAULT_COLLECTION_NAME: str = Field(
-        "neural_code_embeddings", description="Default collection name for vector database"
-    )
-    DEFAULT_VECTOR_INDEX_TYPE: str = Field("HNSW", description="Default vector index type")
-    DEFAULT_VECTOR_METRIC_TYPE: str = Field("COSINE", description="Default vector metric type")
-    DEFAULT_DATABASE_NAME: str = Field("neural_code_generator", description="Default database name")
-    DEFAULT_CACHE_TTL: int = Field(3600, description="Default cache TTL in seconds")
-
-    model_config = ConfigDict(frozen=True)
 
 
 class Paths(BaseModel):
@@ -349,38 +335,6 @@ class Metrics(str, Enum):
     METRIC_VECTOR_DB_QUERY_TIME = "neural_code_generator_vector_db_query_time_seconds"
     METRIC_VECTOR_DB_OPERATIONS = "neural_code_generator_vector_db_operations_total"
 
-
-class MetricsConfig(BaseModel):
-    """Configuration for metrics collection"""
-
-    DEFAULT_METRICS_PORT: int = Field(8081, description="Default metrics port")
-    DEFAULT_METRICS_ENDPOINT: str = Field("/metrics", description="Default metrics endpoint")
-
-    model_config = ConfigDict(frozen=True)
-
-
-class DeploymentConfig(BaseModel):
-    """Constants for deployment configuration"""
-
-    DEFAULT_IMAGE: str = Field(
-        "program-synthesis/neural-code-generator:latest", description="Default container image"
-    )
-    DEFAULT_PORT: int = Field(8000, description="Default port")
-    DEFAULT_CPU_REQUEST: str = Field("2", description="Default CPU request")
-    DEFAULT_MEMORY_REQUEST: str = Field("16Gi", description="Default memory request")
-    DEFAULT_GPU_REQUEST: str = Field("1", description="Default GPU request")
-    DEFAULT_CPU_LIMIT: str = Field("4", description="Default CPU limit")
-    DEFAULT_MEMORY_LIMIT: str = Field("24Gi", description="Default memory limit")
-    DEFAULT_GPU_LIMIT: str = Field("1", description="Default GPU limit")
-    DEFAULT_NAMESPACE: str = Field("program-synthesis", description="Default Kubernetes namespace")
-    DEFAULT_REPLICAS: int = Field(1, description="Default number of replicas")
-    READINESS_PATH: str = Field("/readiness", description="Path for readiness probe")
-    LIVENESS_PATH: str = Field("/liveness", description="Path for liveness probe")
-    STARTUP_PATH: str = Field("/startup", description="Path for startup probe")
-    DEFAULT_UID: int = Field(1000, description="Default UID")
-    DEFAULT_GID: int = Field(1000, description="Default GID")
-
-    model_config = ConfigDict(frozen=True)
 
 
 class ErrorCodes(int, Enum):

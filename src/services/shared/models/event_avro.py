@@ -16,14 +16,12 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
-
+from pydantic_avro.base import AvroBase
 from pydantic import Field
-
-from .base import PulsarAvroBaseModel
 from .enums import EventPriority
 
 
-class EventAvro(PulsarAvroBaseModel):
+class EventAvro(AvroBase):
     """Avro-compatible event model for Apache Pulsar."""
 
     event_id: str = Field(

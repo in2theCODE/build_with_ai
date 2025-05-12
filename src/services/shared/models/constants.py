@@ -1,4 +1,7 @@
+"""
+constants file
 # src/services/shared/models/constants.py
+"""
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field

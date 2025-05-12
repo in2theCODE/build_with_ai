@@ -19,7 +19,9 @@ from typing import Any, Dict, List, Tuple, Type
 
 import requests
 
-from .base import AvroBaseModel
+from pydantic_avro.base import AvroBase
+
+from src.services.shared.models.base import AvroBaseModel
 
 
 class SchemaRegistryClient:

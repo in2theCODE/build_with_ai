@@ -1,3 +1,4 @@
+# docker-compose-api-gateway-dev.yaml
 version: '3.8'
 
 services:
@@ -30,12 +31,10 @@ services:
   # Authentication Sidecar
   auth-sidecar:
     build:
-      context:
+      context: .
       dockerfile: Dockerfile
     container_name: auth-sidecar
-    secrets:
-      - clerk_public_key
-      - clerk_secret_key
+    user: "1000:1000"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -55,15 +54,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    secrets:
+      - clerk_public_key
+      - clerk_secret_key
 
-
-    # Neo4j instance with updated SSL configuration
+  # Neo4j instance with updated SSL configuration
   neo4j-vector:
     image: neo4j:5.6.0-community
     container_name: neo4j-vector
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    user: "1000:1000"  # Run as non-root user (use an appropriate UID:GID)
     environment:
       - NEO4J_AUTH=neo4j/yourpassword
       # Updated to newer setting names to avoid deprecation warnings
@@ -84,18 +86,20 @@ services:
       - neo4j-vector-plugins:/plugins
     networks:
       - spec-template-network
+      - api-network
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7474/browser/" ]
       interval: 10s
       timeout: 5s
       retries: 3
 
-    # Neural Interpreter
+  # Neural Interpreter
   neural-interpreter:
     build:
       context: ../src/api_gateway/neural_interpretor
     container_name: neural-interpreter
     restart: unless-stopped
+    user: "1000:1000"  # Run as non-root user (use an appropriate UID:GID)
     volumes:
       - ../src/services/api_gateway/neural_interpretor/app/config:/app/config
       - ../certs/neural_interpretor:/app/config/certs
@@ -108,47 +112,50 @@ services:
     networks:
       - spec-template-network
       - pulsar-network
+      - api-network
     healthcheck:
       test: [ "CMD", "test", "-e", "/tmp/agent-health.txt" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    secrets:
+      - openai_api_key
+      - anthropic_api_key
 
+networks:
+  api-network:
+    external: true
+  pulsar-network:
+    external: true
+  spec-template-network:
+    external: true
+  monitoring:
+    external: true
+
+volumes:
+  neo4j-vector-data:
+  neo4j-vector-logs:
+  neo4j-vector-plugins:
+
+# For Mac development environment
 secrets:
   clerk_public_key:
     file: /Users/justinrussell/.docker-secrets-codegen/next_public_clerk_publishable_key
   clerk_secret_key:
     file: /Users/justinrussell/.docker-secrets-codegen/clerk_secret_key
-  db_user:
-    file: /Users/justinrussell/.docker-secrets-codegen/db_user
-  db_password:
-    file: /Users/justinrussell/.docker-secrets-codegen/db_password
   openai_api_key:
     file: /Users/justinrussell/.docker-secrets-codegen/openai_api_key
   anthropic_api_key:
     file: /Users/justinrussell/.docker-secrets-codegen/anthropic_api_key
-  pinecone_api_key:
-    file: /Users/justinrussell/.docker-secrets-codegen/pinecone_api_key
-  mongodb_root_password:
-    file: /Users/justinrussell/.docker-secrets-codegen/mongodb_root_password
-  pulsar_secret_key:
-    file: /Users/justinrussell/.docker-secrets-codegen/pulsar_secret_key
 
-
-networks:
-  api-network:
-    driver: bridge
-  pulsar-network:
-    driver: bridge
-  spec-template-network:
-    driver: bridge
-  monitoring:
-    driver: bridge
-
-volumes:
-  pulsar-data:
-  spec_registry_data:
-  neo4j-vector-data:
-  neo4j-vector-logs:
-  neo4j-vector-plugins:
+# For Ubuntu deployment, comment out the above secrets section and uncomment this:
+# secrets:
+#   clerk_public_key:
+#     external: true
+#   clerk_secret_key:
+#     external: true
+#   openai_api_key:
+#     external: true
+#   anthropic_api_key:
+#     external: true

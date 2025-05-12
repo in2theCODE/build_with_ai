@@ -1,11 +1,19 @@
-# docker-compose-pulsar-infra-dev.yml
-
 networks:
   pulsar-network:
     name: pulsar-network
     driver: bridge
   spec-template-network:
-    external: true
+    name: spec-template-network
+    driver: bridge
+  api-network:
+    name: api-network
+    driver: bridge
+  monitoring:
+    name: monitoring
+    driver: bridge
+  socket-proxy:
+    name: socket-proxy
+    driver: bridge
 
 volumes:
   zookeeper_data_1:
@@ -23,11 +31,13 @@ volumes:
 services:
   # ZooKeeper Ensemble
   zookeeper-1:
-    image: apachepulsar/pulsar
+    image: apachepulsar/pulsar:4.0.4
     container_name: pulsar-zookeeper-1
     restart: unless-stopped
     networks:
       - pulsar-network
+    ports:
+      - "2181:2181"  # ZooKeeper client port for external access if needed
     volumes:
       - zookeeper_data_1:/pulsar/data/zookeeper
     environment:
@@ -45,7 +55,7 @@ services:
       retries: 3
 
   zookeeper-2:
-    image: apachepulsar/pulsar-all:4.0.0
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-zookeeper-2
     restart: unless-stopped
     networks:
@@ -67,7 +77,7 @@ services:
       retries: 3
 
   zookeeper-3:
-    image: apachepulsar/pulsar-all:4.0.0
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-zookeeper-3
     restart: unless-stopped
     networks:
@@ -90,7 +100,7 @@ services:
 
   # Initialize cluster metadata
   init-cluster:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-init-cluster
     restart: on-failure
     networks:
@@ -112,11 +122,13 @@ services:
 
   # BookKeeper Cluster
   bookie-1:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-bookie-1
     restart: unless-stopped
     networks:
       - pulsar-network
+    ports:
+      - "8000:8000"  # Added BookKeeper HTTP monitoring port
     depends_on:
       zookeeper-1:
         condition: service_healthy
@@ -135,6 +147,8 @@ services:
       - PULSAR_PREFIX_metadataServiceUri=zk://zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181/ledgers
       - PULSAR_PREFIX_advertisedAddress=bookie-1
       - PULSAR_PREFIX_useHostNameAsBookieID=true
+      - PULSAR_PREFIX_httpServerEnabled=true  # Enable HTTP server for metrics
+      - PULSAR_PREFIX_httpServerPort=8000     # Set HTTP server port
     command: >
       bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
                bin/pulsar bookie"
@@ -145,7 +159,7 @@ services:
       retries: 3
 
   bookie-2:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-bookie-2
     restart: unless-stopped
     networks:
@@ -178,7 +192,7 @@ services:
       retries: 3
 
   bookie-3:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-bookie-3
     restart: unless-stopped
     networks:
@@ -212,11 +226,15 @@ services:
 
   # Pulsar Brokers
   broker-1:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar:4.0.4  # Updated to consistent version
     container_name: pulsar-broker-1
     restart: unless-stopped
     networks:
       - pulsar-network
+      - spec-template-network  # Added connection to external network
+      - api-network  # Added connection to external network
+      - monitoring  # Added connection to external network
+      - socket-proxy  # Added connection to external network
     depends_on:
       zookeeper-1:
         condition: service_healthy
@@ -231,8 +249,8 @@ services:
       bookie-3:
         condition: service_healthy
     ports:
-      - "6650:6650"  # Pulsar binary protocol
-      - "8080:8080"  # Pulsar web service
+      - "6622:6650"  # Pulsar binary protocol
+      - "8022:8080"  # Pulsar web service
     volumes:
       - broker_data_1:/pulsar/data
     environment:
@@ -274,23 +292,26 @@ services:
     restart: unless-stopped
     networks:
       - pulsar-network
+      - api-network
+      - monitoring
     depends_on:
       broker-1:
         condition: service_healthy
     ports:
-      - "9527:9527"  # Web UI
+      - "127.0.0.1:9522:9527"  # Web UI
     volumes:
       - pulsar_manager_data:/data
     environment:
       - SPRING_CONFIGURATION_FILE=/pulsar-manager/pulsar-manager/application.properties
       - REDIRECT_HOST=http://localhost
-      - REDIRECT_PORT=9527
+      - REDIRECT_PORT=9522  # Fixed to match the exposed host port
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9527" ]
       interval: 10s
       timeout: 5s
       retries: 3
 
+# For Mac development - will need to modify for Ubuntu deployment
 secrets:
   clerk_public_key:
     file: /Users/justinrussell/.docker-secrets-codegen/next_public_clerk_publishable_key

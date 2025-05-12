@@ -1,9 +1,10 @@
+# docker-compose-proxy-dev.yaml - IMPROVED
 version: '3.8'
 
 services:
   socket-proxy:
     container_name: socket-proxy
-    image: tecnativa/docker-socket-proxy:latest
+    image: tecnativa/docker-socket-proxy:arm32v7
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -23,15 +24,30 @@ services:
       - PLUGINS=0
       - SYSTEM=0
       - EXEC=0
+    ports:
+      - "127.0.0.1:2375:2375"  # Only expose locally, not to the internet
     networks:
       - socket-proxy
+      - monitoring  # Added missing monitoring network connection
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2375"]
+      test: [ "CMD", "nc", "-z", "localhost", "2375" ]
       interval: 10s
       timeout: 5s
       retries: 3
+    user: "nobody:nobody"  # Added security: run as non-root user
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
 networks:
   socket-proxy:
     name: socket-proxy
-    external: false
+    driver: bridge
+    external: true
+  monitoring:
+    name: monitoring
+    driver: bridge
+    external: true  # First component to use this network, so create it

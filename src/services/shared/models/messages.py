@@ -32,8 +32,8 @@ import uuid
 
 from pydantic import Field
 
-from .base import AvroBaseModel
-from .base import BaseMessage
+from pydantic_avro.base import AvroBase
+from .base import BaseMessage, AvroBaseModel
 from .enums import ProcessingMode
 from .enums import TaskPriority
 from .enums import TaskStatus

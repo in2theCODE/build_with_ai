@@ -9,18 +9,16 @@ schema generation.
 
 Classes:
     AvroBaseModel: Base model with Avro schema support
-    PulsarAvroBaseModel: Enhanced model with Pulsar integration
+    AvroBase: Enhanced model with Pulsar integration
     EventPayload: Base class for all event payloads
     BaseEvent: Base class for all system events
     BaseMessage: Base class for all message schemas
     BaseComponent: Base class for all system components
     ConfigurableComponent: Component that can be dynamically configured
 """
-
-# refactored_base.py
-
 from __future__ import annotations
 
+import fastavro
 from datetime import datetime
 from datetime import timezone
 import io
@@ -34,15 +32,11 @@ from typing import (
     Union,
 )
 from uuid import uuid4
-
-from dataclasses_avroschema.pydantic import AvroBaseModel
-import fastavro
+from pydantic_avro import AvroBase
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import model_validator
 from pydantic import PrivateAttr
-
 from .enums import EventPriority
 from .enums import EventType
 
@@ -50,7 +44,7 @@ from .enums import EventType
 T = TypeVar("T")
 
 
-class PulsarAvroBaseModel(AvroBaseModel):
+class AvroBaseModel(AvroBase):
     """Base model with Avro and Pulsar support for all models in the system.
 
     This model inherits from AvroBaseModel which provides Avro schema generation,
@@ -92,7 +86,7 @@ class PulsarAvroBaseModel(AvroBaseModel):
         return buffer.getvalue()
 
     @classmethod
-    def deserialize(cls, data: bytes) -> "PulsarAvroBaseModel":
+    def deserialize(cls, data: bytes) -> "AvroBase":
         """Deserialize from binary using Fast Avro."""
         schema = cls.avro_schema_to_python()
         buffer = io.BytesIO(data)
@@ -100,18 +94,18 @@ class PulsarAvroBaseModel(AvroBaseModel):
         return cls.model_validate(record)
 
     @classmethod
-    def from_avro_dict(cls, data: Dict[str, Any]) -> "PulsarAvroBaseModel":
+    def from_avro_dict(cls, data: Dict[str, Any]) -> "AvroBase":
         """Create an instance from an Avro dictionary."""
         return cls.model_validate(data)
 
 
-class EventPayload(PulsarAvroBaseModel):
+class EventPayload(AvroBase):
     """Base class for all event payloads."""
 
     pass
 
 
-class BaseEvent(PulsarAvroBaseModel):
+class BaseEvent(AvroBase):
     """Base event class for all events in the system."""
 
     # Required fields
@@ -146,7 +140,6 @@ class BaseEvent(PulsarAvroBaseModel):
 
     # ---------------------- Validators ----------------------
 
-    @model_validator(mode="before")
     @classmethod
     def validate_event_type(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("event_type"), str):
@@ -156,7 +149,6 @@ class BaseEvent(PulsarAvroBaseModel):
                 raise ValueError(f"Invalid event_type: {data['event_type']}")
         return data
 
-    @model_validator(mode="before")
     @classmethod
     def validate_priority(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("priority"), int):
@@ -166,7 +158,6 @@ class BaseEvent(PulsarAvroBaseModel):
                 data["priority"] = EventPriority.NORMAL
         return data
 
-    @model_validator(mode="before")
     @classmethod
     def validate_timestamp(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(data, dict) and isinstance(data.get("timestamp"), str):
@@ -177,7 +168,7 @@ class BaseEvent(PulsarAvroBaseModel):
         return data
 
 
-class BaseMessage(PulsarAvroBaseModel):
+class BaseMessage(AvroBase):
     """Base class for all message schemas."""
 
     pass
