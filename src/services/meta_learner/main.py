@@ -12,7 +12,7 @@ import signal
 import sys
 import threading
 import time
-from typing import Dict, Any, Optional
+from typing import Optional
 
 # Setup logging before anything else
 logging.basicConfig(
@@ -34,7 +34,7 @@ except ImportError:
     )
 
 # Import from shared modules
-from src.services.shared.models.base import BaseComponent, BaseEvent
+from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import EventType, SynthesisStrategy
 from src.services.shared.models.types import VerificationReport
 from src.services.shared.models.synthesis import SynthesisResult
@@ -43,7 +43,7 @@ from src.services.shared.pulsar.event_emitter import SecureEventEmitter
 from src.services.shared.pulsar.event_listener import SecureEventListener
 
 # Import service-specific modules
-from .meta_learner import MetaLearner
+from src.services.meta_learner.meta_learner import MetaLearner
 
 
 class MetaLearnerService:

@@ -1,10 +1,11 @@
 # docker-compose-pulsar-infra-dev.yml
-version: '3.8'
 
 networks:
   pulsar-network:
     name: pulsar-network
     driver: bridge
+  spec-template-network:
+    external: true
 
 volumes:
   zookeeper_data_1:
@@ -17,11 +18,12 @@ volumes:
   broker_data_2:
   broker_data_3:
   pulsar_manager_data:
+  pulsar-data:
 
 services:
   # ZooKeeper Ensemble
   zookeeper-1:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar
     container_name: pulsar-zookeeper-1
     restart: unless-stopped
     networks:
@@ -43,7 +45,7 @@ services:
       retries: 3
 
   zookeeper-2:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar-all:4.0.0
     container_name: pulsar-zookeeper-2
     restart: unless-stopped
     networks:
@@ -65,7 +67,7 @@ services:
       retries: 3
 
   zookeeper-3:
-    image: apachepulsar/pulsar:4.0.3
+    image: apachepulsar/pulsar-all:4.0.0
     container_name: pulsar-zookeeper-3
     restart: unless-stopped
     networks:
@@ -86,6 +88,28 @@ services:
       timeout: 5s
       retries: 3
 
+  # Initialize cluster metadata
+  init-cluster:
+    image: apachepulsar/pulsar:4.0.3
+    container_name: pulsar-init-cluster
+    restart: on-failure
+    networks:
+      - pulsar-network
+    depends_on:
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+    command: >
+      bash -c "bin/pulsar initialize-cluster-metadata \
+               --cluster pulsar-cluster \
+               --zookeeper zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181 \
+               --configuration-store zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181 \
+               --web-service-url http://broker-1:8080 \
+               --broker-service-url pulsar://broker-1:6650"
+
   # BookKeeper Cluster
   bookie-1:
     image: apachepulsar/pulsar:4.0.3
@@ -94,16 +118,23 @@ services:
     networks:
       - pulsar-network
     depends_on:
-      - zookeeper-1
-      - zookeeper-2
-      - zookeeper-3
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+      init-cluster:
+        condition: service_completed_successfully
     volumes:
       - bookkeeper_data_1:/pulsar/data/bookkeeper
     environment:
       - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
-      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
-      - advertisedAddress=bookie-1
-      - useHostNameAsBookieID=true
+      # Important: zkServers is what BookKeeper uses to connect to ZooKeeper
+      - PULSAR_PREFIX_zkServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - PULSAR_PREFIX_metadataServiceUri=zk://zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181/ledgers
+      - PULSAR_PREFIX_advertisedAddress=bookie-1
+      - PULSAR_PREFIX_useHostNameAsBookieID=true
     command: >
       bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
                bin/pulsar bookie"
@@ -120,16 +151,23 @@ services:
     networks:
       - pulsar-network
     depends_on:
-      - zookeeper-1
-      - zookeeper-2
-      - zookeeper-3
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+      init-cluster:
+        condition: service_completed_successfully
     volumes:
       - bookkeeper_data_2:/pulsar/data/bookkeeper
     environment:
       - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
-      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
-      - advertisedAddress=bookie-2
-      - useHostNameAsBookieID=true
+      # Important: zkServers is what BookKeeper uses to connect to ZooKeeper
+      - PULSAR_PREFIX_zkServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - PULSAR_PREFIX_metadataServiceUri=zk://zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181/ledgers
+      - PULSAR_PREFIX_advertisedAddress=bookie-2
+      - PULSAR_PREFIX_useHostNameAsBookieID=true
     command: >
       bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
                bin/pulsar bookie"
@@ -146,16 +184,23 @@ services:
     networks:
       - pulsar-network
     depends_on:
-      - zookeeper-1
-      - zookeeper-2
-      - zookeeper-3
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+      init-cluster:
+        condition: service_completed_successfully
     volumes:
       - bookkeeper_data_3:/pulsar/data/bookkeeper
     environment:
       - PULSAR_MEM=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=4g
-      - ZK_SERVERS=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
-      - advertisedAddress=bookie-3
-      - useHostNameAsBookieID=true
+      # Important: zkServers is what BookKeeper uses to connect to ZooKeeper
+      - PULSAR_PREFIX_zkServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - PULSAR_PREFIX_metadataServiceUri=zk://zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181/ledgers
+      - PULSAR_PREFIX_advertisedAddress=bookie-3
+      - PULSAR_PREFIX_useHostNameAsBookieID=true
     command: >
       bash -c "bin/apply-config-from-env.py conf/bookkeeper.conf &&
                bin/pulsar bookie"
@@ -173,12 +218,18 @@ services:
     networks:
       - pulsar-network
     depends_on:
-      - zookeeper-1
-      - zookeeper-2
-      - zookeeper-3
-      - bookie-1
-      - bookie-2
-      - bookie-3
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+      bookie-1:
+        condition: service_healthy
+      bookie-2:
+        condition: service_healthy
+      bookie-3:
+        condition: service_healthy
     ports:
       - "6650:6650"  # Pulsar binary protocol
       - "8080:8080"  # Pulsar web service
@@ -186,10 +237,14 @@ services:
       - broker_data_1:/pulsar/data
     environment:
       - PULSAR_MEM=-Xms4g -Xmx4g -XX:MaxDirectMemorySize=8g
-      - zookeeperServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
-      - configurationStoreServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
-      - clusterName=pulsar-cluster
-      - advertisedAddress=broker-1
+      - PULSAR_PREFIX_zookeeperServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - PULSAR_PREFIX_configurationStoreServers=zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      - PULSAR_PREFIX_clusterName=pulsar-cluster
+      - PULSAR_PREFIX_advertisedAddress=broker-1
+      # Add BookKeeper settings to ensure availability
+      - PULSAR_PREFIX_managedLedgerDefaultEnsembleSize=3
+      - PULSAR_PREFIX_managedLedgerDefaultWriteQuorum=2
+      - PULSAR_PREFIX_managedLedgerDefaultAckQuorum=2
     command: >
       bash -c "bin/apply-config-from-env.py conf/broker.conf &&
                bin/pulsar broker"
@@ -198,6 +253,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    secrets:
+      - source: pulsar_secret_key
+        target: /pulsar/conf/pulsar_secret_key
+      - source: clerk_public_key
+        target: /pulsar/conf/clerk_public_key
+      - source: clerk_secret_key
+        target: /pulsar/conf/clerk_secret_key
+      - source: anthropic_api_key
+        target: /pulsar/conf/anthropic_api_key
+      - source: openai_api_key
+        target: /pulsar/conf/openai_api_key
+      - source: pinecone_api_key
+        target: /pulsar/conf/pinecone_api_key
 
   # Pulsar Manager
   pulsar-manager:
@@ -207,7 +275,8 @@ services:
     networks:
       - pulsar-network
     depends_on:
-      - broker-1
+      broker-1:
+        condition: service_healthy
     ports:
       - "9527:9527"  # Web UI
     volumes:
@@ -222,37 +291,16 @@ services:
       timeout: 5s
       retries: 3
 
-  # Pulsar - Event Bus
-  pulsar:
-    image: apachepulsar/pulsar:4.0.3
-    container_name: pulsar
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6650:6650"  # Pulsar binary protocol port
-      - "127.0.0.1:8080:8080"  # Pulsar web service port
-    volumes:
-      - pulsar-data:/pulsar/data
-      - ..//.pulsar/certs:/pulsar/certs
-      - ./infra/configs/pulsar:/pulsar/conf
-      - ./bin/pulsar/setup.py:/pulsar/setup.py
-    command: >
-      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone -nss -nfw"
-    environment:
-      - PULSAR_MEM=-Xms1g -Xmx1g
-      - webServicePortTls=8443
-      - tlsEnabled=true
-      - tlsCertificateFilePath=/Users/justinrussell/.pulsar/certs/pulsar.crt
-      - tlsKeyFilePath=/pulsar/certs/pulsar.key
-      - tlsTrustCertsFilePath=/pulsar/certs/ca.crt
-      - authenticationEnabled=true
-      - authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderTls
-      - webSocketServiceEnabled=true
-    networks:
-      - spec-template-network
-      - pulsar-network
-    healthcheck:
-      test: [ "CMD", "bin/pulsar-admin", "brokers", "healthcheck" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+secrets:
+  clerk_public_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/next_public_clerk_publishable_key
+  clerk_secret_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/clerk_secret_key
+  openai_api_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/openai_api_key
+  anthropic_api_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/anthropic_api_key
+  pinecone_api_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/pinecone_api_key
+  pulsar_secret_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/pulsar_secret_key

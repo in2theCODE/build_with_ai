@@ -15,7 +15,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /Users/justinrussell/.traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
-      - /Users/justinrussell/.tra1  qefik/certs:/etc/traefik/certs:ro
+      - /Users/justinrussell/.traefik/certs:/etc/traefik/certs:ro
       - /Users/justinrussell/.traefik/dynamic:/etc/traefik/dynamic:ro
       - /Users/justinrussell/.traefik/acme:/etc/traefik/acme
     networks:
@@ -30,7 +30,7 @@ services:
   # Authentication Sidecar
   auth-sidecar:
     build:
-      context: ../src/api_gateway/auth-sidecar
+      context:
       dockerfile: Dockerfile
     container_name: auth-sidecar
     secrets:
@@ -114,11 +114,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    depends_on:
-      - pulsar
-      - auth-sidecar
-      - neo4j-vector
-
 
 secrets:
   clerk_public_key:

@@ -8,7 +8,7 @@ import importlib
 import logging
 from typing import Any, Dict, Optional, Type
 
-from src.services.neural_code_generator.app.enhanced_neural_code_generator import (
+from src.services.neural_code_generator.enhanced_neural_code_generator import (
     EnhancedNeuralCodeGenerator,
 )
 from src.services.shared.models.base import BaseComponent
@@ -33,7 +33,7 @@ class ComponentFactory:
 
     def register_component(
         self, component_type: ComponentType, name: str, component_class: Type[BaseComponent]
-    ): a fucking thing
+    ):
         """
         Register a component implementation.
 

@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 networks:
   monitoring:
@@ -17,8 +17,8 @@ services:
     container_name: prometheus
     restart: unless-stopped
     volumes:
-      - ../src/services/prometheus/app/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ../src/services/prometheus/app/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
+      - ~/build_with_ai/src/services/prometheus/app/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
+      - ~/build_with_ai/src/services/prometheus/app/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -63,10 +63,10 @@ services:
     container_name: grafana
     restart: unless-stopped
     volumes:
-      - ../src/services/grafana/app/provisioning/datasource:/etc/grafana/provisioning/datasources
+      - :/etc/grafana/provisioning/datasources
       - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
-      - grafana_data:/var/lib/grafana
+      - /grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
@@ -108,3 +108,4 @@ services:
           memory: 256M
         reservations:
           memory: 128M
+

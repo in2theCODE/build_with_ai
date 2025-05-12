@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 # Import the enhanced neural code generator
 try:
-    from src.services.neural_code_generator.app.enhanced_neural_code_generator import (
+    from src.services.neural_code_generator.enhanced_neural_code_generator import (
         EnhancedNeuralCodeGenerator,
     )
 except ImportError:

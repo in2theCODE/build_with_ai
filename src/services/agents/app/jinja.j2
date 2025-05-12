@@ -1,0 +1,253 @@
+Template Files
+Let's create some Jinja2 templates:
+jinja{# agent_template_service/templates/agent_main.py.j2 #}
+#!/usr/bin/env python
+"""
+{{ agent_name }} - Auto-generated agent
+{{ agent_description }}
+"""
+import asyncio
+import logging
+import argparse
+from typing import Dict, Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Import blocks
+{% for block_id, block in blocks.items() %}
+from blocks.{{ block.metadata.name.lower().replace(' ', '_') }} import {{ block.metadata.name.replace(' ', '') }}
+{% endfor %}
+
+# Pulsar imports
+from src.services.shared.client_factory import create_pulsar_client
+from src.services.shared.event_emitter import SecureEventEmitter
+from src.services.shared.event_listener import SecureEventListener
+
+class {{ agent_name.replace(' ', '') }}:
+    """{{ agent_description }}"""
+
+    def __init__(self, config: Dict[str, Any] = {}):
+        self.config = config
+
+        # Initialize blocks
+        {% for block_id, block in blocks.items() %}
+        self.{{ block.metadata.name.lower().replace(' ', '_') }} = {{ block.metadata.name.replace(' ', '') }}()
+        {% endfor %}
+
+        # Initialize event services
+        self.event_emitter = SecureEventEmitter(
+            service_url=config.get("pulsar_url", "pulsar://pulsar:6650"),
+            secret_key=config.get("secret_key", ""),
+            tenant="public",
+            namespace="agents"
+        )
+
+        # The events we want to listen for
+        event_types = [
+            {% for block_id, block in blocks.items() %}
+            {% for event in block.events_handled %}
+            "{{ event }}",
+            {% endfor %}
+            {% endfor %}
+        ]
+
+        self.event_listener = SecureEventListener(
+            service_url=config.get("pulsar_url", "pulsar://pulsar:6650"),
+            subscription_name="{{ agent_name.lower().replace(' ', '_') }}",
+            event_types=event_types,
+            secret_key=config.get("secret_key", ""),
+            tenant="public",
+            namespace="agents"
+        )
+
+    async def initialize(self):
+        """Initialize the agent."""
+        # Start event listener
+        await self.event_listener.start()
+
+        # Register event handlers
+        {% for block_id, block in blocks.items() %}
+        {% for event in block.events_handled %}
+        self.event_listener.register_handler("{{ event }}", self.handle_{{ event.replace('.', '_') }})
+        {% endfor %}
+        {% endfor %}
+
+        logger.info("Agent initialized")
+
+    {% for block_id, block in blocks.items() %}
+    {% for event in block.events_handled %}
+    async def handle_{{ event.replace('.', '_') }}(self, event):
+        """Handle {{ event }} event."""
+        try:
+            # Process with appropriate block
+            result = await self.{{ block.metadata.name.lower().replace(' ', '_') }}.process(event)
+
+            # Emit result events if any
+            {% for emitted_event in block.events_emitted %}
+            # Example emitted event
+            if result.get("{{ emitted_event }}"):
+                await self.event_emitter.emit_async(result["{{ emitted_event }}"])
+            {% endfor %}
+
+            logger.info(f"Processed event {event.event_id} of type {event.event_type}")
+        except Exception as e:
+            logger.error(f"Error handling event {event.event_id}: {e}")
+    {% endfor %}
+    {% endfor %}
+
+    async def run(self):
+        """Run the agent."""
+        try:
+            # Initialize
+            await self.initialize()
+
+            # Keep running
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Shutting down...")
+        finally:
+            # Close connections
+            await self.event_listener.stop()
+            self.event_emitter.close()
+
+async def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="{{ agent_name }}")
+    parser.add_argument("--config", type=str, help="Path to config file")
+    args = parser.parse_args()
+
+    # Load config
+    config = {}
+    if args.config:
+        import json
+        with open(args.config, "r") as f:
+            config = json.load(f)
+
+    # Create and run agent
+    agent = {{ agent_name.replace(' ', '') }}(config)
+    await agent.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+jinja{# agent_template_service/templates/block_implementation.py.j2 #}
+"""
+{{ block.metadata.name }} - {{ block.metadata.description }}
+Version: {{ block.metadata.version }}
+"""
+import asyncio
+from typing import Dict, Any, List, Optional
+
+class {{ block.metadata.name.replace(' ', '') }}:
+    """{{ block.metadata.description }}"""
+
+    def __init__(self):
+        # Initialize any resources
+        pass
+
+    async def process(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process an event.
+
+        Args:
+            event: The event to process
+
+        Returns:
+            The processing result
+        """
+        # Extract inputs
+        {% for input in block.inputs %}
+        {{ input.name }} = event.get("{{ input.name }}")
+        {% endfor %}
+
+        # Implementation (this is a template, replace with actual implementation)
+        {{ block.implementation | indent(8) }}
+
+        # Return outputs
+        return {
+            {% for output in block.outputs %}
+            "{{ output.name }}": {{ output.name }},
+            {% endfor %}
+        }
+jinja{# agent_template_service/templates/agent.json.j2 #}
+{
+    "name": "{{ agent_name }}",
+    "description": "{{ agent_description }}",
+    "version": "1.0.0",
+    "blocks": [
+        {% for block_id, block in blocks.items() %}
+        {
+            "id": "{{ block_id }}",
+            "name": "{{ block.metadata.name }}",
+            "type": "{{ block.type }}",
+            "version": "{{ block.metadata.version }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "connections": [
+        {% for connection in template.connections %}
+        {
+            "source": "{{ connection.source }}",
+            "target": "{{ connection.target }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "configuration": {{ configuration | tojson }}
+}
+jinja{# agent_template_service/templates/Dockerfile.j2 #}
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy agent code
+COPY . .
+
+# Run the agent
+CMD ["python", "main.py"]
+jinja{# agent_template_service/templates/docker-compose.yml.j2 #}
+version: '3.8'
+
+services:
+{{ agent_name.lower().replace(' ', '-') }}:
+build:
+context: .
+dockerfile: Dockerfile
+volumes:
+- ./:/app
+environment:
+- PULSAR_SERVICE_URL=pulsar://pulsar:6650
+depends_on:
+- pulsar
+networks:
+- pulsar-network
+secrets:
+- pulsar_secret_key
+{% if "openai_api_key" in configuration %}
+    - openai_api_key
+{% endif %}
+{% if "anthropic_api_key" in configuration %}
+    - anthropic_api_key
+{% endif %}
+
+networks:
+  pulsar-network:
+    external: true
+
+secrets:
+  pulsar_secret_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/pulsar_secret_key
+  {% if "openai_api_key" in configuration %}
+  openai_api_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/openai_api_key
+  {% endif %}
+  {% if "anthropic_api_key" in configuration %}
+  anthropic_api_key:
+    file: /Users/justinrussell/.docker-secrets-codegen/anthropic_api_key
+  {% endif %}
+Workflow Integration

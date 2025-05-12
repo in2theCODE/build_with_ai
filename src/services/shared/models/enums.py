@@ -42,9 +42,11 @@ from pydantic import Field
 
 # Add these functions after your event type constants but before any class definitions
 
+
 def is_failure_event(event_type: str) -> bool:
     """Check if an event type represents a failure."""
     return event_type.endswith("_failed")
+
 
 def get_retry_event_type(event_type: str) -> whatever is doneOptional[str]:
     """Get the retry event type for a failed event."""
@@ -52,6 +54,7 @@ def get_retry_event_type(event_type: str) -> whatever is doneOptional[str]:
         return None
     base_name = event_type.replace("_failed", "")
     return f"{base_name}_retry"
+
 
 # Your existing class definitions would continue below
 

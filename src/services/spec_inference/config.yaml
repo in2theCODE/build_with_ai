@@ -1,0 +1,37 @@
+# Speculative Accelerator Configuration
+
+# Model configuration
+model:
+  name: "meta-llama/Llama-3.1-70B-Instruct"  # Model identifier
+  tensor_parallel_size: 8                     # Number of GPUs to use
+  quantization: "fp8"                         # Quantization method (null, fp8, int8, etc.)
+  max_model_len: 8192                         # Maximum context length
+  trust_remote_code: true                     # Whether to trust remote code
+  gpu_memory_utilization: 0.9                 # Fraction of GPU memory to use
+  dtype: "auto"                              # Data type for model weights (auto, float16, bfloat16)
+
+# Speculative decoding configuration
+speculation:
+  method: "hybrid"  # Options: none, suffix, draft, hybrid
+  draft_model: "Snowflake/Arctic-LSTM-Speculator-Llama-3.1-70B-Instruct"  # Draft model for speculation
+  num_tokens: 3     # Maximum number of tokens to speculate
+
+  # Advanced options
+  advanced:
+    speculative_cache_size: 10000  # Size of suffix tree cache for agentic workloads
+    reuse_suffix_tree: true        # Reuse suffix tree across requests
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  cors_origins: ["*"]
+  log_level: "info"
+  request_timeout: 300  # Seconds
+
+# Monitoring configuration
+monitoring:
+  enable_prometheus: true
+  metrics_port: 8001
+  log_metrics_interval: 60  # Seconds

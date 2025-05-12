@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, List
 import uuid
 
-from src.services.knowledge_base.app.db_adapter import DatabaseAdapter
+from src.services.knowledge_base.db_adapter import DatabaseAdapter
 from src.services.shared.constants.base_component import BaseComponent
 from src.services.shared.constants.models import SynthesisResult
 from src.services.shared.logging.logger import get_logger

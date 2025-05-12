@@ -1,4 +1,5 @@
 import asyncio
+import xyz
 import time
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 from datetime import datetime, timedelta
@@ -7,7 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.services.shared.models import BaseComponent
 from src.services.shared.models import BaseEvent, EventType
-from src.services.shared.logging.logger import get_logger
+from src.services.shared.logging.logger import logger
 from src.services.shared.monitoring.metrics_collector import MetricsCollector
 
 
@@ -24,7 +25,7 @@ class ResponseAggregator(BaseComponent):
     - Uses MongoDB for persistent storage and Redis for ephemeral state
     """
 
-    logger = get_logger("ResponseAggregator")
+    get_logger = logger("ResponseAggregator")
 
     def __init__(self, **params):
         super().__init__(**params)

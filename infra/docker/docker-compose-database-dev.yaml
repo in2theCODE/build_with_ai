@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # Database for Spec Registry
@@ -13,8 +13,8 @@ services:
       - POSTGRES_PASSWORD=postgres  # Simple password for development
     volumes:
       - spec_registry_db_data:/var/lib/postgresql/data
-      - ../certs/spec-registry-db/certificate.crt:/var/lib/postgresql/server.crt:ro
-      - ../certs/spec-registry-db/private.key:/var/lib/postgresql/server.key:ro
+      - ~/build_with_ai/certs/spec-registry-db/certificate.crt:/var/lib/postgresql/server.crt:ro
+      - ~/build_with_ai/certs/spec-registry-db/private.key:/var/lib/postgresql/server.key:ro
     ports:
       - "127.0.0.1:5435:5432"
     networks:
@@ -37,8 +37,8 @@ services:
       - POSTGRES_PASSWORD=postgres  # Simple password for development
     volumes:
       - project_manager_db_data:/var/lib/postgresql/data
-      - ../certs/project-manager-db/certificate.crt:/var/lib/postgresql/server.crt:ro
-      - ../certs/project-manager-db/private.key:/var/lib/postgresql/server.key:ro # You'll need this
+      - ~/build_with_ai/certs/project-manager-db/certificate.crt:/var/lib/postgresql/server.crt:ro
+      - ~/build_with_ai/certs/project-manager-db/private.key:/var/lib/postgresql/server.key:ro # You'll need this
     ports:
       - "127.0.0.1:5436:5432"
     networks:
@@ -61,8 +61,8 @@ services:
       - POSTGRES_PASSWORD=postgres  # Simple password for development
     volumes:
       - workflow_engine_db_data:/var/lib/postgresql/data
-      - ../certs/workflow-engine-db/certificate.crt:/var/lib/postgresql/server.crt:ro
-      - ../certs/workflow-engine-db/private.key:/var/lib/postgresql/server.key:ro
+      - ~/build_with_ai/certs/workflow-engine-db/certificate.crt:/var/lib/postgresql/server.crt:ro
+      - ~/build_with_ai/certs/workflow-engine-db/private.key:/var/lib/postgresql/server.key:ro
     ports:
       - "127.0.0.1:5437:5432"
     networks:
@@ -138,7 +138,7 @@ services:
 
   event-aggregator:
     build:
-      context: ../src/services/aggregators
+      context:
     container_name: event-aggregator
     restart: unless-stopped
     ports:
@@ -153,27 +153,35 @@ services:
       - EVENT_SYSTEM_VECTOR_DB_TYPE=qdrant
       - EVOLUTION_ANALYZER_VECTOR_DB=vector-db
       - DB_CONNECTION_STRING=postgresql://database:5432/specdb
-    volumes:
-      - ./config:/app/config
-      - ./logs:/app/logs
+
+  # Logger service
+  logger-service:
+    build:
+      context: ~/build_with_ai/src/services/shared/logging/
+      dockerfile: Dockerfile
+    container_name: logger-service
+    restart: unless-stopped
+    environment:
+      - MONGODB_URI=mongodb://admin:${MONGODB_PASSWORD}@event-aggregator-mongodb:27017/event_system?authSource=admin
+      - MONGODB_DATABASE=event_system
+      - MONGODB_COLLECTION=application_logs
+      - PULSAR_SERVICE_URL=pulsar://pulsar:6650
+      - PULSAR_TOPIC=log.entry
+      - PULSAR_SUBSCRIPTION=logger-service
+      - LOG_RETENTION_DAYS=30
+      - CONTAINER_NAME=logger-service
     depends_on:
       - event-aggregator-mongodb
-      - evolution-analyzer-vector-db
-
-
     networks:
-      - spec-template-network
       - pulsar-network
+      - spec-template-network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      test: [ "CMD", "python", "-c", "import socket; socket.socket().connect((\"localhost\", 8080))" ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
-    secrets:
-      - mongodb_root_password
-      - db_user
-      - db_password
+      start_period: 10s
+    # No volume mounts needed since we're using MongoDB for storage
 
 volumes:
   spec_registry_db_data:
@@ -210,8 +218,6 @@ secrets:
     file: /Users/justinrussell/.docker-secrets-codegen/openai_api_key
   anthropic_api_key:
     file: /Users/justinrussell/.docker-secrets-codegen/anthropic_api_key
-  pinecone_api_key:
-    file: /Users/justinrussell/.docker-secrets-codegen/pinecone_api_key
   mongodb_root_password:
     file: /Users/justinrussell/.docker-secrets-codegen/mongodb_root_password
   pulsar_secret_key:

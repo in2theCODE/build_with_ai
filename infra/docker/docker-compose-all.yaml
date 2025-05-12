@@ -28,34 +28,6 @@ services:
       retries: 3
       start_period: 5s
 
-  # Authentication Sidecar
-  auth-sidecar:
-    build:
-      context: ../src/api_gateway/auth-sidecar
-      dockerfile: Dockerfile
-    container_name: auth-sidecar
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000,https://buildwithai.cloud
-    volumes:
-      # Mount the secrets directory as read-only files
-      - /Users/justinrussell/.docker-secrets-codegen/next_public_clerk_publishable_key:/run/secrets/clerk_publishable_key:ro
-      - /Users/justinrussell/.docker-secrets-codegen/clerk_secret_key:/run/secrets/clerk_secret_key:ro
-      # Configuration volume if needed
-      - ./config:/etc/auth-sidecar:ro
-    networks:
-      - api-network
-    healthcheck:
-      test: [ "CMD", "wget", "--spider", "http://localhost:3000/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-    secrets:
-      - clerk_public_key
-      - clerk_secret_key
 
   # Neo4j Vector Database
   neo4j-vector:
@@ -120,10 +92,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    depends_on:
-      - pulsar
-      - auth-sidecar
-      - neo4j-vector
 
   # Pulsar - Event Bus
   pulsar:
@@ -237,10 +205,6 @@ services:
       - SPEC_REGISTRY_URL=http://spec-registry:8000
       - EVENT_BUS_URL=pulsar://pulsar:6650
       - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
-    depends_on:
-      - spec-registry
-      - pulsar
-      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
@@ -266,11 +230,6 @@ services:
     networks:
       - spec-template-network
       - pulsar-network
-    depends_on:
-      pulsar:
-        condition: service_healthy
-      database:
-        condition: service_healthy
     healthcheck:
       test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')" ]
       interval: 30s
@@ -281,6 +240,63 @@ services:
       - pulsar_secret_key
       - db_user
       - db_password
+
+
+  speculative-accelerator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: speculative-accelerator
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./cache:/app/cache
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: [ "--config", "config.yaml" ]
+
+
+
+
+
+
+
+
+
+
+  grafana:
+    image: grafana/grafana:10.0.3
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+
 
   # Workflow Engine - Orchestrates the entire flow
   workflow-engine:
@@ -293,11 +309,6 @@ services:
       - SPEC_REGISTRY_URL=http://spec-registry:8000
       - EVENT_BUS_URL=pulsar://pulsar:6650
       - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
-    depends_on:
-      - spec-registry
-      - pulsar
-      - project_manager
-      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
@@ -314,117 +325,31 @@ services:
       - VECTOR_DB_PORT=6333
       - EVENT_BUS_URL=pulsar://pulsar:6650
       - EVENT_AGGREGATOR_URL=http://event-aggregator:8080
-    depends_on:
-      - spec-registry
-      - vector-db
-      - pulsar
-      - event-aggregator
     networks:
       - spec-template-network
       - pulsar-network
 
-  # Event Aggregator
-  event-aggregator:
-    build:
-      context: ../src/services/aggregators
-    container_name: event-aggregator
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:8080"
-    environment:
-      - EVENT_SYSTEM_DATABASE_TYPE=mongodb
-      - EVENT_SYSTEM_DATABASE_URI=mongodb://admin:${MONGODB_PASSWORD}@mongodb:27017/event_system?authSource=admin
-      - EVENT_SYSTEM_DATABASE_NAME=event_system
-      - EVENT_SYSTEM_EVENTS_PROVIDER=pulsar
-      - EVENT_SYSTEM_EVENTS_SERVICE_URL=pulsar://pulsar:6650
-      - EVENT_SYSTEM_VECTOR_DB_ENABLED=true
-      - EVENT_SYSTEM_VECTOR_DB_TYPE=qdrant
-      - EVENT_SYSTEM_VECTOR_DB_HOST=vector-db
-      - DB_CONNECTION_STRING=postgresql://database:5432/specdb
-    volumes:
-      - ./config:/app/config
-      - ./logs:/app/logs
-    depends_on:
-      - mongodb
-      - pulsar
-      - vector-db
-      - database
-    networks:
-      - spec-template-network
-      - pulsar-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
-    secrets:
-      - mongodb_root_password
-      - db_user
-      - db_password
 
-  # Monitoring section - should be in a separate file for cleaner organization
-  prometheus:
-    image: prom/prometheus:v2.35.0
-    platform: linux/arm64  # Add if using Apple Silicon
-    container_name: prometheus
-    volumes:
-      - ./services/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
-      - ./services/prometheus/prometheus_rules.yaml:/etc/prometheus/prometheus_rules.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    ports:
-      - "127.0.0.1:9090:9090"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - pulsar
 
-  alertmanager:
-    image: prom/alertmanager:v0.24.0
-    platform: linux/arm64  # Add if using Apple Silicon
-    container_name: alertmanager
-    volumes:
-      - ./services/prometheus/alert_manager.yaml:/etc/alertmanager/alertmanager.yml
-      - alertmanager_data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    ports:
-      - "127.0.0.1:9093:9093"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
 
-  grafana:
-    image: grafana/grafana:8.5.2
-    platform: linux/arm64  # Add if using Apple Silicon
-    container_name: grafana
-    volumes:
-      - ../src/services/grafana/app/provisioning/datasource:/etc/grafana/provisioning/datasources
-      - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    ports:
-      - "127.0.0.1:3000:3000"
-    restart: unless-stopped
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   node-exporter:
     image: prom/node-exporter:v1.3.1

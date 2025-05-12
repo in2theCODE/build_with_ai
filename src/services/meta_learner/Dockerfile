@@ -22,3 +22,4 @@ ENV PYTHONPATH=/app
 
 # Run the meta_learner service
 CMD ["python", "meta_learner.py"]
+USER nobody
