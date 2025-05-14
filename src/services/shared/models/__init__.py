@@ -6,12 +6,9 @@ as well as functionality for registering schemas with Apache Pulsar's schema reg
 It handles serialization and deserialization of events and messages using Avro.
 """
 
-import os
-from typing import Any, Dict, Type
-
-from infra.registration.schema_registry import convert_pydantic_schema_to_avro
-from infra.registration.schema_registry import register_pydantic_model
-from infra.registration.schema_registry import SchemaRegistryClient
+from src.services.shared.models.schema_registry import convert_pydantic_schema_to_avro
+from src.services.shared.models.schema_registry import register_pydantic_model
+from src.services.shared.models.schema_registry import SchemaRegistryClient
 
 # Base models
 from src.services.shared.models.base import BaseComponent

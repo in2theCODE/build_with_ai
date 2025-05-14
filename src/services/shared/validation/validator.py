@@ -27,7 +27,7 @@ from typing import (
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Import advanced logger
-from ..logging.logger import get_logger
+from src.services.shared.loggerService.loggingService import get_logger
 
 
 # Setup logger

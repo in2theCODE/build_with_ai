@@ -16,6 +16,7 @@ Classes:
     BaseComponent: Base class for all system components
     ConfigurableComponent: Component that can be dynamically configured
 """
+
 from __future__ import annotations
 
 import fastavro

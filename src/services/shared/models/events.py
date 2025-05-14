@@ -31,15 +31,14 @@ Classes:
 """
 
 # src/services/shared/models/events.py
-from typing import Any, Dict, List, Literal, Optional, Union
-
-from pydantic import Field
+from typing import Literal, Union
 from pydantic import model_validator
-
-from .base import BaseEvent
-from .base import EventPayload
 from .enums import EventPriority
 from .enums import EventType
+from pydantic import Field
+from typing import Dict, List, Any, Optional
+from .base import BaseEvent, EventPayload
+from .enums import ContextType, SynapseState, EvolutionMechanism
 
 
 class CodeGenerationRequestPayload(EventPayload):
@@ -99,7 +98,6 @@ class SpecSheetEvent(BaseEvent):
     spec_sheet_name: Optional[str] = Field(None, description="Spec sheet name")
     spec_sheet_category: Optional[str] = Field(None, description="Spec sheet category")
 
-    @model_validator(mode="before")
     @classmethod
     def ensure_payload_consistency(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure that spec sheet data is consistent with payload."""
@@ -132,7 +130,6 @@ class SpecInstanceEvent(BaseEvent):
     spec_sheet_version: str = Field(..., description="Spec sheet version")
     project_id: str = Field("", description="Project identifier")
 
-    @model_validator(mode="before")
     @classmethod
     def ensure_payload_consistency(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure that instance data is consistent with payload."""
@@ -163,12 +160,12 @@ class CodeGenerationRequestedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        spec_sheet: Dict[str, Any],
-        target_language: str = "python",
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            spec_sheet: Dict[str, Any],
+            target_language: str = "python",
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationRequestedEvent":
         """Factory method to create a code generation request event."""
         return cls(
@@ -191,15 +188,15 @@ class CodeGenerationCompletedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        generated_code: str,
-        program_ast: Dict[str, Any],
-        confidence_score: float,
-        strategy_used: str,
-        time_taken: float,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            generated_code: str,
+            program_ast: Dict[str, Any],
+            confidence_score: float,
+            strategy_used: str,
+            time_taken: float,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationCompletedEvent":
         """Factory method to create a code generation completed event."""
         return cls(
@@ -227,13 +224,13 @@ class CodeGenerationFailedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        error_message: str,
-        error_type: str,
-        partial_result: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            error_message: str,
+            error_type: str,
+            partial_result: Optional[Dict[str, Any]] = None,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "CodeGenerationFailedEvent":
         """Factory method to create a code generation failed event."""
         return cls(
@@ -256,12 +253,12 @@ class KnowledgeQueryRequestedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        query: str,
-        limit: int = 5,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            query: str,
+            limit: int = 5,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeQueryRequestedEvent":
         """Factory method to create a knowledge query request event."""
         return cls(
@@ -282,13 +279,13 @@ class KnowledgeQueryCompletedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        results: List[Dict[str, Any]],
-        query: str,
-        time_taken: float,
-        correlation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            results: List[Dict[str, Any]],
+            query: str,
+            time_taken: float,
+            correlation_id: Optional[str] = None,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeQueryCompletedEvent":
         """Factory method to create a knowledge query completed event."""
         return cls(
@@ -311,11 +308,11 @@ class KnowledgeUpdatedEvent(BaseEvent):
 
     @classmethod
     def create(
-        cls,
-        source_container: str,
-        key: str,
-        update_type: str,
-        metadata: Optional[Dict[str, Any]] = None,
+            cls,
+            source_container: str,
+            key: str,
+            update_type: str,
+            metadata: Optional[Dict[str, Any]] = None,
     ) -> "KnowledgeUpdatedEvent":
         """Factory method to create a knowledge updated event."""
         return cls(
@@ -342,3 +339,34 @@ class SpecSheetDeletedEvent(SpecSheetEvent):
     """Event for spec sheet deletion."""
 
     event_type: Literal[EventType.SPEC_SHEET_DELETED] = EventType.SPEC_SHEET_DELETED
+
+
+class ContextNodeActivatedPayload(EventPayload):
+    """Payload for context node activation events."""
+
+    node_id: str = Field(..., description="ID of the activated node")
+    context_type: ContextType = Field(..., description="Type of context")
+    activation_value: float = Field(..., description="Activation strength value")
+    related_contexts: List[str] = Field(default_factory=list, description="Related context IDs")
+    query_vector: Optional[List[float]] = Field(None, description="Query vector if applicable")
+
+
+class SynapseStateChangedPayload(EventPayload):
+    """Payload for synapse state change events."""
+
+    synapse_id: str = Field(..., description="ID of the synapse")
+    from_node_id: str = Field(..., description="ID of the source node")
+    to_node_id: str = Field(..., description="ID of the target node")
+    previous_state: SynapseState = Field(..., description="Previous synapse state")
+    new_state: SynapseState = Field(..., description="New synapse state")
+    weight_change: float = Field(..., description="Change in synapse weight")
+
+
+class EvolutionEventPayload(EventPayload):
+    """Payload for evolution events."""
+
+    evolution_id: str = Field(..., description="ID of the evolution event")
+    mechanism: EvolutionMechanism = Field(..., description="Evolution mechanism")
+    parent_templates: List[str] = Field(default_factory=list, description="Parent template IDs")
+    child_template: str = Field(..., description="Child template ID")
+    fitness_change: float = Field(..., description="Change in fitness score")

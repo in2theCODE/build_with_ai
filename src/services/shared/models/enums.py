@@ -154,6 +154,7 @@ class EventType(str, Enum):
     """Standardized event types for the system."""
 
     # Neural code generator events
+    SPEC_SHEET_COMPLETED = "spec_sheet_completed"
     AGGREGATION_COMPLETED = "aggregation_completed"
     AGGREGATION_COMPLETED_PARTIAL = "aggregation_completed_partial"
     LEARNING_DATA_RECORDED = "learning_data_recorded"
@@ -219,9 +220,6 @@ class Database(str, Enum):
     # Cache
     CACHE_TYPE_REDIS = "redis"
     CACHE_TYPE_MEMORY = "memory"
-
-
-
 
 
 class Paths(BaseModel):
@@ -334,7 +332,6 @@ class Metrics(str, Enum):
     METRIC_ERRORS_TOTAL = "neural_code_generator_errors_total"
     METRIC_VECTOR_DB_QUERY_TIME = "neural_code_generator_vector_db_query_time_seconds"
     METRIC_VECTOR_DB_OPERATIONS = "neural_code_generator_vector_db_operations_total"
-
 
 
 class ErrorCodes(int, Enum):
@@ -450,3 +447,56 @@ class VerificationResult(str, Enum):
     UNKNOWN = "unknown"
     TIMEOUT = "timeout"
     ERROR = "error"
+
+
+from enum import Enum, auto
+
+
+class ContextType(str, Enum):
+    """Types of context nodes in the mesh."""
+
+    CODE_PATTERN = "code_pattern"
+    KNOWLEDGE = "knowledge"
+    EVOLUTION = "evolution"
+    METRICS = "metrics"
+    SYSTEM = "system"
+
+
+class SynapseState(str, Enum):
+    """States of synapses in the mesh."""
+
+    FORMING = "forming"  # New connection being established
+    STRENGTHENING = "strengthening"  # Connection being reinforced
+    STABLE = "stable"  # Stable connection
+    WEAKENING = "weakening"  # Connection losing strength
+    PRUNING = "pruning"  # Connection being removed
+
+
+class ActivationFunction(str, Enum):
+    """Activation functions for context node activation."""
+
+    SIGMOID = "sigmoid"
+    RELU = "relu"
+    TANH = "tanh"
+    SOFTMAX = "softmax"
+    THRESHOLD = "threshold"
+
+
+class LearningStrategy(str, Enum):
+    """Learning strategies for the mesh."""
+
+    HEBBIAN = "hebbian"  # Neurons that fire together, wire together
+    ANTI_HEBBIAN = "anti_hebbian"  # Opposite of Hebbian
+    STDP = "stdp"  # Spike-timing-dependent plasticity
+    REINFORCEMENT = "reinforcement"  # Reward-based learning
+    SUPERVISED = "supervised"  # Error-based learning
+
+
+class EvolutionMechanism(str, Enum):
+    """Evolution mechanisms for templates."""
+
+    MUTATION = "mutation"  # Random changes
+    CROSSOVER = "crossover"  # Combining templates
+    SELECTION = "selection"  # Selecting successful templates
+    DRIFT = "drift"  # Random drift without selection
+    EMERGENCE = "emergence"  # New patterns emerging from interactions
