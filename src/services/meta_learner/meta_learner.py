@@ -5,6 +5,7 @@ Meta learning component for the Program Synthesis System.
 This component analyzes synthesis results to learn more effective synthesis
 strategies over time, enabling the system to adapt to different problem domains.
 """
+
 import hashlib
 from collections import defaultdict
 import datetime
@@ -14,8 +15,7 @@ import os
 from pathlib import Path
 import random
 import sys
-import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional
 
 
 # Add parent directory to path for imports
@@ -239,8 +239,7 @@ class MetaLearner(BaseComponent):
         if domain in self.domain_strategies and self.domain_strategies[domain]:
             # Sort strategies by success rate
             domain_stats = {
-                strategy: self._calculate_strategy_success_rate(strategy)
-                for strategy in self.domain_strategies[domain]
+                strategy: self._calculate_strategy_success_rate(strategy) for strategy in self.domain_strategies[domain]
             }
 
             best_strategy = max(domain_stats.items(), key=lambda x: x[1])[0]
@@ -299,9 +298,7 @@ class MetaLearner(BaseComponent):
 
             # Q-learning update: Q(s,a) = Q(s,a) + α[r + γ·maxQ(s',a') - Q(s,a)]
             # Simplified here since we're only tracking immediate rewards
-            self.domain_strategies[domain][strategy] = current_value + self.learning_rate * (
-                reward - current_value
-            )
+            self.domain_strategies[domain][strategy] = current_value + self.learning_rate * (reward - current_value)
 
         # Update clusters if using clustering
         if self.enable_clustering and HAVE_ML_DEPS:
@@ -386,9 +383,7 @@ class MetaLearner(BaseComponent):
 
             # Q-learning update: Q(s,a) = Q(s,a) + α[r + γ·maxQ(s',a') - Q(s,a)]
             # Simplified here since we're only tracking immediate rewards
-            self.domain_strategies[domain][strategy] = current_value + self.learning_rate * (
-                reward - current_value
-            )
+            self.domain_strategies[domain][strategy] = current_value + self.learning_rate * (reward - current_value)
 
         # Update clusters if using clustering
         if self.enable_clustering and HAVE_ML_DEPS:
@@ -451,7 +446,10 @@ class MetaLearner(BaseComponent):
         """
         # Skip if not enough data
         if not self.strategy_stats or not self.domain_strategies:
-            return {"has_data": False, "message": "Not enough data for pattern analysis"}
+            return {
+                "has_data": False,
+                "message": "Not enough data for pattern analysis",
+            }
 
         # Calculate strategy versatility
         strategy_versatility = {}
@@ -636,13 +634,11 @@ class MetaLearner(BaseComponent):
             reward = 1 if success else -1
 
             # Apply Q-learning update
-            self.problem_clusters["clusters"][cluster_id][strategy] = (
-                current_score + self.learning_rate * (reward - current_score)
+            self.problem_clusters["clusters"][cluster_id][strategy] = current_score + self.learning_rate * (
+                reward - current_score
             )
 
-        self.logger.info(
-            f"Clustered {len(examples)} examples into {len(self.problem_clusters['clusters'])} clusters"
-        )
+        self.logger.info(f"Clustered {len(examples)} examples into {len(self.problem_clusters['clusters'])} clusters")
 
     def _get_problem_cluster(self, specification: str) -> Optional[str]:
         """Get the cluster for a given problem specification."""
@@ -696,10 +692,7 @@ class MetaLearner(BaseComponent):
         common_domains = []
 
         for domain in self.domain_strategies:
-            if (
-                strategy1 in self.domain_strategies[domain]
-                and strategy2 in self.domain_strategies[domain]
-            ):
+            if strategy1 in self.domain_strategies[domain] and strategy2 in self.domain_strategies[domain]:
                 common_domains.append(domain)
 
         if not common_domains:

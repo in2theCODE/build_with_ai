@@ -1099,7 +1099,7 @@ class SchemaCompatibilityResult:
         )
 EOF
 
-# Create analytics models
+# Create analytics app
 cat > ./template-registry/models/analytics/usage.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -1494,7 +1494,7 @@ class TemplateEvolutionAnalysis:
         return cls.from_dict(json.loads(json_str))
 EOF
 
-# Template models
+# Template app
 cat > ./template-registry/models/templates/base.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -2173,7 +2173,7 @@ class TemplateInstance:
         return cls.from_dict(json.loads(json_str))
 EOF
 
-# Events models
+# Events app
 cat > ./template-registry/models/events/base.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -3522,7 +3522,7 @@ EOF
 create_model_modules() {
     log "Creating model modules..."
 
-    # Base template models
+    # Base template app
     cat > ./template-registry/models/templates/base.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -4030,7 +4030,7 @@ class TemplateSearchQuery:
         return asdict(self)
 EOF
 
-    # Template instance models
+    # Template instance app
     cat > ./template-registry/models/templates/instance.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -4277,7 +4277,7 @@ class TemplateInstance:
         return cls.from_dict(json.loads(json_str))
 EOF
 
-    # Event models
+    # Event app
     cat > ./template-registry/models/events/base.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -4533,7 +4533,7 @@ class SystemEvent(BaseEvent):
         )
 EOF
 
-    # Analytics models
+    # Analytics app
     cat > ./template-registry/models/analytics/usage.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -4709,7 +4709,7 @@ class TemplateUsageAnalytics:
         return cls.from_dict(json.loads(json_str))
 EOF
 
-    # Evolution analytics models
+    # Evolution analytics app
     cat > ./template-registry/models/analytics/evolution.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-

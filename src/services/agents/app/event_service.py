@@ -1,10 +1,7 @@
 # agent_template_service/services/event_service.py
 import os
-import asyncio
 import logging
-from typing import Any, Callable, Dict, List, Optional
 
-from src.services.shared.client_factory import create_pulsar_client
 from src.services.shared.models.base import BaseEvent
 from src.services.shared.event_emitter import SecureEventEmitter
 from src.services.shared.event_listener import SecureEventListener, EventHandlerType
@@ -75,9 +72,7 @@ class AgentEventService:
             self.handlers[event_type] = handler
             logger.info(f"Registered handler for event type {event_type}")
         else:
-            logger.warning(
-                f"Event listener not initialized, couldn't register handler for {event_type}"
-            )
+            logger.warning(f"Event listener not initialized, couldn't register handler for {event_type}")
 
     async def close(self):
         """Close connections and clean up resources."""

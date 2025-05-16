@@ -22,7 +22,7 @@ global:
 
 # Load rules once and periodically evaluate them
 rule_files:
-  - "prometheus_rules.yml"
+  - "prometheus_rules"
 
 # Alertmanager configuration
 alerting:

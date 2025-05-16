@@ -6,7 +6,7 @@ import uuid
 from src.services.knowledge_base.db_adapter import DatabaseAdapter
 from src.services.shared.constants.base_component import BaseComponent
 from src.services.shared.constants.models import SynthesisResult
-from src.services.shared.logging.logger import get_logger
+from src.services.shared.loggerService.loggingService import get_logger
 
 
 def _generate_function_stub(synthesis_result):
@@ -179,9 +179,7 @@ class ASTCodeGenerator(BaseComponent):
 
 {code}"""
 
-        self.logger.info(
-            f"Best-effort code generation completed, {len(code.splitlines())} lines generated"
-        )
+        self.logger.info(f"Best-effort code generation completed, {len(code.splitlines())} lines generated")
 
         return code
 
@@ -232,20 +230,14 @@ class ASTCodeGenerator(BaseComponent):
             statement_type = statement.get("type", "unknown")
 
             if statement_type == "return":
-                value_expr = self._generate_expression(
-                    statement.get("value", {"type": "literal", "value": 0})
-                )
+                value_expr = self._generate_expression(statement.get("value", {"type": "literal", "value": 0}))
                 code_lines.append(f"    return {value_expr}")
             elif statement_type == "assignment":
                 target = statement.get("target", "result")
-                value_expr = self._generate_expression(
-                    statement.get("value", {"type": "literal", "value": 0})
-                )
+                value_expr = self._generate_expression(statement.get("value", {"type": "literal", "value": 0}))
                 code_lines.append(f"    {target} = {value_expr}")
             elif statement_type == "if":
-                condition = self._generate_expression(
-                    statement.get("condition", {"type": "literal", "value": True})
-                )
+                condition = self._generate_expression(statement.get("condition", {"type": "literal", "value": True}))
                 then_body = self._generate_body(statement.get("then_body", []))
                 else_body = self._generate_body(statement.get("else_body", []))
                 code_lines.append(f"    if {condition}:")
@@ -336,9 +328,7 @@ class ASTCodeGenerator(BaseComponent):
 
                 if similar_results and similar_results[0]["score"] > 0.95:
                     # Found a very similar AST, use its code
-                    self.logger.info(
-                        f"Using similar AST with similarity score {similar_results[0]['score']}"
-                    )
+                    self.logger.info(f"Using similar AST with similarity score {similar_results[0]['score']}")
                     return similar_results[0]["generated_code"]
             except Exception as e:
                 self.logger.error(f"Error searching for similar ASTs: {str(e)}")

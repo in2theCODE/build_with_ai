@@ -67,7 +67,7 @@
     <option shadow="false" />
     <option shelljs="false" />
     <option singleGroups="false" />
-    <option smarttabs="false" />
+    <option smarttabs="true" />
     <option strict="true" />
     <option sub="false" />
     <option supernew="false" />

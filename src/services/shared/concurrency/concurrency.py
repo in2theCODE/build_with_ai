@@ -12,23 +12,18 @@ import concurrent.futures
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-import functools
 import logging
 import os
 import time
 from typing import (
     Any,
-    Awaitable,
     Callable,
     Coroutine,
     Dict,
-    Generic,
     List,
     Optional,
-    Set,
     Tuple,
     TypeVar,
-    Union,
 )
 
 
@@ -218,9 +213,7 @@ class TaskPool:
 
         return canceled
 
-    def wait_for_tasks(
-        self, task_ids: List[str], timeout: Optional[float] = None
-    ) -> Dict[str, str]:
+    def wait_for_tasks(self, task_ids: List[str], timeout: Optional[float] = None) -> Dict[str, str]:
         """
         Wait for multiple tasks to complete.
 
@@ -232,9 +225,7 @@ class TaskPool:
             Dictionary mapping task IDs to status
         """
         # Get futures for all valid task IDs
-        futures_to_wait = {
-            self.futures[task_id]: task_id for task_id in task_ids if task_id in self.futures
-        }
+        futures_to_wait = {self.futures[task_id]: task_id for task_id in task_ids if task_id in self.futures}
 
         if not futures_to_wait:
             return {}
@@ -301,9 +292,7 @@ class AsyncTaskManager:
         self.semaphore = asyncio.Semaphore(max_concurrency)
 
         # Task queues by priority
-        self.task_queues: Dict[TaskPriority, asyncio.Queue] = {
-            priority: asyncio.Queue() for priority in TaskPriority
-        }
+        self.task_queues: Dict[TaskPriority, asyncio.Queue] = {priority: asyncio.Queue() for priority in TaskPriority}
 
         # Flag to indicate shutdown
         self.shutting_down = False
@@ -418,9 +407,7 @@ class AsyncTaskManager:
         # Add task to appropriate queue
         await self.task_queues[priority].put((task_id, coro))
 
-        self.logger.debug(
-            f"Submitted async task {task_id} ({task_name}) with priority {priority.name}"
-        )
+        self.logger.debug(f"Submitted async task {task_id} ({task_name}) with priority {priority.name}")
 
         return task_id
 
@@ -515,9 +502,7 @@ class AsyncTaskManager:
 
         return True
 
-    async def wait_for_tasks(
-        self, task_ids: List[str], timeout: Optional[float] = None
-    ) -> Dict[str, str]:
+    async def wait_for_tasks(self, task_ids: List[str], timeout: Optional[float] = None) -> Dict[str, str]:
         """
         Wait for multiple tasks to complete.
 
@@ -617,9 +602,7 @@ class ParallelExecutor:
 
         self.logger.info(f"Initialized parallel executor with {self.max_workers} workers")
 
-    def map(
-        self, func: Callable[[T], R], items: List[T], chunk_size: Optional[int] = None
-    ) -> List[R]:
+    def map(self, func: Callable[[T], R], items: List[T], chunk_size: Optional[int] = None) -> List[R]:
         """
         Apply a function to each item in a list in parallel.
 
@@ -647,8 +630,7 @@ class ParallelExecutor:
 
         # Submit tasks for each chunk
         task_ids = [
-            self.task_pool.submit(process_chunk, chunk, task_name=f"map-chunk-{i}")
-            for i, chunk in enumerate(chunks)
+            self.task_pool.submit(process_chunk, chunk, task_name=f"map-chunk-{i}") for i, chunk in enumerate(chunks)
         ]
 
         # Collect results
@@ -660,9 +642,7 @@ class ParallelExecutor:
         # Flatten results
         return [result for chunk_result in results for result in chunk_result]
 
-    def execute_all(
-        self, tasks: List[Tuple[Callable[..., R], List[Any], Dict[str, Any]]]
-    ) -> List[R]:
+    def execute_all(self, tasks: List[Tuple[Callable[..., R], List[Any], Dict[str, Any]]]) -> List[R]:
         """
         Execute a list of tasks in parallel.
 

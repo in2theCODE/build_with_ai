@@ -2,6 +2,7 @@
 """
 Dedicated logging service that subscribes to log events and stores them in MongoDB.
 """
+
 import asyncio
 import os
 import json
@@ -12,13 +13,26 @@ import pulsar
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
 
-# Configure basic logging
+# At the top of your application entry point (e.g. main.py)
+
+# Configure logging for the LoggerService itself (e.g., to stdout)
+# This should be the primary logging setup for this specific service.
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),  # Allow configuring level
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout,
 )
-logger = logging.getLogger("logger_service")
+# This logger will be used by the LoggerService class instances
+service_internal_logger = logging.getLogger("logger_service")
+
+# The configure_logging function and PulsarLogHandler import are for OTHER services
+# to use if they import from this file to set up THEIR Pulsar logging.
+# It might be cleaner to move PulsarLogHandler and its setup function
+# to a more general 'shared_logging_utils.py' if many services use it.
+# For now, let's assume other services might call configure_logging from here.
+
+# ... rest of your LoggerService class using service_internal_logger ...
+# e.g., service_internal_logger.info("Starting logger service")
 
 
 class LoggerService:
@@ -118,9 +132,7 @@ class LoggerService:
 
         # TTL index for automatic cleanup
         # This will delete logs older than the specified retention period
-        await self.collection.create_index(
-            "timestamp", expireAfterSeconds=self.log_retention_days * 24 * 60 * 60
-        )
+        await self.collection.create_index("timestamp", expireAfterSeconds=self.log_retention_days * 24 * 60 * 60)
 
         logger.info("MongoDB indexes created successfully")
 

@@ -77,7 +77,8 @@ class SMTSpecificationParser(BaseComponent):
 
         # Add regex patterns for improved parsing
         self._param_pattern = re.compile(
-            r"(?:parameter|param|argument|arg|input|takes|accepts)\s+(\w+)", re.IGNORECASE
+            r"(?:parameter|param|argument|arg|input|takes|accepts)\s+(\w+)",
+            re.IGNORECASE,
         )
         self._type_patterns = {
             "int": re.compile(
@@ -125,12 +126,14 @@ class SMTSpecificationParser(BaseComponent):
             re.IGNORECASE,
         )
         self._collection_pattern = re.compile(
-            r"([\w_]+)\s+(?:in|is in|is one of|belongs to|member of)\s+\[(.*?)\]", re.IGNORECASE
+            r"([\w_]+)\s+(?:in|is in|is one of|belongs to|member of)\s+\[(.*?)\]",
+            re.IGNORECASE,
         )
 
         # Key-value pattern for tokenization
         self._key_value_pattern = re.compile(
-            r'([\w_]+)\s*[:=]\s*([\w_]+|\d+(?:\.\d+)?|"[^"]*"|\'[^\']*\')', re.IGNORECASE
+            r'([\w_]+)\s*[:=]\s*([\w_]+|\d+(?:\.\d+)?|"[^"]*"|\'[^\']*\')',
+            re.IGNORECASE,
         )
 
         # Example patterns
@@ -139,7 +142,8 @@ class SMTSpecificationParser(BaseComponent):
             re.IGNORECASE | re.DOTALL,
         )
         self._example_kv_pattern = re.compile(
-            r'([\w_]+)\s*[:=]\s*([\w_]+|\d+(?:\.\d+)?|"[^"]*"|\'[^\']*\')', re.IGNORECASE
+            r'([\w_]+)\s*[:=]\s*([\w_]+|\d+(?:\.\d+)?|"[^"]*"|\'[^\']*\')',
+            re.IGNORECASE,
         )
 
         # Type inference patterns
@@ -148,9 +152,7 @@ class SMTSpecificationParser(BaseComponent):
             re.IGNORECASE,
         )
 
-    def parse(
-        self, specification: str, context: Optional[Dict[str, Any]] = None
-    ) -> FormalSpecification:
+    def parse(self, specification: str, context: Optional[Dict[str, Any]] = None) -> FormalSpecification:
         """
         Parse the specification into a formal model with improved accuracy.
 
@@ -164,9 +166,7 @@ class SMTSpecificationParser(BaseComponent):
         if context is None:
             context = {}
 
-        self.logger.info(
-            f"Parsing specification with {self.smt_solver} and {self.type_system} type system"
-        )
+        self.logger.info(f"Parsing specification with {self.smt_solver} and {self.type_system} type system")
 
         # Extract parameters and their types first for use in constraint generation
         parameter_names = self._extract_parameter_names(specification)
@@ -177,9 +177,7 @@ class SMTSpecificationParser(BaseComponent):
         constraints = _extract_constraints(specification, context, parameter_names, types)
         examples = _extract_examples(specification, context, parameter_names, types)
 
-        self.logger.info(
-            f"Parsed specification with {len(constraints)} constraints and {len(examples)} examples"
-        )
+        self.logger.info(f"Parsed specification with {len(constraints)} constraints and {len(examples)} examples")
         self.logger.debug(f"Parameter names: {parameter_names}")
         self.logger.debug(f"Inferred types: {types}")
 
@@ -189,9 +187,7 @@ class SMTSpecificationParser(BaseComponent):
         """Extract parameter names from the specification with improved accuracy."""
         # Try to find explicit parameter declarations
         matches = self._param_pattern.findall(specification)
-        parameters = [
-            match for match in matches if match and match.isalnum() and not match.isdigit()
-        ]
+        parameters = [match for match in matches if match and match.isalnum() and not match.isdigit()]
 
         def _create_ast(
             self,
@@ -232,14 +228,15 @@ class SMTSpecificationParser(BaseComponent):
         # If no parameters found, use common names as fallback
         if not parameters:
             parameters = ["x"]  # Default to just x if none found
-            self.logger.warning(
-                "No parameters detected in specification, using default parameter 'x'"
-            )
+            self.logger.warning("No parameters detected in specification, using default parameter 'x'")
 
         return parameters
 
     def _infer_types(
-        self, specification: str, context: Optional[Dict[str, Any]], parameter_names: List[str]
+        self,
+        specification: str,
+        context: Optional[Dict[str, Any]],
+        parameter_names: List[str],
     ) -> Dict[str, str]:
         """Infer types from the specification with improved pattern matching."""
         types = {}
@@ -257,9 +254,7 @@ class SMTSpecificationParser(BaseComponent):
                     # Check if the parameter name is in any of the capture groups
                     if param in groups:
                         param_type = type_name
-                        self.logger.debug(
-                            f"Identified {param} as {type_name} based on pattern match"
-                        )
+                        self.logger.debug(f"Identified {param} as {type_name} based on pattern match")
                         break
 
             types[param] = param_type
@@ -282,9 +277,7 @@ class SMTSpecificationParser(BaseComponent):
                     types[var_name] = "array"
                 elif var_type in ("set"):
                     types[var_name] = "set"
-                self.logger.debug(
-                    f"Identified {var_name} as {types[var_name]} based on type annotation"
-                )
+                self.logger.debug(f"Identified {var_name} as {types[var_name]} based on type annotation")
 
         # Infer types from constraints
         # Look for comparison to specific value types
@@ -338,11 +331,7 @@ class SMTSpecificationParser(BaseComponent):
                 types["result"] = "float"
             elif "bool" in result_type_text or "boolean" in result_type_text:
                 types["result"] = "bool"
-            elif (
-                "str" in result_type_text
-                or "string" in result_type_text
-                or "text" in result_type_text
-            ):
+            elif "str" in result_type_text or "string" in result_type_text or "text" in result_type_text:
                 types["result"] = "str"
             elif "array" in result_type_text or "list" in result_type_text:
                 types["result"] = "array"
@@ -371,9 +360,7 @@ class SMTSpecificationParser(BaseComponent):
                 bool_outputs += 1
             elif re.match(r"-?\d+\.\d+", output):
                 float_outputs += 1
-            elif (output.startswith('"') and output.endswith('"')) or (
-                output.startswith("'") and output.endswith("'")
-            ):
+            elif (output.startswith('"') and output.endswith('"')) or (output.startswith("'") and output.endswith("'")):
                 string_outputs += 1
 
         # If we have a consistent pattern in examples, use that
@@ -465,9 +452,7 @@ class SMTSpecificationParser(BaseComponent):
 
         return constraints
 
-    def _create_comparison_constraint(
-        self, z3_var: Any, operator: str, right_val: str, var_type: str
-    ) -> Optional[Any]:
+    def _create_comparison_constraint(self, z3_var: Any, operator: str, right_val: str, var_type: str) -> Optional[Any]:
         """Create a comparison constraint based on operator and variable type."""
         # Convert the right value based on the variable type
         try:
@@ -497,9 +482,7 @@ class SMTSpecificationParser(BaseComponent):
 
             return result
         except (ValueError, TypeError):
-            self.logger.warning(
-                f"Could not create comparison constraint for {z3_var} {operator} {right_val}"
-            )
+            self.logger.warning(f"Could not create comparison constraint for {z3_var} {operator} {right_val}")
             return None
 
     def _convert_value(self, value_str: str, type_str: str) -> Any:
@@ -583,9 +566,7 @@ class SMTSpecificationParser(BaseComponent):
             return int(float(value_str)) if value_str.replace(".", "", 1).isdigit() else value_str
 
         except (ValueError, TypeError) as e:
-            self.logger.warning(
-                f"Conversion error: {str(e)} - Cannot convert '{value_str}' to {type_str}"
-            )
+            self.logger.warning(f"Conversion error: {str(e)} - Cannot convert '{value_str}' to {type_str}")
             return self._get_default_value(type_str)
 
     def _parse_constraint_string(
@@ -631,7 +612,7 @@ class SMTSpecificationParser(BaseComponent):
     ) -> List[Dict[str, Any]]:
         """Extract examples from the specification with improved parsing."""
         examples = []
-        self.logger.debug(f"Extracting examples from specification")
+        self.logger.debug("Extracting examples from specification")
 
         # Detect example sections - look for blocks of text that appear to be examples
         example_sections = []
@@ -643,7 +624,9 @@ class SMTSpecificationParser(BaseComponent):
 
         for i, line in enumerate(lines):
             if re.search(
-                r"\b(example|instance|test case|sample input|test input)\b", line, re.IGNORECASE
+                r"\b(example|instance|test case|sample input|test input)\b",
+                line,
+                re.IGNORECASE,
             ):
                 if current_section and in_example_section:
                     example_sections.append("\n".join(current_section))
@@ -742,7 +725,11 @@ class SMTSpecificationParser(BaseComponent):
             return 0  # Fallback default
 
     def _parse_example_text(
-        self, input_text: str, output_text: str, parameter_names: List[str], types: Dict[str, str]
+        self,
+        input_text: str,
+        output_text: str,
+        parameter_names: List[str],
+        types: Dict[str, str],
     ) -> Optional[Dict[str, Any]]:
         """Parse example input and output text into structured data with improved detection."""
         if not input_text or not output_text:
@@ -759,9 +746,7 @@ class SMTSpecificationParser(BaseComponent):
                 try:
                     input_values[key] = self._convert_value(value, param_type)
                 except ValueError:
-                    self.logger.warning(
-                        f"Could not convert '{value}' to {param_type} for parameter {key}"
-                    )
+                    self.logger.warning(f"Could not convert '{value}' to {param_type} for parameter {key}")
 
         # Approach 2: Try to extract values in order
         if not input_values and parameter_names:
@@ -776,9 +761,7 @@ class SMTSpecificationParser(BaseComponent):
                     try:
                         input_values[param] = self._convert_value(value, param_type)
                     except ValueError:
-                        self.logger.warning(
-                            f"Could not convert '{value}' to {param_type} for parameter {param}"
-                        )
+                        self.logger.warning(f"Could not convert '{value}' to {param_type} for parameter {param}")
 
         # If we couldn't extract values for some parameters, use defaults
         for param in parameter_names:
@@ -796,9 +779,7 @@ class SMTSpecificationParser(BaseComponent):
             try:
                 output_value = self._convert_value(output_match.group(1).strip("\"'"), result_type)
             except ValueError:
-                self.logger.warning(
-                    f"Could not convert output '{output_match.group(1)}' to {result_type}"
-                )
+                self.logger.warning(f"Could not convert output '{output_match.group(1)}' to {result_type}")
                 output_value = self._get_default_value(result_type)
         else:
             # If no clear output value, try using the whole output text
@@ -816,9 +797,7 @@ class SMTSpecificationParser(BaseComponent):
         try:
             input_values[param] = self._convert_value(value, param_type)
         except ValueError:
-            self.logger.warning(
-                f"Could not convert '{value}' to {param_type} for parameter {param}"
-            )
+            self.logger.warning(f"Could not convert '{value}' to {param_type} for parameter {param}")
 
     # Approach 3: Look for comma or space-separated values if no other structure found
     # Approach 3: Look for comma or space-separated values if no other structure found
@@ -838,6 +817,4 @@ if not input_values and parameter_names:
             try:
                 input_values[param] = self._convert_value(value, param_type)
             except ValueError:
-                self.logger.warning(
-                    f"Could not convert '{value}' to {param_type} for parameter {param}"
-                )
+                self.logger.warning(f"Could not convert '{value}' to {param_type} for parameter {param}")

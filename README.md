@@ -37,7 +37,7 @@ Advanced neural code generation component for the Program Synthesis System. This
 3. **Test the standalone mode**:
    ```bash
    docker run --gpus all -it --rm \
-     -v $(pwd)/models:/app/models \
+     -v $(pwd)/app:/app/app \
      -v $(pwd)/knowledge_base:/app/knowledge_base \
      program-synthesis/neural-code-generator:dev \
      python -m program_synthesis_system.services.neural_code_generator.standalone \

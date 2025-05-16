@@ -3,7 +3,9 @@
 import asyncio
 import os
 import logging
-from src.services.spec_registry.app.spec_registry_event_adapter import SpecRegistryEventAdapter
+from src.services.spec_registry.app.spec_registry_event_adapter import (
+    SpecRegistryEventAdapter,
+)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),

@@ -1,7 +1,5 @@
-# agent_template_service/models/events.py
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
+# agent_template_service/app/events.py
+from typing import Dict, List, Any
 
 from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import EventType

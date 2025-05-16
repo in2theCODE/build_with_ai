@@ -29,7 +29,7 @@ if [ -n "$PULSAR_SERVICE_URL" ]; then
     fi
 fi
 
-# Download models if they don't exist and MODEL_DOWNLOAD_URL is set
+# Download app if they don't exist and MODEL_DOWNLOAD_URL is set
 if [ -n "$MODEL_DOWNLOAD_URL" ] && [ ! -f "$MODEL_PATH/config.json" ]; then
     echo "Downloading model from $MODEL_DOWNLOAD_URL to $MODEL_PATH"
     mkdir -p "$MODEL_PATH"

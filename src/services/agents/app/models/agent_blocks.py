@@ -1,7 +1,7 @@
-# agent_template_service/models/agent_blocks.py
+# agent_template_service/app/agent_blocks.py
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 
 

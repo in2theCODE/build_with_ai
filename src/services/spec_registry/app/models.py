@@ -1,10 +1,10 @@
-# src/services/spec_registry/app/models.py
+# app/services/spec_registry/app/app.py
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union, Literal
+from typing import Any, Dict, List, Optional, Union, Literal
 import uuid
 
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 # Field types for spec sheets

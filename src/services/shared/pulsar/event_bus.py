@@ -132,11 +132,9 @@ class PulsarEventBus(EventBus):
 
         self.schema_registry = None
         if schema_registry_url:
-            from infra.registration.schema_registry import SchemaRegistryClient
+            from src.services.shared.models.schema_registry import SchemaRegistryClient
 
-            self.schema_registry = SchemaRegistryClient(
-                url=schema_registry_url, auth_token=schema_registry_auth_token
-            )
+            self.schema_registry = SchemaRegistryClient(url=schema_registry_url, auth_token=schema_registry_auth_token)
 
     async def start(self) -> bool:
         """
@@ -235,9 +233,7 @@ class PulsarEventBus(EventBus):
                 schema_id = self.schema_registry.get_schema_id(subject)
                 if schema_id:
                     if not self.schema_registry.validate_event_against_schema(event, schema_id):
-                        logger.error(
-                            f"Schema validation failed for event {event_type}: {schema_id}"
-                        )
+                        logger.error(f"Schema validation failed for event {event_type}: {schema_id}")
                         return False
 
             # Get or create producer
@@ -290,13 +286,15 @@ class PulsarEventBus(EventBus):
             if self.running and self.client:
                 asyncio.create_task(
                     self._create_consumer(
-                        event_types, handler, subscription_name, subscription_type, **kwargs
+                        event_types,
+                        handler,
+                        subscription_name,
+                        subscription_type,
+                        **kwargs,
                     )
                 )
 
-            logger.info(
-                f"Registered subscription '{subscription_name}' for event types: {', '.join(event_types)}"
-            )
+            logger.info(f"Registered subscription '{subscription_name}' for event types: {', '.join(event_types)}")
             return True
 
         except Exception as e:
@@ -358,9 +356,7 @@ class PulsarEventBus(EventBus):
             "key_shared": pulsar.ConsumerType.KeyShared,
         }
 
-        consumer_type = consumer_type_map.get(
-            subscription_type.lower(), pulsar.ConsumerType.Exclusive
-        )
+        consumer_type = consumer_type_map.get(subscription_type.lower(), pulsar.ConsumerType.Exclusive)
 
         # Create a consumer for each event type
         for event_type in event_types:
@@ -410,9 +406,7 @@ class PulsarEventBus(EventBus):
 
                     # Acknowledge message
                     consumer.acknowledge(msg)
-                    logger.debug(
-                        f"Processed event {event.get('event_id', 'unknown')} of type {event_type}"
-                    )
+                    logger.debug(f"Processed event {event.get('event_id', 'unknown')} of type {event_type}")
 
                 except Exception as e:
                     # Negative acknowledge on handler error

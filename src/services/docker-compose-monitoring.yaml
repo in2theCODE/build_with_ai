@@ -5,11 +5,6 @@ networks:
     name: monitoring
     driver: bridge
 
-volumes:
-  prometheus_data:
-  alertmanager_data:
-  grafana_data:
-
 services:
 
   prometheus:
@@ -17,11 +12,10 @@ services:
     container_name: prometheus
     restart: unless-stopped
     volumes:
-      - ~/build_with_ai/src/services/prometheus/app/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
-      - ~/build_with_ai/src/services/prometheus/app/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/app:/etc/prometheus
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--config.file=/etc/prometheus/prometheus.yaml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.enable-lifecycle'
     ports:
@@ -40,7 +34,8 @@ services:
     container_name: alertmanager
     restart: unless-stopped
     volumes:
-      - ../src/services/prometheus/app/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./prometheus/app:/etc/prometheus
       - alertmanager_data:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -63,13 +58,11 @@ services:
     container_name: grafana
     restart: unless-stopped
     volumes:
-      - :/etc/grafana/provisioning/datasources
-      - ../src/services/grafana/app/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ../src/services/grafana/app/dashboard_definitions:/var/lib/grafana/dashboards
-      - /grafana_data:/var/lib/grafana
+      - ./grafana/app:/etc/grafana
+      - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin_secure_password
+      - GF_SECURITY_ADMIN_PASSWORD=2163584654
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     ports:
@@ -109,3 +102,7 @@ services:
         reservations:
           memory: 128M
 
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

@@ -1,12 +1,9 @@
 import asyncio
-from datetime import datetime
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 import uuid
 
 from neo4j import AsyncGraphDatabase
-from neo4j import AsyncSession
-import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -34,10 +31,7 @@ class PatternMatcher:
         """Initialize database and create constraints/indexes"""
         async with self.driver.session() as session:
             # Create constraints
-            await session.run(
-                "CREATE CONSTRAINT pattern_id IF NOT EXISTS "
-                "FOR (p:Pattern) REQUIRE p.id IS UNIQUE"
-            )
+            await session.run("CREATE CONSTRAINT pattern_id IF NOT EXISTS FOR (p:Pattern) REQUIRE p.id IS UNIQUE")
 
             # Create vector index if Neo4j supports it (Neo4j 5.0+)
             try:
@@ -53,9 +47,7 @@ class PatternMatcher:
             except Exception as e:
                 logger.warning(f"Could not create vector index: {e}")
 
-    async def store_pattern(
-        self, pattern_text: str, embedding: List[float], metadata: Dict[str, Any] = None
-    ) -> str:
+    async def store_pattern(self, pattern_text: str, embedding: List[float], metadata: Dict[str, Any] = None) -> str:
         """
         Store a pattern with its embedding for later matching
 
@@ -90,7 +82,11 @@ class PatternMatcher:
         return pattern_id
 
     async def match(
-        self, query_text: str, embedding: List[float], threshold: float = 0.85, limit: int = 5
+        self,
+        query_text: str,
+        embedding: List[float],
+        threshold: float = 0.85,
+        limit: int = 5,
     ) -> Optional[Dict[str, Any]]:
         """
         Match query against stored patterns using vector similarity
@@ -137,7 +133,8 @@ class PatternMatcher:
         """Delete a pattern by its ID"""
         async with self.driver.session() as session:
             result = await session.run(
-                "MATCH (p:Pattern {id: $id}) DELETE p RETURN count(p) as deleted", id=pattern_id
+                "MATCH (p:Pattern {id: $id}) DELETE p RETURN count(p) as deleted",
+                id=pattern_id,
             )
             record = await result.single()
             return record and record["deleted"] > 0
@@ -155,7 +152,11 @@ class PatternMatcher:
             )
 
             return [
-                {"id": record["id"], "text": record["text"], "metadata": record["metadata"]}
+                {
+                    "id": record["id"],
+                    "text": record["text"],
+                    "metadata": record["metadata"],
+                }
                 async for record in result
             ]
 

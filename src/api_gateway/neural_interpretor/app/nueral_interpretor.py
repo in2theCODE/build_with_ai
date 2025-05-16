@@ -17,7 +17,7 @@ import pulsar
 from pydantic import BaseModel
 from pydantic import Field
 from src.services.shared.concurrency.concurrency import AsyncTaskManager
-from src.services.shared.logging.logger import get_logger
+from src.services.shared.loggerService.loggingService import get_logger
 
 # Keep the imports exactly as they are - they're correct
 from src.services.shared.models import ProcessingMode
@@ -25,8 +25,8 @@ from src.services.shared.models import Task
 from src.services.shared.models import TaskPriority
 from src.services.shared.models import TaskStatus
 from src.services.shared.monitoring.metrics import MetricsCollector
-from src.services.shared.validation.validator import ValidationResult
-from src.services.shared.validation.validator import Validator
+from shared_models.validator import ValidationResult
+from shared_models.validator import Validator
 
 
 # Configure logging
@@ -436,9 +436,7 @@ class NeuralInterpretor:
 
         return scores
 
-    def _analyze_complexity(
-        self, prompt: str, system_message: Optional[str] = None
-    ) -> Dict[str, int]:
+    def _analyze_complexity(self, prompt: str, system_message: Optional[str] = None) -> Dict[str, int]:
         """
         Analyze the complexity dimensions of a task
 
@@ -884,9 +882,7 @@ class NeuralInterpretor:
                 scores[workflow_type] = score
 
                 # Log workflow identification
-                logger.debug(
-                    f"Identified potential workflow: {workflow_type} (confidence: {score:.2f})"
-                )
+                logger.debug(f"Identified potential workflow: {workflow_type} (confidence: {score:.2f})")
 
         return scores
 
@@ -1135,19 +1131,14 @@ class NeuralInterpreter:
             return ProcessingMode.COLLABORATIVE
 
         # Check if task is complex
-        elif (
-            max_complexity >= complexity_threshold
-            or metadata.actionability.computation >= complexity_threshold
-        ):
+        elif max_complexity >= complexity_threshold or metadata.actionability.computation >= complexity_threshold:
             return ProcessingMode.DELIBERATIVE
 
         # Default to reactive for simpler tasks
         else:
             return ProcessingMode.REACTIVE
 
-    def estimate_processing_time(
-        self, prompt: str, metadata: TaskMetadata, mode: ProcessingMode
-    ) -> float:
+    def estimate_processing_time(self, prompt: str, metadata: TaskMetadata, mode: ProcessingMode) -> float:
         """
         Estimate task processing time in seconds
 
@@ -1229,9 +1220,7 @@ class NeuralInterpreter:
         else:
             return TaskPriority.LOW
 
-    def validate_request(
-        self, prompt: str, system_message: Optional[str] = None
-    ) -> ValidationResult:
+    def validate_request(self, prompt: str, system_message: Optional[str] = None) -> ValidationResult:
         """
         Validate request parameters
 
@@ -1303,9 +1292,7 @@ class NeuralInterpreter:
 
             # 3. Determine processing mode
             processing_mode = (
-                ProcessingMode.COLLABORATIVE
-                if require_collaboration
-                else self.determine_processing_mode(metadata)
+                ProcessingMode.COLLABORATIVE if require_collaboration else self.determine_processing_mode(metadata)
             )
 
             # 4. Estimate processing time
@@ -1317,9 +1304,7 @@ class NeuralInterpreter:
             # 6. Determine service route
             workflow_id = context.get("workflow_id")
             workflow_phase = context.get("workflow_phase")
-            service_route = self.metadata_analyzer.determine_service_route(
-                metadata, workflow_id, workflow_phase
-            )
+            service_route = self.metadata_analyzer.determine_service_route(metadata, workflow_id, workflow_phase)
 
             # For workflow tasks, add project ID
             project_id = context.get("project_id")
@@ -1382,9 +1367,7 @@ class NeuralInterpreter:
             metrics_collector.record_error("task_processing_error")
 
             # Publish error metrics
-            await self.publish_metrics(
-                {"event": "task_analysis_error", "task_id": task_id, "error": str(e)}
-            )
+            await self.publish_metrics({"event": "task_analysis_error", "task_id": task_id, "error": str(e)})
 
             # Re-raise for proper error handling
             raise
@@ -1485,9 +1468,7 @@ class NeuralInterpreter:
 
                         # Acknowledge message
                         self.consumers["results"].acknowledge(msg)
-                        metrics_collector.record_request(
-                            status="success", strategy="process_result"
-                        )
+                        metrics_collector.record_request(status="success", strategy="process_result")
                     else:
                         logger.warning("Received result without task_id")
                         metrics_collector.record_error("invalid_result_message")
@@ -1550,7 +1531,8 @@ class NeuralInterpreter:
                 # Process next task in workflow
                 await self.process_query(
                     prompt=payload.get(
-                        "next_prompt", f"Process workflow {workflow_id} phase {next_phase}"
+                        "next_prompt",
+                        f"Process workflow {workflow_id} phase {next_phase}",
                     ),
                     system_message=payload.get("next_system_message"),
                     session_id=payload.get("session_id"),

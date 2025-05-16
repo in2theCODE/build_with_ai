@@ -1,4 +1,4 @@
-# src/models/embedding_client.py
+# app/app/embedding_client.py
 
 import asyncio
 import logging
@@ -17,7 +17,9 @@ class EmbeddingClient:
     """Client for generating text embeddings for semantic analysis."""
 
     def __init__(
-        self, config: Dict[str, Any], metrics_collector: Optional[MetricsCollector] = None
+        self,
+        config: Dict[str, Any],
+        metrics_collector: Optional[MetricsCollector] = None,
     ):
         """
         Initialize the embedding client.
@@ -29,13 +31,11 @@ class EmbeddingClient:
         self.config = config
         self.metrics_collector = metrics_collector
         self.model_name = config.get("embedding_model", "default-embedding-model")
-        self.dimension = config.get(
-            "embedding_dimension", 1536
-        )  # Default for many embedding models
+        self.dimension = config.get("embedding_dimension", 1536)  # Default for many embedding app
         self.batch_size = config.get("batch_size", 32)
         self.logger = logging.getLogger(__name__)
 
-        # Initialize any embedding models or clients here
+        # Initialize any embedding app or clients here
         self._initialize_models()
 
     class Timer:
@@ -66,7 +66,7 @@ class EmbeddingClient:
             return self.end_time - self.start_time
 
     def _initialize_models(self):
-        """Initialize embedding models based on configuration."""
+        """Initialize embedding app based on configuration."""
 
         model_type = self.config.get("embedding_type", "default")
 

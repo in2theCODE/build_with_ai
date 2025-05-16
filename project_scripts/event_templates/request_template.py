@@ -3,6 +3,7 @@
 Template Request Client
 Send template generation requests to Pulsar
 """
+
 import argparse
 from datetime import datetime
 import json
@@ -21,7 +22,9 @@ except ImportError:
 
 def main():
     parser = argparse.ArgumentParser(description="Send template generation request")
-    parser.add_argument("--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL")
+    parser.add_argument(
+        "--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL"
+    )
     parser.add_argument("--category", required=True, help="Template category")
     parser.add_argument("--name", required=True, help="Template name")
     parser.add_argument("--description", required=True, help="Template description")
@@ -30,7 +33,9 @@ def main():
     )
     parser.add_argument("--audience", default="system", help="Target audience")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout in seconds")
-    parser.add_argument("--wait-response", action="store_true", help="Wait for response")
+    parser.add_argument(
+        "--wait-response", action="store_true", help="Wait for response"
+    )
 
     args = parser.parse_args()
 

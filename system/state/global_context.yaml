@@ -1,0 +1,185 @@
+---
+# global_context.yaml
+# Definition of the Global Context Aggregator pattern
+
+name: GlobalContextAggregator
+version: 1.0.0
+description: >
+  Aggregator that captures events from distributed services to establish
+  a global context, persists this context to a database, and provides
+  context information back to services without them knowing the source.
+
+components:
+  aggregator:
+    name: GlobalContextAggregator
+    type: pulsar-function
+    runtime: java
+    className: org.example.GlobalContextFunction
+    inputs:
+      - service-events
+      - context-requests
+    outputs:
+      - global-context-events
+      - context-responses
+    description: >
+      Captures events from all services, updates the global context database,
+      and responds to context queries without revealing the underlying data source.
+
+    state:
+      type: database
+      technology: PostgreSQL
+      schema: global_context
+      tables:
+        - name: context_entities
+          description: Stores global context information from all services
+          columns:
+            - name: context_id
+              type: UUID
+              primary_key: true
+            - name: context_type
+              type: VARCHAR
+            - name: originating_service
+              type: VARCHAR
+            - name: context_data
+              type: JSONB
+            - name: created_at
+              type: TIMESTAMP
+            - name: updated_at
+              type: TIMESTAMP
+            - name: version
+              type: INTEGER
+
+events:
+  incoming:
+    - name: ServiceContextEvent
+      topic: service-events
+      schema: avro
+      description: Events emitted by services that contribute to global context
+      fields:
+        - name: eventId
+          type: string
+          description: Unique identifier for the event
+        - name: serviceId
+          type: string
+          description: Identifier of the service emitting the event
+        - name: eventType
+          type: string
+          description: Type of context event (create, update, delete)
+        - name: contextType
+          type: string
+          description: Category of context this event relates to
+        - name: contextData
+          type: object
+          description: Actual context data payload
+        - name: timestamp
+          type: long
+          description: When the event was generated
+
+    - name: ContextRequest
+      topic: context-requests
+      schema: avro
+      description: Requests for specific context information from services
+      fields:
+        - name: requestId
+          type: string
+          description: Unique identifier for the request
+        - name: serviceId
+          type: string
+          description: Identifier of the service making the request
+        - name: contextType
+          type: string
+          description: Type of context being requested
+        - name: contextId
+          type: string
+          description: Optional specific context identifier
+        - name: filter
+          type: object
+          description: Optional filtering criteria
+        - name: timestamp
+          type: long
+          description: When the request was generated
+
+  outgoing:
+    - name: GlobalContextEvent
+      topic: global-context-events
+      schema: avro
+      description: Events emitted when global context changes
+      fields:
+        - name: eventId
+          type: string
+          description: Unique identifier for the event
+        - name: contextType
+          type: string
+          description: Category of context that changed
+        - name: contextId
+          type: string
+          description: Identifier of the specific context entity
+        - name: changeType
+          type: string
+          description: Type of change (created, updated, deleted)
+        - name: contextData
+          type: object
+          description: The updated context data
+        - name: version
+          type: integer
+          description: Version number after this change
+        - name: timestamp
+          type: long
+          description: When the change occurred
+
+    - name: ContextResponse
+      topic: context-responses
+      schema: avro
+      description: Responses to specific context requests
+      fields:
+        - name: responseId
+          type: string
+          description: Unique identifier for the response
+        - name: requestId
+          type: string
+          description: ID of the original request this responds to
+        - name: success
+          type: boolean
+          description: Whether the request was successful
+        - name: contextData
+          type: array
+          items: object
+          description: Array of context objects matching the request
+        - name: timestamp
+          type: long
+          description: When the response was generated
+
+behavior:
+  - pattern: "Event Sourcing"
+    description: >
+      All changes to global context are captured as a sequence of events,
+      providing a complete audit trail and allowing state reconstruction.
+
+  - pattern: "CQRS"
+    description: >
+      Separates command (context updates) from query (context requests),
+      allowing each to be optimized independently.
+
+  - pattern: "Service Decoupling"
+    description: >
+      Services only need to know about topics to interact with, not about
+      the database or other services, providing loose coupling.
+
+  - responsibilities:
+      - "Capture events from all distributed services"
+      - "Persist events to build comprehensive global context"
+      - "Process incoming events to update global state"
+      - "Emit derived events based on global context changes"
+      - "Respond to specific context requests without revealing data source"
+      - "Maintain data consistency across the distributed system"
+
+deployment:
+  pulsar:
+    tenant: global-system
+    namespace: context
+    function_name: global-context-aggregator
+    parallelism: 3
+    resources:
+      cpu: 2
+      ram: 4Gi
+    log_topic: global-context-logs

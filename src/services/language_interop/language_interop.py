@@ -1,6 +1,4 @@
-def create_interop_bridge(
-    self, source_code: str, source_language: str, target_language: str
-) -> str:
+def create_interop_bridge(self, source_code: str, source_language: str, target_language: str) -> str:
     """
     Create an interoperability bridge between languages.
 

@@ -1,0 +1,64 @@
+[project]
+name = "shared-models"
+version = "0.1.0"
+description = "Pydantic v2 models and schemas used across services"
+authors = [
+    { name = "Justin Russell", email = "Justin@in2thecode.com" }
+]
+license = { text = "" }
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pydantic>=2.5.0,<3.0.0",
+    "fastavro",
+    "pydantic-avro",
+    "requests",
+    "fish>=1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "ruff",
+    "black",
+    "pip>=25.1.1",
+    "setuptools>=80.4.0",
+    "wheel>=0.45.1",
+]
+
+[build-system]
+requires = [
+    "setuptools==80.4.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["shared_models"]
+
+[tool.setuptools.package-data]
+# If you have .json, .yaml, or other non-Python files
+"shared_models" = ["*.json", "*.yaml"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["src/shared_models"]
+
+[tool.black]
+line-length = 120
+target-version = ["py3.10"]
+
+[tool.ruff]
+line-length = 120
+exclude = ["__pycache__", ".venv", "node_modules"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests"
+]

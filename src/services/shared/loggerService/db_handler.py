@@ -1,7 +1,8 @@
-import asyncio
 import json
 import logging
 import os
+import sys
+
 import pulsar
 from datetime import datetime
 
@@ -14,9 +15,7 @@ class PulsarLogHandler(logging.Handler):
         super().__init__()
 
         # Set default values from environment variables if not provided
-        self.service_url = service_url or os.environ.get(
-            "PULSAR_SERVICE_URL", "pulsar://pulsar:6650"
-        )
+        self.service_url = service_url or os.environ.get("PULSAR_SERVICE_URL", "pulsar://pulsar:6650")
         self.topic = topic or os.environ.get("PULSAR_TOPIC", "log.entry")
         self.container_name = os.environ.get("CONTAINER_NAME", "unknown")
 
@@ -32,7 +31,7 @@ class PulsarLogHandler(logging.Handler):
             self.producer = self.client.create_producer(self.topic)
             print(f"Connected to Pulsar at {self.service_url}, topic: {self.topic}")
         except Exception as e:
-            print(f"Error connecting to Pulsar: {e}")
+            sys.stderr.write(f"PulsarLogHandler: Error connecting to Pulsar: {e}\n")
             self.client = None
             self.producer = None
 
@@ -54,10 +53,10 @@ class PulsarLogHandler(logging.Handler):
 
             # Convert to JSON
             json_data = json.dumps(log_data)
-
             # Send to Pulsar
-            self.producer.send(json_data.encode("utf-8"))
+            self.producer.send(json_data.encode())
         except Exception as e:
+            self.handleError(record)
             print(f"Error sending log to Pulsar: {e}")
 
     def format(self, record):
@@ -131,3 +130,6 @@ class PulsarLogHandler(logging.Handler):
         if self.client:
             self.client.close()
         super().close()
+
+    def formatException(self, exc_info):
+        pass

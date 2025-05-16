@@ -1,4 +1,4 @@
-# src/shared/metrics.py
+# app/shared/metrics.py
 
 import asyncio
 import functools
@@ -97,9 +97,7 @@ def _record_success(component_name: str, function_name: str, start_time: float):
             _metrics_collector.record_request(status="success", strategy=function_name)
 
             # If you have a histogram for function duration
-            timer = _metrics_collector.request_duration.labels(
-                component=component_name, strategy=function_name
-            )
+            timer = _metrics_collector.request_duration.labels(component=component_name, strategy=function_name)
             if hasattr(timer, "observe"):
                 timer.observe(duration)
         except Exception as e:

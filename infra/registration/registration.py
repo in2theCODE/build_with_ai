@@ -21,7 +21,11 @@ from threading import Lock
 from typing import Any, Dict, List, Optional, Type, TypeVar, cast, Coroutine, Tuple
 
 # Import shared modules
-from src.services.shared.logging.logger import configure_logging, get_logger, log_execution_time
+from src.services.shared.loggerService.loggingService import (
+    configure_logging,
+    get_logger,
+    log_execution_time,
+)
 from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import Components as ComponentType
 from src.services.shared.models.enums import EventType
@@ -112,7 +116,8 @@ class ServiceRegistry(metaclass=SingletonMeta):
             except Exception as e:
                 # Fallback to basic logging if the shared module fails
                 logging.basicConfig(
-                    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+                    level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
                 )
                 logging.warning(
                     f"Failed to configure logging using shared module: {e}. Using basic logging."
@@ -127,7 +132,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             self.logger = logging.getLogger("service_registry")
             self.logger.error(f"Failed to set up logging properly: {e}")
 
-    async def initialize(self, pulsar_url: str, metrics_port: int = 8081) -> "ServiceRegistry":
+    async def initialize(
+        self, pulsar_url: str, metrics_port: int = 8081
+    ) -> "ServiceRegistry":
         """
         Initialize the service registry with required dependencies.
 
@@ -173,7 +180,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             self.initialized = True
             self.logger.info("Service registry initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize service registry: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to initialize service registry: {e}", exc_info=True
+            )
             raise RuntimeError(f"Service registry initialization failed: {e}") from e
 
         return self
@@ -205,10 +214,14 @@ class ServiceRegistry(metaclass=SingletonMeta):
             return False
 
         try:
-            self.logger.info(f"Registering service: {service_name} of type {service_type}")
+            self.logger.info(
+                f"Registering service: {service_name} of type {service_type}"
+            )
 
             if service_name in self.services:
-                self.logger.warning(f"Service {service_name} already registered. Updating...")
+                self.logger.warning(
+                    f"Service {service_name} already registered. Updating..."
+                )
 
             service_info = {
                 "instance": service_instance,
@@ -229,7 +242,8 @@ class ServiceRegistry(metaclass=SingletonMeta):
                 self.health_monitors[service_name] = health_monitor
             except Exception as e:
                 self.logger.error(
-                    f"Failed to create health monitor for {service_name}: {e}", exc_info=True
+                    f"Failed to create health monitor for {service_name}: {e}",
+                    exc_info=True,
                 )
 
             # Set up circuit breaker for this service
@@ -241,7 +255,8 @@ class ServiceRegistry(metaclass=SingletonMeta):
                 self.circuit_breakers[service_name] = circuit_breaker
             except Exception as e:
                 self.logger.error(
-                    f"Failed to create circuit breaker for {service_name}: {e}", exc_info=True
+                    f"Failed to create circuit breaker for {service_name}: {e}",
+                    exc_info=True,
                 )
 
             # Emit event for service registration
@@ -268,7 +283,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             self.logger.info(f"Service {service_name} registered successfully")
             return True
         except Exception as e:
-            self.logger.error(f"Failed to register service {service_name}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to register service {service_name}: {e}", exc_info=True
+            )
             return False
 
     def get_service(self, service_name: str) -> Optional[Any]:
@@ -294,13 +311,17 @@ class ServiceRegistry(metaclass=SingletonMeta):
         # Apply circuit breaker pattern - synchronous check
         circuit_breaker = self.circuit_breakers.get(service_name)
         if circuit_breaker and circuit_breaker.is_open():
-            self.logger.warning(f"Circuit breaker open for {service_name}, service unavailable")
+            self.logger.warning(
+                f"Circuit breaker open for {service_name}, service unavailable"
+            )
             return None
 
         self.logger.debug(f"Retrieved service: {service_name}")
         return self.services[service_name]["instance"]
 
-    def get_service_with_type(self, service_name: str, expected_type: Type[T]) -> Optional[T]:
+    def get_service_with_type(
+        self, service_name: str, expected_type: Type[T]
+    ) -> Optional[T]:
         """
         Get a service by name with expected type.
 
@@ -363,7 +384,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             self.logger.error("Cannot perform health check: registry not initialized")
             return {}
 
-        self.logger.info(f"Performing health check on {len(self.health_monitors)} services")
+        self.logger.info(
+            f"Performing health check on {len(self.health_monitors)} services"
+        )
         results = {}
 
         # Create tasks for all health checks to run in parallel
@@ -374,12 +397,16 @@ class ServiceRegistry(metaclass=SingletonMeta):
 
         # Wait for all health checks to complete
         if health_check_tasks:
-            completed_results = await asyncio.gather(*health_check_tasks, return_exceptions=True)
+            completed_results = await asyncio.gather(
+                *health_check_tasks, return_exceptions=True
+            )
 
             # Process results
             for result in completed_results:
                 if isinstance(result, Exception):
-                    self.logger.error(f"Health check task failed: {result}", exc_info=True)
+                    self.logger.error(
+                        f"Health check task failed: {result}", exc_info=True
+                    )
                     continue
 
                 name, status = result
@@ -408,7 +435,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             self.logger.debug(f"Health status for {service_name}: {status}")
             return service_name, status
         except Exception as e:
-            self.logger.error(f"Health check failed for {service_name}: {e}", exc_info=True)
+            self.logger.error(
+                f"Health check failed for {service_name}: {e}", exc_info=True
+            )
             return service_name, "error"
 
     def get_service_health(self, service_name: str) -> Optional[str]:
@@ -487,11 +516,14 @@ class ServiceRegistry(metaclass=SingletonMeta):
                     if hasattr(breaker, "half_open_requests"):
                         setattr(breaker, "half_open_requests", 0)
 
-                    self.logger.info(f"Successfully reset circuit breaker for {service_name}")
+                    self.logger.info(
+                        f"Successfully reset circuit breaker for {service_name}"
+                    )
                     return True
         except Exception as e:
             self.logger.error(
-                f"Failed to reset circuit breaker for {service_name}: {e}", exc_info=True
+                f"Failed to reset circuit breaker for {service_name}: {e}",
+                exc_info=True,
             )
 
         return False
@@ -514,7 +546,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
             service_info = {
                 "name": name,
                 "type": (
-                    str(info["type"].value) if hasattr(info["type"], "value") else str(info["type"])
+                    str(info["type"].value)
+                    if hasattr(info["type"], "value")
+                    else str(info["type"])
                 ),
                 "health_status": info.get("health_status", "unknown"),
                 "registered_at": info.get("registered_at", 0),
@@ -564,7 +598,9 @@ class ServiceRegistry(metaclass=SingletonMeta):
                 self.logger.debug("Shutting down metrics collector")
                 self.metrics_collector.shutdown()
             except Exception as e:
-                self.logger.error(f"Error shutting down metrics collector: {e}", exc_info=True)
+                self.logger.error(
+                    f"Error shutting down metrics collector: {e}", exc_info=True
+                )
 
         # Mark as uninitialized
         self.initialized = False

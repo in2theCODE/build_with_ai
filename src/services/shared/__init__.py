@@ -1,8 +1,8 @@
 """
-Shared package for common models, utilities, and services.
+Shared package for common app, utilities, and services.
 """
 
-from validation import
+import validation
 
 # Version information
 __version__ = "1.0.0"
@@ -58,7 +58,7 @@ __all__ = [
     "ProjectType", "ProjectStatus", "VerificationResult",
     "SynthesisStrategy", "DisclosureLevel", "ComponentType",
 
-    # Core models
+    # Core app
     "FormalSpecification", "SynthesisResult",
     "SymbolicTestResult", "InterfaceVerificationResult",
 

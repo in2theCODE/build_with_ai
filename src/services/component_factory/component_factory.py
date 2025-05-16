@@ -28,11 +28,16 @@ class ComponentFactory:
         """Register default component implementations."""
         # Register the neural code generator
         self.register_component(
-            ComponentType.CODE_GENERATOR, "neural_code_generator", EnhancedNeuralCodeGenerator
+            ComponentType.CODE_GENERATOR,
+            "neural_code_generator",
+            EnhancedNeuralCodeGenerator,
         )
 
     def register_component(
-        self, component_type: ComponentType, name: str, component_class: Type[BaseComponent]
+        self,
+        component_type: ComponentType,
+        name: str,
+        component_class: Type[BaseComponent],
     ):
         """
         Register a component implementation.
@@ -76,7 +81,7 @@ class ComponentFactory:
         # Try to dynamically import the component
         try:
             # Construct the expected module path
-            module_name = f"program_synthesis_system.services"
+            module_name = "program_synthesis_system.services"
             if component_type.value:
                 module_name += f".{component_type.value}"
             module_name += f".{implementation}"
@@ -87,11 +92,7 @@ class ComponentFactory:
             # Get the component class (assume it's the first class that inherits from BaseComponent)
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (
-                    isinstance(attr, type)
-                    and issubclass(attr, BaseComponent)
-                    and attr != BaseComponent
-                ):
+                if isinstance(attr, type) and issubclass(attr, BaseComponent) and attr != BaseComponent:
                     try:
                         component = attr(**params)
                         # Register for future use

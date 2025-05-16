@@ -3,6 +3,7 @@
 Event-Driven Template Generator
 Creates templates based on events received from Pulsar
 """
+
 import argparse
 import asyncio
 from datetime import datetime
@@ -11,7 +12,7 @@ import logging
 import os
 import signal
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import uuid
 
 
@@ -54,7 +55,9 @@ class EventTemplateGenerator:
             )
 
             # Create producer for template generation responses
-            self.producer = self.client.create_producer(topic="template.generation.response")
+            self.producer = self.client.create_producer(
+                topic="template.generation.response"
+            )
 
             logger.info(f"Connected to Pulsar broker at {self.broker_url}")
             logger.info("Listening for template generation requests...")
@@ -144,7 +147,9 @@ class EventTemplateGenerator:
                 }
 
             # Create template ID
-            template_id = f"{category}-{name.replace(' ', '-').lower()}-{uuid.uuid4().hex[:8]}"
+            template_id = (
+                f"{category}-{name.replace(' ', '-').lower()}-{uuid.uuid4().hex[:8]}"
+            )
 
             # Create metadata
             metadata = {
@@ -185,13 +190,18 @@ class EventTemplateGenerator:
 
         except Exception as e:
             logger.error(f"Template generation error: {str(e)}")
-            return {"status": "error", "message": f"Failed to generate template: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Failed to generate template: {str(e)}",
+            }
 
     def _calculate_complexity(self, components: List[Dict[str, Any]]) -> int:
         """Calculate template complexity based on services"""
         # Simple complexity calculation based on component count and required status
         base_complexity = min(len(components), 10)
-        required_components = sum(1 for comp in components if comp.get("required", False))
+        required_components = sum(
+            1 for comp in components if comp.get("required", False)
+        )
 
         # Scale complexity between 1-10
         return max(1, min(10, base_complexity + (required_components // 2)))
@@ -220,9 +230,15 @@ async def run_service(generator):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Event-driven template generator service")
-    parser.add_argument("--template-dir", default="./templates", help="Template directory")
-    parser.add_argument("--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL")
+    parser = argparse.ArgumentParser(
+        description="Event-driven template generator service"
+    )
+    parser.add_argument(
+        "--template-dir", default="./templates", help="Template directory"
+    )
+    parser.add_argument(
+        "--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL"
+    )
 
     args = parser.parse_args()
 

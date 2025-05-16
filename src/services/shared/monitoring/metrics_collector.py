@@ -68,9 +68,7 @@ class MetricsCollector:
         # Start Prometheus HTTP server
         try:
             prometheus_client.start_http_server(self.metrics_port)
-            logger.info(
-                f"Prometheus metrics available at :{self.metrics_port}{self.metrics_endpoint}"
-            )
+            logger.info(f"Prometheus metrics available at :{self.metrics_port}{self.metrics_endpoint}")
         except Exception as e:
             logger.error(f"Failed to start Prometheus HTTP server: {e}")
             self.enabled = False
@@ -135,7 +133,7 @@ class MetricsCollector:
 
         self.model_loading_time = Histogram(
             "neural_code_generator_model_loading_time_seconds",
-            "Time taken to load models",
+            "Time taken to load app",
             ["component", "model_type"],
             buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
         )
@@ -206,9 +204,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.requests_total.labels(
-            component=self.component_name, status=status, strategy=strategy
-        ).inc()
+        self.requests_total.labels(component=self.component_name, status=status, strategy=strategy).inc()
 
     def start_request_timer(self, strategy: str = "default") -> Timer | None:
         """
@@ -236,9 +232,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.request_tokens.labels(component=self.component_name, token_type=token_type).observe(
-            count
-        )
+        self.request_tokens.labels(component=self.component_name, token_type=token_type).observe(count)
 
     # Result metrics methods
     def record_confidence(self, confidence: float, strategy: str = "default"):
@@ -252,9 +246,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.result_confidence.labels(component=self.component_name, strategy=strategy).observe(
-            confidence
-        )
+        self.result_confidence.labels(component=self.component_name, strategy=strategy).observe(confidence)
 
     def record_code_length(self, length: int, language: str = "python"):
         """
@@ -267,9 +259,7 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.generated_code_length.labels(component=self.component_name, language=language).observe(
-            length
-        )
+        self.generated_code_length.labels(component=self.component_name, language=language).observe(length)
 
     # Cache metrics methods
     def record_cache_hit(self, cache_type: str = "knowledge_base"):
@@ -320,7 +310,9 @@ class MetricsCollector:
                 self,
                 status_gauge_name,
                 Gauge(
-                    f"neural_code_generator_{status}", f"Component {status} status", ["component"]
+                    f"neural_code_generator_{status}",
+                    f"Component {status} status",
+                    ["component"],
                 ),
             )
 
@@ -358,9 +350,7 @@ class MetricsCollector:
         if not self.enabled:
             return None
 
-        return self.model_loading_time.labels(
-            component=self.component_name, model_type=model_type
-        ).time()
+        return self.model_loading_time.labels(component=self.component_name, model_type=model_type).time()
 
     # Event system metrics methods
     def record_event_emitted(self, event_type: str):
@@ -400,9 +390,7 @@ class MetricsCollector:
         if not self.enabled:
             return None
 
-        return self.event_processing_time.labels(
-            component=self.component_name, event_type=event_type
-        ).time()
+        return self.event_processing_time.labels(component=self.component_name, event_type=event_type).time()
 
     # Health metrics methods
     def set_component_up(self, up: bool = True):
@@ -443,9 +431,7 @@ class MetricsCollector:
         if not self.enabled:
             return None
 
-        return self.vector_db_query_time.labels(
-            component=self.component_name, operation=operation
-        ).time()
+        return self.vector_db_query_time.labels(component=self.component_name, operation=operation).time()
 
     def record_vector_db_operation(self, operation: str, status: str = "success"):
         """
@@ -458,6 +444,4 @@ class MetricsCollector:
         if not self.enabled:
             return
 
-        self.vector_db_operations.labels(
-            component=self.component_name, operation=operation, status=status
-        ).inc()
+        self.vector_db_operations.labels(component=self.component_name, operation=operation, status=status).inc()

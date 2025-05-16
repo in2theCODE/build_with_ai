@@ -110,7 +110,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./dashboard:/app
-    working_dir: /app
+    working_dir: /src
     command: ["npm", "start"]
     networks:
       - api-network

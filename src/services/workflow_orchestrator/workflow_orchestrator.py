@@ -14,7 +14,7 @@ from enum import Enum
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import pulsar
 from src.services.shared.constants.models import (
@@ -225,32 +225,38 @@ class WorkflowOrchestrator:
             )
 
             # Create consumers
+            await self.create_consumer("project_events", self.project_events_topic, self.handle_project_event)
+
             await self.create_consumer(
-                "project_events", self.project_events_topic, self.handle_project_event
+                "spec_sheet_events",
+                self.spec_sheet_events_topic,
+                self.handle_spec_sheet_event,
             )
 
             await self.create_consumer(
-                "spec_sheet_events", self.spec_sheet_events_topic, self.handle_spec_sheet_event
+                "code_gen_events",
+                self.code_gen_events_topic,
+                self.handle_code_gen_event,
             )
 
             await self.create_consumer(
-                "code_gen_events", self.code_gen_events_topic, self.handle_code_gen_event
+                "integration_events",
+                self.integration_events_topic,
+                self.handle_integration_event,
+            )
+
+            await self.create_consumer("test_events", self.test_events_topic, self.handle_test_event)
+
+            await self.create_consumer(
+                "workflow_commands",
+                self.workflow_commands_topic,
+                self.handle_workflow_command,
             )
 
             await self.create_consumer(
-                "integration_events", self.integration_events_topic, self.handle_integration_event
-            )
-
-            await self.create_consumer(
-                "test_events", self.test_events_topic, self.handle_test_event
-            )
-
-            await self.create_consumer(
-                "workflow_commands", self.workflow_commands_topic, self.handle_workflow_command
-            )
-
-            await self.create_consumer(
-                "assistance_events", self.assistance_events_topic, self.handle_assistance_event
+                "assistance_events",
+                self.assistance_events_topic,
+                self.handle_assistance_event,
             )
 
             logger.info(f"Initialized Pulsar connections to {self.pulsar_url}")
@@ -512,13 +518,9 @@ class WorkflowOrchestrator:
             elif command == "GENERATE_SPEC_SHEETS":
                 await self.start_spec_sheet_generation(project_id)
             elif command == "COMPLETE_SPEC_SHEETS":
-                await self.start_spec_sheet_completion(
-                    project_id, payload.get("spec_sheet_ids", [])
-                )
+                await self.start_spec_sheet_completion(project_id, payload.get("spec_sheet_ids", []))
             elif command == "VALIDATE_SPEC_SHEETS":
-                await self.start_spec_sheet_validation(
-                    project_id, payload.get("spec_sheet_ids", [])
-                )
+                await self.start_spec_sheet_validation(project_id, payload.get("spec_sheet_ids", []))
             elif command == "GENERATE_CODE":
                 await self.start_code_generation(project_id, payload.get("spec_sheet_ids", []))
             elif command == "VERIFY_CODE":
@@ -659,9 +661,7 @@ class WorkflowOrchestrator:
         project_id = payload.get("project_id")
 
         if project_id not in self.project_states:
-            logger.warning(
-                f"Received spec sheets generation start for unknown project: {project_id}"
-            )
+            logger.warning(f"Received spec sheets generation start for unknown project: {project_id}")
             return
 
         # Update project state
@@ -713,9 +713,7 @@ class WorkflowOrchestrator:
         spec_sheet_id = payload.get("spec_sheet_id")
 
         if project_id not in self.project_states:
-            logger.warning(
-                f"Received spec sheet completion start for unknown project: {project_id}"
-            )
+            logger.warning(f"Received spec sheet completion start for unknown project: {project_id}")
             return
 
         # Update project state
@@ -766,9 +764,7 @@ class WorkflowOrchestrator:
         if all_sheets and completed_sheets and set(completed_sheets) == set(all_sheets):
             # All spec sheets completed, update project status
             self.project_states[project_id]["status"] = ProjectStatus.SPEC_SHEETS_COMPLETED.value
-            self.project_states[project_id][
-                "current_phase"
-            ] = WorkflowPhase.SPEC_SHEET_COMPLETION.value
+            self.project_states[project_id]["current_phase"] = WorkflowPhase.SPEC_SHEET_COMPLETION.value
             self._save_project_states()
 
             # Publish event
@@ -900,9 +896,7 @@ class WorkflowOrchestrator:
         component_id = payload.get("component_id")
 
         if project_id not in self.project_states:
-            logger.warning(
-                f"Received component generation completion for unknown project: {project_id}"
-            )
+            logger.warning(f"Received component generation completion for unknown project: {project_id}")
             return
 
         # Add completed component
@@ -950,9 +944,7 @@ class WorkflowOrchestrator:
         is_valid = verification_result.get("is_valid", True)
 
         if project_id not in self.project_states:
-            logger.warning(
-                f"Received code verification completion for unknown project: {project_id}"
-            )
+            logger.warning(f"Received code verification completion for unknown project: {project_id}")
             return
 
         # Update project state
@@ -1004,9 +996,7 @@ class WorkflowOrchestrator:
         optimization_result = payload.get("optimization_result", {})
 
         if project_id not in self.project_states:
-            logger.warning(
-                f"Received code optimization completion for unknown project: {project_id}"
-            )
+            logger.warning(f"Received code optimization completion for unknown project: {project_id}")
             return
 
         # Update project state
@@ -1227,9 +1217,7 @@ class WorkflowOrchestrator:
         self._save_project_states()
 
         # Log event
-        logger.info(
-            f"Project {project_id} test execution completed, all_passed: {all_tests_passed}"
-        )
+        logger.info(f"Project {project_id} test execution completed, all_passed: {all_tests_passed}")
 
         # If all tests passed, finalize the application
         if all_tests_passed:
@@ -1465,9 +1453,7 @@ class WorkflowOrchestrator:
             logger.warning(f"No spec sheets found for project {project_id}")
             return
 
-        logger.info(
-            f"Starting spec sheet completion for project {project_id}, sheets: {spec_sheet_ids}"
-        )
+        logger.info(f"Starting spec sheet completion for project {project_id}, sheets: {spec_sheet_ids}")
 
         # Publish spec sheet completion started event
         await self.publish_system_event(
@@ -1485,7 +1471,11 @@ class WorkflowOrchestrator:
             await self.publish_message(
                 "spec_sheet_commands",
                 json.loads(request.to_json()),
-                {"action": "complete", "project_id": project_id, "spec_sheet_id": spec_sheet_id},
+                {
+                    "action": "complete",
+                    "project_id": project_id,
+                    "spec_sheet_id": spec_sheet_id,
+                },
             )
 
         # Update project state
@@ -1514,9 +1504,7 @@ class WorkflowOrchestrator:
             logger.warning(f"No completed spec sheets found for project {project_id}")
             return
 
-        logger.info(
-            f"Starting spec sheet validation for project {project_id}, sheets: {spec_sheet_ids}"
-        )
+        logger.info(f"Starting spec sheet validation for project {project_id}, sheets: {spec_sheet_ids}")
 
         # Publish spec validation started event
         await self.publish_system_event(
@@ -1616,7 +1604,10 @@ class WorkflowOrchestrator:
         )
 
         # Create verification request
-        verification_request = {"project_id": project_id, "verification_type": "static_analysis"}
+        verification_request = {
+            "project_id": project_id,
+            "verification_type": "static_analysis",
+        }
 
         # Publish to code gen commands topic
         await self.publish_message(
@@ -1654,7 +1645,10 @@ class WorkflowOrchestrator:
         )
 
         # Create optimization request
-        optimization_request = {"project_id": project_id, "optimization_level": "medium"}
+        optimization_request = {
+            "project_id": project_id,
+            "optimization_level": "medium",
+        }
 
         # Publish to code gen commands topic
         await self.publish_message(
@@ -1698,7 +1692,10 @@ class WorkflowOrchestrator:
         )
 
         # Create integration request
-        integration_request = {"project_id": project_id, "integration_type": "component_assembly"}
+        integration_request = {
+            "project_id": project_id,
+            "integration_type": "component_assembly",
+        }
 
         # Publish to integration commands topic
         await self.publish_message(
@@ -1743,7 +1740,9 @@ class WorkflowOrchestrator:
 
         # Publish to test commands topic
         await self.publish_message(
-            "test_commands", test_request, {"action": "generate_tests", "project_id": project_id}
+            "test_commands",
+            test_request,
+            {"action": "generate_tests", "project_id": project_id},
         )
 
         # Update project state
@@ -1813,11 +1812,16 @@ class WorkflowOrchestrator:
         )
 
         # Create debugging request
-        debugging_request = {"project_id": project_id, "issue_description": issue_description}
+        debugging_request = {
+            "project_id": project_id,
+            "issue_description": issue_description,
+        }
 
         # Publish to test commands topic (or could be a dedicated debugging topic)
         await self.publish_message(
-            "test_commands", debugging_request, {"action": "debug", "project_id": project_id}
+            "test_commands",
+            debugging_request,
+            {"action": "debug", "project_id": project_id},
         )
 
         # Update project state
@@ -1889,7 +1893,10 @@ class WorkflowOrchestrator:
         """Publish a system event."""
         # Create system event message
         event = SystemEventMessage(
-            event_type=event_type, component=component, message=message, details=details or {}
+            event_type=event_type,
+            component=component,
+            message=message,
+            details=details or {},
         )
 
         # Publish to system events topic
@@ -1904,26 +1911,27 @@ class WorkflowOrchestrator:
         orchestrator = WorkflowOrchestrator(
             pulsar_url=os.environ.get("PULSAR_URL", "pulsar://pulsar:6650"),
             storage_dir=os.environ.get("STORAGE_DIR", "/app/storage"),
-            project_events_topic=os.environ.get(
-                "PROJECT_EVENTS_TOPIC", "persistent://public/default/project_events"
-            ),
+            project_events_topic=os.environ.get("PROJECT_EVENTS_TOPIC", "persistent://public/default/project_events"),
             spec_sheet_events_topic=os.environ.get(
-                "SPEC_SHEET_EVENTS_TOPIC", "persistent://public/default/spec_sheet_events"
+                "SPEC_SHEET_EVENTS_TOPIC",
+                "persistent://public/default/spec_sheet_events",
             ),
             code_gen_events_topic=os.environ.get(
-                "CODE_GEN_EVENTS_TOPIC", "persistent://public/default/code_generation_events"
+                "CODE_GEN_EVENTS_TOPIC",
+                "persistent://public/default/code_generation_events",
             ),
             integration_events_topic=os.environ.get(
-                "INTEGRATION_EVENTS_TOPIC", "persistent://public/default/integration_events"
+                "INTEGRATION_EVENTS_TOPIC",
+                "persistent://public/default/integration_events",
             ),
-            test_events_topic=os.environ.get(
-                "TEST_EVENTS_TOPIC", "persistent://public/default/test_events"
-            ),
+            test_events_topic=os.environ.get("TEST_EVENTS_TOPIC", "persistent://public/default/test_events"),
             workflow_commands_topic=os.environ.get(
-                "WORKFLOW_COMMANDS_TOPIC", "persistent://public/default/workflow_commands"
+                "WORKFLOW_COMMANDS_TOPIC",
+                "persistent://public/default/workflow_commands",
             ),
             assistance_events_topic=os.environ.get(
-                "ASSISTANCE_EVENTS_TOPIC", "persistent://public/default/assistance_events"
+                "ASSISTANCE_EVENTS_TOPIC",
+                "persistent://public/default/assistance_events",
             ),
         )
 

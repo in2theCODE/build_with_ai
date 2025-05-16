@@ -5,10 +5,9 @@ This module provides health monitoring capabilities for microservices,
 working with both the healthcheck API and circuit breaker pattern.
 """
 
-import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 
 # Try to import the metrics collector
@@ -67,9 +66,7 @@ class HealthMonitor:
                 1 if initial_status == HealthStatus.HEALTHY else 0
             )
 
-        logger.info(
-            f"Health monitor initialized for service '{service_name}' with status '{initial_status}'"
-        )
+        logger.info(f"Health monitor initialized for service '{service_name}' with status '{initial_status}'")
 
     def register_dependency(self, name: str, check_function: Callable[[], bool]) -> None:
         """
@@ -125,9 +122,7 @@ class HealthMonitor:
                 if not healthy:
                     all_healthy = False
                     info["error_count"] += 1
-                    logger.warning(
-                        f"Dependency '{name}' for service '{self.service_name}' is unhealthy"
-                    )
+                    logger.warning(f"Dependency '{name}' for service '{self.service_name}' is unhealthy")
 
                     # Dependencies are critical
                     critical_failure = True
@@ -140,9 +135,7 @@ class HealthMonitor:
                 info["status"] = HealthStatus.UNHEALTHY
                 info["error_count"] += 1
                 info["last_check_time"] = time.time()
-                logger.error(
-                    f"Error checking dependency '{name}' for service '{self.service_name}': {e}"
-                )
+                logger.error(f"Error checking dependency '{name}' for service '{self.service_name}': {e}")
 
         # Check subsystems
         for name, info in self.subsystems.items():
@@ -154,9 +147,7 @@ class HealthMonitor:
                 if not healthy:
                     all_healthy = False
                     info["error_count"] += 1
-                    logger.warning(
-                        f"Subsystem '{name}' for service '{self.service_name}' is unhealthy"
-                    )
+                    logger.warning(f"Subsystem '{name}' for service '{self.service_name}' is unhealthy")
                 else:
                     info["error_count"] = 0
 
@@ -165,9 +156,7 @@ class HealthMonitor:
                 info["status"] = HealthStatus.UNHEALTHY
                 info["error_count"] += 1
                 info["last_check_time"] = time.time()
-                logger.error(
-                    f"Error checking subsystem '{name}' for service '{self.service_name}': {e}"
-                )
+                logger.error(f"Error checking subsystem '{name}' for service '{self.service_name}': {e}")
 
         # Update service status
         old_status = self.status
@@ -183,9 +172,7 @@ class HealthMonitor:
 
         # Log status change
         if old_status != self.status:
-            logger.info(
-                f"Service '{self.service_name}' health status changed: {old_status} -> {self.status}"
-            )
+            logger.info(f"Service '{self.service_name}' health status changed: {old_status} -> {self.status}")
 
             # Update metrics if available
             if self.metrics_collector and hasattr(self.metrics_collector, "component_up"):

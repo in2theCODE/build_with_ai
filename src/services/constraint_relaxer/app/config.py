@@ -18,12 +18,8 @@ class AppConfig:
         self.EVENT_BUS_NAMESPACE = os.getenv("EVENT_BUS_NAMESPACE", "default")
 
         # Topics
-        self.RELAXATION_REQUEST_TOPIC = os.getenv(
-            "RELAXATION_REQUEST_TOPIC", "constraint.relaxation.requests"
-        )
-        self.RELAXATION_RESPONSE_TOPIC = os.getenv(
-            "RELAXATION_RESPONSE_TOPIC", "constraint.relaxation.responses"
-        )
+        self.RELAXATION_REQUEST_TOPIC = os.getenv("RELAXATION_REQUEST_TOPIC", "constraint.relaxation.requests")
+        self.RELAXATION_RESPONSE_TOPIC = os.getenv("RELAXATION_RESPONSE_TOPIC", "constraint.relaxation.responses")
 
         # Constraint relaxer configuration
         self.MAX_RELAXATION_ITERATIONS = int(os.getenv("MAX_RELAXATION_ITERATIONS", "5"))

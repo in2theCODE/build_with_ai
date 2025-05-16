@@ -43,7 +43,7 @@ components:
   code_generator:
     class: "program_synthesis_system.services.neural_code_generator.NeuralCodeGenerator"
     params:
-      model_path: "models/neural_code_generator"
+      model_path: "app/neural_code_generator"
       target_language: "${system.default_language}"
       max_context_length: 8192
       generation:

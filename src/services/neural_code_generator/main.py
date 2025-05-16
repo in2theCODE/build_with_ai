@@ -7,12 +7,10 @@ requests via Apache Pulsar and sends responses back to specified topics.
 """
 
 import asyncio
-import json
 import logging
 import os
 import signal
 import sys
-from typing import Any, Dict, Optional
 
 
 # Setup logging
@@ -53,7 +51,7 @@ async def main():
         "subscription_name": subscription_name,
         "pulsar_enabled": True,
         # Model configuration
-        "model_path": os.environ.get("MODEL_PATH", "models/deepseek-coder-8b-instruct"),
+        "model_path": os.environ.get("MODEL_PATH", "app/deepseek-coder-8b-instruct"),
         "target_language": os.environ.get("TARGET_LANGUAGE", "python"),
         "max_context_length": int(os.environ.get("MAX_CONTEXT_LENGTH", "8192")),
         "quantization": os.environ.get("QUANTIZATION", "int8"),

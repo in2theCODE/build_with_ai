@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import base64
-import datetime
 import hashlib
 import hmac
-import os
 import time
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Union
 import urllib.parse
 
 import requests

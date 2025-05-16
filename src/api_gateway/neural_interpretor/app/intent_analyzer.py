@@ -3,7 +3,6 @@ from enum import Enum
 import logging
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 from pydantic import BaseModel
 from src.services.shared.monitoring.embedding_client import EmbeddingClient
 from src.services.shared.monitoring.metrics import track_inference_time
@@ -44,7 +43,10 @@ class IntentAnalyzer:
 
     @track_inference_time
     async def analyze_query(
-        self, query: str, system_message: Optional[str] = None, require_delegation: bool = False
+        self,
+        query: str,
+        system_message: Optional[str] = None,
+        require_delegation: bool = False,
     ) -> QueryIntent:
         """
         Analyze a query to determine its intent and complexity
@@ -85,9 +87,7 @@ class IntentAnalyzer:
         else:
             # Use complexity scoring
             processing_mode = (
-                ProcessingMode.DELIBERATIVE
-                if complexity_score > self.complexity_threshold
-                else ProcessingMode.REACTIVE
+                ProcessingMode.DELIBERATIVE if complexity_score > self.complexity_threshold else ProcessingMode.REACTIVE
             )
             logger.info(
                 f"Query {query[:50]}... assigned to {processing_mode} mode with complexity {complexity_score:.2f}"

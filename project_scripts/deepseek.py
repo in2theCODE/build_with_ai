@@ -14,11 +14,15 @@ os.makedirs(download_path, exist_ok=True)
 
 # Download tokenizer to the specific path
 tokenizer = AutoTokenizer.from_pretrained(
-    "deepseek-ai/deepseek-coder-6.7b-base", cache_dir=download_path, trust_remote_code=True
+    "deepseek-ai/deepseek-coder-6.7b-base",
+    cache_dir=download_path,
+    trust_remote_code=True,
 )
 
 # Check if MPS is available
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+device = (
+    torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+)
 print(f"Using device: {device}")
 
 # Download model to the specific path and move to MPS

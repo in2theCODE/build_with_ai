@@ -29,16 +29,14 @@ try:
     HAVE_ML_DEPS = True
 except ImportError:
     HAVE_ML_DEPS = False
-    logger.warning(
-        "ML dependencies not available. Install numpy and scikit-learn for full functionality."
-    )
+    logger.warning("ML dependencies not available. Install numpy and scikit-learn for full functionality.")
 
 # Import from shared modules
 from src.services.shared.models.base import BaseEvent
 from src.services.shared.models.enums import EventType, SynthesisStrategy
 from src.services.shared.models.types import VerificationReport
 from src.services.shared.models.synthesis import SynthesisResult
-from src.services.shared.logging.logger import get_logger
+from src.services.shared.loggerService.loggingService import get_logger
 from src.services.shared.pulsar.event_emitter import SecureEventEmitter
 from src.services.shared.pulsar.event_listener import SecureEventListener
 
@@ -128,9 +126,7 @@ class MetaLearnerService:
             EventType.CODE_GENERATION_COMPLETED.value, self._handle_generation_completed
         )
 
-        self.event_listener.register_handler(
-            EventType.CODE_GENERATION_FAILED.value, self._handle_generation_failed
-        )
+        self.event_listener.register_handler(EventType.CODE_GENERATION_FAILED.value, self._handle_generation_failed)
 
         self.event_listener.register_handler(
             EventType.VERIFICATION_COMPLETED.value, self._handle_verification_completed
@@ -288,9 +284,7 @@ class MetaLearnerService:
             )
 
             # Record the failure in the meta_learner
-            self.meta_learner.record_failure(
-                specification, context, synthesis_result, verification_report
-            )
+            self.meta_learner.record_failure(specification, context, synthesis_result, verification_report)
 
             # Emit event to the aggregator
             await self.event_emitter.emit_async(
@@ -358,9 +352,7 @@ class MetaLearnerService:
             if verification_status == "VERIFIED":
                 self.meta_learner.record_success(specification, context, synthesis_result)
             else:
-                self.meta_learner.record_failure(
-                    specification, context, synthesis_result, verification_report
-                )
+                self.meta_learner.record_failure(specification, context, synthesis_result, verification_report)
 
             # Emit event to the aggregator
             await self.event_emitter.emit_async(

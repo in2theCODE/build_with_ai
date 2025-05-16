@@ -23,9 +23,7 @@ class StatisticalVerifier(BaseComponent):
         self.confidence_threshold = self.get_param("confidence_threshold", 0.95)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def verify(
-        self, synthesis_result: SynthesisResult, formal_spec: FormalSpecification
-    ) -> VerificationReport:
+    def verify(self, synthesis_result: SynthesisResult, formal_spec: FormalSpecification) -> VerificationReport:
         """
         Verify the synthesized program against the specification.
 
@@ -69,9 +67,7 @@ class StatisticalVerifier(BaseComponent):
         end_time = time.time()
         time_taken = end_time - start_time
 
-        self.logger.info(
-            f"Verification completed in {time_taken:.2f} seconds with confidence {confidence:.4f}"
-        )
+        self.logger.info(f"Verification completed in {time_taken:.2f} seconds with confidence {confidence:.4f}")
 
         return VerificationReport(
             status=status,
@@ -89,22 +85,16 @@ class StatisticalVerifier(BaseComponent):
         test_inputs.extend([example["input"] for example in formal_spec.examples])
 
         # Add inputs from constraint solving
-        solver_inputs = self._generate_inputs_from_constraints(
-            formal_spec.constraints, formal_spec.types
-        )
+        solver_inputs = self._generate_inputs_from_constraints(formal_spec.constraints, formal_spec.types)
         test_inputs.extend(solver_inputs)
 
         # Add random inputs based on types
-        random_inputs = self._generate_random_inputs(
-            formal_spec.types, self.sample_size - len(test_inputs)
-        )
+        random_inputs = self._generate_random_inputs(formal_spec.types, self.sample_size - len(test_inputs))
         test_inputs.extend(random_inputs)
 
         return test_inputs
 
-    def _generate_inputs_from_constraints(
-        self, constraints: List[Any], types: Dict[str, str]
-    ) -> List[Dict[str, Any]]:
+    def _generate_inputs_from_constraints(self, constraints: List[Any], types: Dict[str, str]) -> List[Dict[str, Any]]:
         """Generate inputs by solving constraints."""
         # In a real implementation, this would use Z3 or another solver
         # to generate diverse inputs that exercise the constraints
@@ -119,7 +109,7 @@ class StatisticalVerifier(BaseComponent):
         for constraint in constraints:
             solver.add(constraint)
 
-        # Generate a few models
+        # Generate a few app
         for i in range(min(10, self.sample_size // 10)):
             if solver.check() == z3.sat:
                 model = solver.model()
@@ -150,7 +140,7 @@ class StatisticalVerifier(BaseComponent):
                 block_constraint = z3.Or([decl() != model[decl] for decl in model.decls()])
                 solver.add(block_constraint)
             else:
-                # No more models
+                # No more app
                 break
 
         return result
@@ -241,9 +231,7 @@ class StatisticalVerifier(BaseComponent):
             if result_type == "int":
                 return sum(value for value in inputs.values() if isinstance(value, int))
             elif result_type == "float":
-                return sum(
-                    float(value) for value in inputs.values() if isinstance(value, (int, float))
-                )
+                return sum(float(value) for value in inputs.values() if isinstance(value, (int, float)))
             elif result_type == "bool":
                 return any(value for value in inputs.values() if isinstance(value, bool))
             elif result_type == "str":
@@ -253,9 +241,7 @@ class StatisticalVerifier(BaseComponent):
 
         return interpreter
 
-    def _check_constraints(
-        self, inputs: Dict[str, Any], output: Any, constraints: List[Any]
-    ) -> bool:
+    def _check_constraints(self, inputs: Dict[str, Any], output: Any, constraints: List[Any]) -> bool:
         """Check if the input-output pair satisfies all constraints."""
         # In a real implementation, this would substitute values into
         # the constraints and evaluate them
@@ -285,9 +271,7 @@ class StatisticalVerifier(BaseComponent):
         complexity_factor = 1.0 / (1.0 + complexity / 100.0)
 
         # Calculate confidence
-        confidence = (
-            base_confidence + (max_confidence - base_confidence) * test_factor * complexity_factor
-        )
+        confidence = base_confidence + (max_confidence - base_confidence) * test_factor * complexity_factor
 
         return min(confidence, max_confidence)
 
@@ -304,7 +288,10 @@ class DistributedVerifier:
         # Placeholder implementation
         # In a real implementation, this would distribute work to different machines
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED, confidence=0.99, time_taken=3.0, counterexamples=[]
+            status=VerificationResult.VERIFIED,
+            confidence=0.99,
+            time_taken=3.0,
+            counterexamples=[],
         )
         return verification_report
 
@@ -395,7 +382,10 @@ class SimplePropertyTester(BaseVerifier):
         # Implementation would perform quick property checks
         # This is a placeholder implementation
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED, confidence=0.8, time_taken=0.2, counterexamples=[]
+            status=VerificationResult.VERIFIED,
+            confidence=0.8,
+            time_taken=0.2,
+            counterexamples=[],
         )
         return verification_report
 
@@ -407,7 +397,10 @@ class BoundedModelChecker(BaseVerifier):
         # Implementation would perform bounded model checking
         # This is a placeholder implementation
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED, confidence=0.95, time_taken=1.5, counterexamples=[]
+            status=VerificationResult.VERIFIED,
+            confidence=0.95,
+            time_taken=1.5,
+            counterexamples=[],
         )
         return verification_report
 
@@ -419,7 +412,10 @@ class FormalVerifier(BaseVerifier):
         # Implementation would perform thorough formal verification
         # This is a placeholder implementation
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED, confidence=0.99, time_taken=5.0, counterexamples=[]
+            status=VerificationResult.VERIFIED,
+            confidence=0.99,
+            time_taken=5.0,
+            counterexamples=[],
         )
         return verification_report
 
@@ -437,7 +433,10 @@ class StatisticalVerifier(BaseVerifier):
         # and check if outputs satisfy the specification
         # This is a placeholder implementation
         verification_report = VerificationReport(
-            status=VerificationResult.VERIFIED, confidence=0.97, time_taken=2.0, counterexamples=[]
+            status=VerificationResult.VERIFIED,
+            confidence=0.97,
+            time_taken=2.0,
+            counterexamples=[],
         )
         return verification_report
 

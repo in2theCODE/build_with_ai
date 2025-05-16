@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 import sys
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 
 # Add parent directory to path for imports
@@ -42,9 +42,7 @@ class IncrementalSynthesis(BaseComponent):
         # Initialize caching if enabled
         self.component_cache = {} if self.enable_caching else None
 
-        self.logger.info(
-            f"Incremental synthesis initialized with max {self.max_components} services"
-        )
+        self.logger.info(f"Incremental synthesis initialized with max {self.max_components} services")
 
     def decompose(self, formal_spec: FormalSpecification) -> List[FormalSpecification]:
         """
@@ -56,21 +54,19 @@ class IncrementalSynthesis(BaseComponent):
         Returns:
             List of smaller component specifications
         """
-        self.logger.info(
-            f"Decomposing specification with {len(formal_spec.constraints)} constraints"
-        )
+        self.logger.info(f"Decomposing specification with {len(formal_spec.constraints)} constraints")
         start_time = time.time()
 
         # Check if the specification is already cached
         if self.enable_caching:
             cache_key = self._compute_cache_key(formal_spec)
             if cache_key in self.component_cache:
-                self.logger.info(f"Using cached decomposition for specification")
+                self.logger.info("Using cached decomposition for specification")
                 return self.component_cache[cache_key]
 
         # If the specification is small enough, don't decompose
         if len(formal_spec.constraints) <= self.min_component_size:
-            self.logger.info(f"Specification too small to decompose, returning as is")
+            self.logger.info("Specification too small to decompose, returning as is")
             return [formal_spec]
 
         # Choose decomposition strategy based on configuration
@@ -92,9 +88,7 @@ class IncrementalSynthesis(BaseComponent):
             self.component_cache[cache_key] = components
 
         end_time = time.time()
-        self.logger.info(
-            f"Decomposed into {len(components)} services in {end_time - start_time:.2f} seconds"
-        )
+        self.logger.info(f"Decomposed into {len(components)} services in {end_time - start_time:.2f} seconds")
 
         return components
 
@@ -127,9 +121,7 @@ class IncrementalSynthesis(BaseComponent):
 
         return result
 
-    def _decompose_by_dependencies(
-        self, formal_spec: FormalSpecification
-    ) -> List[FormalSpecification]:
+    def _decompose_by_dependencies(self, formal_spec: FormalSpecification) -> List[FormalSpecification]:
         """Decompose a specification by analyzing variable dependencies."""
         self.logger.info("Decomposing by variable dependencies")
 
@@ -153,9 +145,7 @@ class IncrementalSynthesis(BaseComponent):
 
         return components
 
-    def _extract_variable_dependencies(
-        self, formal_spec: FormalSpecification
-    ) -> Dict[str, Set[str]]:
+    def _extract_variable_dependencies(self, formal_spec: FormalSpecification) -> Dict[str, Set[str]]:
         """Extract dependencies between variables in constraints."""
         dependencies = {}
 
@@ -281,9 +271,7 @@ class IncrementalSynthesis(BaseComponent):
 
         return component_spec
 
-    def _decompose_by_semantic_clustering(
-        self, formal_spec: FormalSpecification
-    ) -> List[FormalSpecification]:
+    def _decompose_by_semantic_clustering(self, formal_spec: FormalSpecification) -> List[FormalSpecification]:
         """Decompose a specification by clustering semantically related constraints."""
         self.logger.info("Decomposing by semantic clustering")
 
@@ -364,17 +352,13 @@ class IncrementalSynthesis(BaseComponent):
 
         return groups
 
-    def _decompose_by_partitioning(
-        self, formal_spec: FormalSpecification
-    ) -> List[FormalSpecification]:
+    def _decompose_by_partitioning(self, formal_spec: FormalSpecification) -> List[FormalSpecification]:
         """Decompose a specification by simple partitioning."""
         self.logger.info("Decomposing by simple partitioning")
 
         # Simple strategy: create roughly equal-sized partitions
         constraints = formal_spec.constraints
-        num_components = min(
-            self.max_components, max(2, len(constraints) // self.min_component_size)
-        )
+        num_components = min(self.max_components, max(2, len(constraints) // self.min_component_size))
 
         # Distribute constraints evenly
         constraints_per_component = len(constraints) // num_components
@@ -405,9 +389,7 @@ class IncrementalSynthesis(BaseComponent):
 
         return components
 
-    def _merge_components(
-        self, components: List[FormalSpecification], target_count: int
-    ) -> List[FormalSpecification]:
+    def _merge_components(self, components: List[FormalSpecification], target_count: int) -> List[FormalSpecification]:
         """Merge services to reduce their number to the target."""
         self.logger.info(f"Merging {len(components)} services to {target_count}")
 
@@ -436,9 +418,7 @@ class IncrementalSynthesis(BaseComponent):
                 continue
 
             # Merge the services
-            merged_component = self._merge_two_components(
-                merged_components[i], merged_components[j]
-            )
+            merged_component = self._merge_two_components(merged_components[i], merged_components[j])
 
             # Replace component i with the merged component
             merged_components[i] = merged_component
@@ -451,15 +431,11 @@ class IncrementalSynthesis(BaseComponent):
                 break
 
         # Return the merged services (excluding merged indices)
-        result = [
-            merged_components[i] for i in range(len(merged_components)) if i not in merged_indices
-        ]
+        result = [merged_components[i] for i in range(len(merged_components)) if i not in merged_indices]
 
         return result
 
-    def _calculate_component_similarity(
-        self, comp1: FormalSpecification, comp2: FormalSpecification
-    ) -> float:
+    def _calculate_component_similarity(self, comp1: FormalSpecification, comp2: FormalSpecification) -> float:
         """Calculate similarity between two services."""
         # Extract variables used in each component
         vars1 = set(comp1.types.keys())
@@ -480,9 +456,7 @@ class IncrementalSynthesis(BaseComponent):
 
         return intersection / union
 
-    def _merge_two_components(
-        self, comp1: FormalSpecification, comp2: FormalSpecification
-    ) -> FormalSpecification:
+    def _merge_two_components(self, comp1: FormalSpecification, comp2: FormalSpecification) -> FormalSpecification:
         """Merge two component specifications."""
         # Create a new specification with merged attributes
         merged_spec = copy.deepcopy(comp1)
@@ -572,11 +546,7 @@ class IncrementalSynthesis(BaseComponent):
                 "type": "return",
                 "value": {
                     "type": "variable",
-                    "name": (
-                        f"result_{len(component_results) - 2}"
-                        if len(component_results) > 1
-                        else "result"
-                    ),
+                    "name": (f"result_{len(component_results) - 2}" if len(component_results) > 1 else "result"),
                 },
             }
         )
@@ -587,13 +557,10 @@ class IncrementalSynthesis(BaseComponent):
         # Calculate the combined confidence score (weighted average)
         total_weight = sum(result.time_taken for result in component_results)
         if total_weight == 0:
-            combined_confidence = sum(
-                result.confidence_score for result in component_results
-            ) / len(component_results)
+            combined_confidence = sum(result.confidence_score for result in component_results) / len(component_results)
         else:
             combined_confidence = sum(
-                result.confidence_score * (result.time_taken / total_weight)
-                for result in component_results
+                result.confidence_score * (result.time_taken / total_weight) for result in component_results
             )
 
         # Calculate the total time taken
@@ -667,18 +634,13 @@ class IncrementalSynthesis(BaseComponent):
                 "value": {
                     "type": "function_call",
                     "function": "combine_results",
-                    "arguments": [
-                        {"type": "variable", "name": f"result_{i}"}
-                        for i in range(len(component_results))
-                    ],
+                    "arguments": [{"type": "variable", "name": f"result_{i}"} for i in range(len(component_results))],
                 },
             }
         )
 
         # Add a return statement for the combined result
-        main_body.append(
-            {"type": "return", "value": {"type": "variable", "name": "combined_result"}}
-        )
+        main_body.append({"type": "return", "value": {"type": "variable", "name": "combined_result"}})
 
         # Add combination function and main function to the combined body
         combined_body.append(
@@ -693,8 +655,7 @@ class IncrementalSynthesis(BaseComponent):
                             "type": "function_call",
                             "function": "merge_results",
                             "arguments": [
-                                {"type": "variable", "name": f"result_{i}"}
-                                for i in range(len(component_results))
+                                {"type": "variable", "name": f"result_{i}"} for i in range(len(component_results))
                             ],
                         },
                     }
@@ -710,13 +671,10 @@ class IncrementalSynthesis(BaseComponent):
         # Calculate the combined confidence score (weighted average)
         total_weight = sum(result.time_taken for result in component_results)
         if total_weight == 0:
-            combined_confidence = sum(
-                result.confidence_score for result in component_results
-            ) / len(component_results)
+            combined_confidence = sum(result.confidence_score for result in component_results) / len(component_results)
         else:
             combined_confidence = sum(
-                result.confidence_score * (result.time_taken / total_weight)
-                for result in component_results
+                result.confidence_score * (result.time_taken / total_weight) for result in component_results
             )
 
         # Calculate the total time taken
@@ -815,9 +773,7 @@ class IncrementalSynthesis(BaseComponent):
                         "value": {
                             "type": "function_call",
                             "function": "component_0",  # Default to first component
-                            "arguments": self._get_function_arguments(
-                                component_results[0].program_ast
-                            ),
+                            "arguments": self._get_function_arguments(component_results[0].program_ast),
                         },
                     }
                 ],
@@ -836,7 +792,10 @@ class IncrementalSynthesis(BaseComponent):
                 "body": [
                     {
                         "type": "return",
-                        "value": {"type": "literal", "value": 0},  # Default to first component
+                        "value": {
+                            "type": "literal",
+                            "value": 0,
+                        },  # Default to first component
                     }
                 ],
             }
@@ -850,13 +809,10 @@ class IncrementalSynthesis(BaseComponent):
         # Calculate the combined confidence score (weighted average)
         total_weight = sum(result.time_taken for result in component_results)
         if total_weight == 0:
-            combined_confidence = sum(
-                result.confidence_score for result in component_results
-            ) / len(component_results)
+            combined_confidence = sum(result.confidence_score for result in component_results) / len(component_results)
         else:
             combined_confidence = sum(
-                result.confidence_score * (result.time_taken / total_weight)
-                for result in component_results
+                result.confidence_score * (result.time_taken / total_weight) for result in component_results
             )
 
         # Calculate the total time taken

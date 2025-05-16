@@ -6,9 +6,16 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from agent_template_service.models.agent_blocks import AgentBlock, BlockMetadata, BlockType
+from agent_template_service.models.agent_blocks import (
+    AgentBlock,
+    BlockMetadata,
+    BlockType,
+)
 from agent_template_service.services.event_service import AgentEventService
-from agent_template_service.models.events import AgentBlockCreatedEvent, AgentBlockUpdatedEvent
+from agent_template_service.models.events import (
+    AgentBlockCreatedEvent,
+    AgentBlockUpdatedEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -132,12 +139,7 @@ class BlockRegistry:
         block_data = block.model_dump()
 
         # Update metadata fields
-        if (
-            "name" in updates
-            or "description" in updates
-            or "version" in updates
-            or "tags" in updates
-        ):
+        if "name" in updates or "description" in updates or "version" in updates or "tags" in updates:
             metadata = block_data["metadata"]
             if "name" in updates:
                 metadata["name"] = updates["name"]
@@ -182,9 +184,7 @@ class BlockRegistry:
         """Get a block by ID."""
         return self.blocks.get(block_id)
 
-    def list_blocks(
-        self, block_type: Optional[BlockType] = None, tags: Optional[List[str]] = None
-    ) -> List[AgentBlock]:
+    def list_blocks(self, block_type: Optional[BlockType] = None, tags: Optional[List[str]] = None) -> List[AgentBlock]:
         """List blocks, optionally filtered by type and tags."""
         blocks = list(self.blocks.values())
 

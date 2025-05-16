@@ -5,7 +5,7 @@ import jinja2
 import uuid
 from typing import Dict, List, Optional, Any
 
-from agent_template_service.models.agent_blocks import AgentBlock, AgentTemplate, AgentInstance
+from agent_template_service.models.agent_blocks import AgentTemplate, AgentInstance
 from agent_template_service.services.block_registry import BlockRegistry
 from agent_template_service.services.template_service import TemplateService
 from agent_template_service.services.event_service import AgentEventService
@@ -45,7 +45,11 @@ class AgentGenerator:
         )
 
     async def generate_agent(
-        self, template_id: str, name: str, description: str, configuration: Dict[str, Any] = {}
+        self,
+        template_id: str,
+        name: str,
+        description: str,
+        configuration: Dict[str, Any] = {},
     ) -> Optional[AgentInstance]:
         """Generate an agent implementation from a template."""
         # Get the template
@@ -137,9 +141,7 @@ class AgentGenerator:
             logger.error(f"Failed to generate agent {instance_id}: {e}")
             return instance
 
-    async def _generate_implementation(
-        self, template: AgentTemplate, instance: AgentInstance
-    ) -> Dict[str, str]:
+    async def _generate_implementation(self, template: AgentTemplate, instance: AgentInstance) -> Dict[str, str]:
         """Generate the implementation files for an agent."""
         # Get blocks
         blocks = {}

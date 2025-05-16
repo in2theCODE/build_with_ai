@@ -155,13 +155,13 @@ services:
     learning_rate: 0.001
     batch_size: 32
     epochs: 10
-    model_save_path: "/app/models/meta_learner"
+    model_save_path: "/app/app/meta_learner"
     use_pretrained: true
 
   # Neural Code Generator
   neural_code_generator:
     model_name: "codegen-16b"
-    model_path: "/app/models/neural_code_generator"
+    model_path: "/app/app/neural_code_generator"
     quantization: "int8"
     temperature: 0.2
     top_p: 0.95

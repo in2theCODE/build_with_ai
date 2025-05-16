@@ -43,7 +43,7 @@ spec:
             - name: LOG_LEVEL
               value: "INFO"
             - name: MODEL_PATH
-              value: "/app/models/deepseek-coder-8b-instruct"
+              value: "/app/app/deepseek-coder-8b-instruct"
             - name: QUANTIZATION
               value: "int8"
             - name: USE_FLASH_ATTENTION
@@ -76,8 +76,8 @@ spec:
               memory: "24Gi"
               nvidia.com/gpu: "1"
           volumeMounts:
-            - name: models-volume
-              mountPath: /app/models
+            - name: app-volume
+              mountPath: /app/app
             - name: knowledge-base-volume
               mountPath: /app/knowledge_base
           readinessProbe:
@@ -99,9 +99,9 @@ spec:
             successThreshold: 1
             failureThreshold: 3
       volumes:
-        - name: models-volume
+        - name: app-volume
           persistentVolumeClaim:
-            claimName: neural-models-pvc
+            claimName: neural-app-pvc
         - name: knowledge-base-volume
           persistentVolumeClaim:
             claimName: knowledge-base-pvc

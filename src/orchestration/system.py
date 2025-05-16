@@ -35,9 +35,7 @@ class SynthesisSystem:
 
         # Initialize optimization services
         self.incremental_synthesis = self._initialize_component(ComponentType.INCREMENTAL_SYNTHESIS)
-        self.verification_stratifier = self._initialize_component(
-            ComponentType.VERIFICATION_STRATIFIER
-        )
+        self.verification_stratifier = self._initialize_component(ComponentType.VERIFICATION_STRATIFIER)
         self.language_interop = self._initialize_component(ComponentType.LANGUAGE_INTEROP)
         self.meta_learner = self._initialize_component(ComponentType.META_LEARNER)
         self.constraint_relaxer = self._initialize_component(ComponentType.CONSTRAINT_RELAXER)
@@ -137,7 +135,7 @@ class SynthesisSystem:
         Returns:
             Tuple of (generated_code, metadata)
         """
-        self.logger.info(f"Starting code generation from specification")
+        self.logger.info("Starting code generation from specification")
         start_time = time.time()
         context = context or {}
 
@@ -154,15 +152,13 @@ class SynthesisSystem:
         if self.version_manager:
             prior_versions = self.version_manager.find_prior_versions(specification, context)
             if prior_versions:
-                self.logger.info(
-                    f"Found {len(prior_versions)} prior versions of this specification"
-                )
+                self.logger.info(f"Found {len(prior_versions)} prior versions of this specification")
 
         # Check knowledge base for cached results
         cache_key = self._compute_cache_key(specification, context)
         cached_result = self.knowledge_base.get(cache_key)
         if cached_result:
-            self.logger.info(f"Found cached result for specification")
+            self.logger.info("Found cached result for specification")
             # Update metadata with version info if it exists
             if self.version_manager:
                 self.version_manager.record_usage(cache_key, cached_result)
@@ -181,9 +177,7 @@ class SynthesisSystem:
         if self.incremental_synthesis and formal_spec.is_decomposable():
             use_incremental = True
             incremental_components = self.incremental_synthesis.decompose(formal_spec)
-            self.logger.info(
-                f"Using incremental synthesis with {len(incremental_components)} services"
-            )
+            self.logger.info(f"Using incremental synthesis with {len(incremental_components)} services")
 
         # Perform synthesis
         try:
@@ -207,14 +201,10 @@ class SynthesisSystem:
         try:
             # Use verification stratification if available
             if self.verification_stratifier:
-                verification_result = self.verification_stratifier.stratified_verify(
-                    synthesis_result, formal_spec
-                )
+                verification_result = self.verification_stratifier.stratified_verify(synthesis_result, formal_spec)
             else:
                 # Traditional verification
-                verification_result = self.statistical_verifier.verify(
-                    synthesis_result, formal_spec
-                )
+                verification_result = self.statistical_verifier.verify(synthesis_result, formal_spec)
         except Exception as e:
             self.logger.error(f"Verification failed: {e}")
             raise ValueError(f"Verification failed: {e}")
@@ -222,13 +212,9 @@ class SynthesisSystem:
         # Add symbolic execution tests if component exists
         if self.symbolic_executor and verification_result.status == VerificationResult.VERIFIED:
             try:
-                symbolic_tests = self.symbolic_executor.generate_tests(
-                    synthesis_result, formal_spec
-                )
+                symbolic_tests = self.symbolic_executor.generate_tests(synthesis_result, formal_spec)
                 if symbolic_tests:
-                    symbolic_result = self.symbolic_executor.execute_tests(
-                        symbolic_tests, synthesis_result
-                    )
+                    symbolic_result = self.symbolic_executor.execute_tests(symbolic_tests, synthesis_result)
                     if not symbolic_result.passed:
                         verification_result.status = VerificationResult.COUNTEREXAMPLE_FOUND
                         verification_result.reason = "Failed symbolic execution tests"
@@ -241,15 +227,11 @@ class SynthesisSystem:
         if verification_result.status != VerificationResult.VERIFIED and self.constraint_relaxer:
             self.logger.info("Attempting constraint relaxation after verification failure")
             try:
-                relaxed_spec = self.constraint_relaxer.relax_constraints(
-                    formal_spec, verification_result
-                )
+                relaxed_spec = self.constraint_relaxer.relax_constraints(formal_spec, verification_result)
                 if relaxed_spec:
                     self.logger.info("Successfully relaxed constraints, retrying synthesis")
                     relaxed_synthesis = self.synthesis_engine.synthesize(relaxed_spec)
-                    relaxed_verification = self.statistical_verifier.verify(
-                        relaxed_synthesis, relaxed_spec
-                    )
+                    relaxed_verification = self.statistical_verifier.verify(relaxed_synthesis, relaxed_spec)
 
                     if relaxed_verification.status == VerificationResult.VERIFIED:
                         self.logger.info("Verification succeeded with relaxed constraints")
@@ -269,9 +251,7 @@ class SynthesisSystem:
                         "target_language",
                         self.config.get("system", {}).get("default_language", "python"),
                     )
-                    generated_code = self.language_interop.generate_for_language(
-                        synthesis_result, target_language
-                    )
+                    generated_code = self.language_interop.generate_for_language(synthesis_result, target_language)
                 else:
                     generated_code = self.code_generator.generate(synthesis_result)
 
@@ -305,37 +285,35 @@ class SynthesisSystem:
                     }
 
                     # Store the result
-                    self.knowledge_base.store(
-                        cache_key, {"code": generated_code, "metadata": metadata}
-                    )
+                    self.knowledge_base.store(cache_key, {"code": generated_code, "metadata": metadata})
 
                     # Record in version manager if it exists
                     if self.version_manager:
-                        self.version_manager.record_new_version(
-                            cache_key, specification, context, metadata
-                        )
+                        self.version_manager.record_new_version(cache_key, specification, context, metadata)
 
                     # Update meta-learner with successful strategy if component exists
                     if self.meta_learner:
                         self.meta_learner.record_success(
-                            specification, context, getattr(synthesis_result, "strategy", "default")
+                            specification,
+                            context,
+                            getattr(synthesis_result, "strategy", "default"),
                         )
 
                     return generated_code, metadata
                 else:
                     # Interface contract failure
-                    raise ValueError(f"Generated code does not satisfy interface contracts")
+                    raise ValueError("Generated code does not satisfy interface contracts")
             else:
                 # Handle verification failure
                 self.logger.error(f"Verification failed: {verification_result.reason}")
-                self.feedback_collector.record_failure(
-                    specification, context, synthesis_result, verification_result
-                )
+                self.feedback_collector.record_failure(specification, context, synthesis_result, verification_result)
 
                 # Update meta-learner with failed strategy if component exists
                 if self.meta_learner:
                     self.meta_learner.record_failure(
-                        specification, context, getattr(synthesis_result, "strategy", "default")
+                        specification,
+                        context,
+                        getattr(synthesis_result, "strategy", "default"),
                     )
 
                 # Try to repair or return best effort solution
@@ -351,16 +329,12 @@ class SynthesisSystem:
                     }
                     return best_effort_code, metadata
                 else:
-                    raise ValueError(
-                        f"Failed to generate verified code: {verification_result.reason}"
-                    )
+                    raise ValueError(f"Failed to generate verified code: {verification_result.reason}")
         except Exception as e:
             self.logger.error(f"Code generation failed: {e}")
             raise ValueError(f"Code generation failed: {e}")
 
-    def _compute_cache_key(
-        self, specification: str, context: Optional[Dict[str, Any]] = None
-    ) -> str:
+    def _compute_cache_key(self, specification: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Compute a cache key for the knowledge base."""
         context_str = json.dumps(context or {}, sort_keys=True)
         return hashlib.sha256(f"{specification}:{context_str}".encode()).hexdigest()

@@ -15,9 +15,7 @@ import logging
 import os
 from pathlib import Path
 import re
-import time
-from typing import Any, Dict, List, Optional, Set, Tuple
-import uuid
+from typing import Any, Dict, List, Optional
 
 
 # Add parent directory to path for imports
@@ -103,7 +101,11 @@ class VersionManager(BaseComponent):
             self.logger.error(f"Failed to save version index: {e}")
 
     def record_new_version(
-        self, version_id: str, specification: str, context: Dict[str, Any], metadata: Dict[str, Any]
+        self,
+        version_id: str,
+        specification: str,
+        context: Dict[str, Any],
+        metadata: Dict[str, Any],
     ) -> None:
         """
         Record a new version of a specification and its synthesis result.
@@ -160,9 +162,7 @@ class VersionManager(BaseComponent):
                 json.dump(combined_metadata, f, indent=2)
 
             # Find related versions
-            related_versions = self._find_related_versions(
-                specification, fingerprint, function_name, domain
-            )
+            related_versions = self._find_related_versions(specification, fingerprint, function_name, domain)
 
             # Store relations
             if related_versions:
@@ -220,7 +220,10 @@ class VersionManager(BaseComponent):
             if "usage" not in metadata:
                 metadata["usage"] = []
 
-            usage_entry = {"timestamp": datetime.datetime.now().isoformat(), "data": usage_data}
+            usage_entry = {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "data": usage_data,
+            }
 
             metadata["usage"].append(usage_entry)
 
@@ -233,9 +236,7 @@ class VersionManager(BaseComponent):
         except Exception as e:
             self.logger.error(f"Failed to record usage of version {version_id}: {e}")
 
-    def find_prior_versions(
-        self, specification: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    def find_prior_versions(self, specification: str, context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Find prior versions related to a specification.
 
@@ -260,9 +261,7 @@ class VersionManager(BaseComponent):
         fingerprint = self._compute_fingerprint(specification)
 
         # Find related versions
-        related_versions = self._find_related_versions(
-            specification, fingerprint, function_name, domain
-        )
+        related_versions = self._find_related_versions(specification, fingerprint, function_name, domain)
 
         return related_versions
 
@@ -376,7 +375,11 @@ class VersionManager(BaseComponent):
         """
         self.logger.info(f"Comparing versions {version_id1} and {version_id2}")
 
-        comparison = {"version1": version_id1, "version2": version_id2, "differences": {}}
+        comparison = {
+            "version1": version_id1,
+            "version2": version_id2,
+            "differences": {},
+        }
 
         try:
             # Load details for both versions
@@ -391,9 +394,7 @@ class VersionManager(BaseComponent):
 
             # Compare specifications
             if "specification" in details1 and "specification" in details2:
-                spec_diff = self._compute_text_diff(
-                    details1["specification"], details2["specification"]
-                )
+                spec_diff = self._compute_text_diff(details1["specification"], details2["specification"])
                 comparison["differences"]["specification"] = spec_diff
 
             # Compare code
@@ -451,9 +452,7 @@ class VersionManager(BaseComponent):
             for version_id in exact_matches:
                 # Load full metadata for exact matches
                 try:
-                    metadata_path = os.path.join(
-                        self.storage_path, "metadata", f"{version_id}.json"
-                    )
+                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
                     if os.path.exists(metadata_path):
                         with open(metadata_path, "r") as f:
                             metadata = json.load(f)
@@ -474,8 +473,7 @@ class VersionManager(BaseComponent):
         function_matches = [
             version_id
             for version_id, version_data in self.version_index.items()
-            if version_data.get("function_name") == function_name
-            and version_id not in exact_matches
+            if version_data.get("function_name") == function_name and version_id not in exact_matches
         ]
 
         # For function matches, compute text similarity
@@ -495,9 +493,7 @@ class VersionManager(BaseComponent):
                 # Include if similarity is above threshold
                 if similarity >= self.similarity_threshold:
                     # Load metadata
-                    metadata_path = os.path.join(
-                        self.storage_path, "metadata", f"{version_id}.json"
-                    )
+                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
                     if os.path.exists(metadata_path):
                         with open(metadata_path, "r") as f:
                             metadata = json.load(f)
@@ -527,9 +523,7 @@ class VersionManager(BaseComponent):
             # Add up to 3 domain matches without detailed similarity check
             for version_id in domain_matches[:3]:
                 try:
-                    metadata_path = os.path.join(
-                        self.storage_path, "metadata", f"{version_id}.json"
-                    )
+                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
                     if os.path.exists(metadata_path):
                         with open(metadata_path, "r") as f:
                             metadata = json.load(f)
@@ -587,9 +581,7 @@ class VersionManager(BaseComponent):
 
         return diff
 
-    def _compare_metadata(
-        self, metadata1: Dict[str, Any], metadata2: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _compare_metadata(self, metadata1: Dict[str, Any], metadata2: Dict[str, Any]) -> Dict[str, Any]:
         """Compare two metadata dictionaries and identify differences."""
         diff = {}
 
@@ -612,17 +604,13 @@ class VersionManager(BaseComponent):
 
         return diff
 
-    def _calculate_version_similarity(
-        self, details1: Dict[str, Any], details2: Dict[str, Any]
-    ) -> float:
+    def _calculate_version_similarity(self, details1: Dict[str, Any], details2: Dict[str, Any]) -> float:
         """Calculate overall similarity between two versions."""
         similarity_components = []
 
         # Include specification similarity if available
         if "specification" in details1 and "specification" in details2:
-            spec_similarity = self._compute_text_similarity(
-                details1["specification"], details2["specification"]
-            )
+            spec_similarity = self._compute_text_similarity(details1["specification"], details2["specification"])
             similarity_components.append(spec_similarity * 0.5)  # Weight: 50%
 
         # Include code similarity if available
@@ -751,9 +739,7 @@ class VersionManager(BaseComponent):
 
                 # Get synthesis strategy
                 try:
-                    metadata_path = os.path.join(
-                        self.storage_path, "metadata", f"{version_id}.json"
-                    )
+                    metadata_path = os.path.join(self.storage_path, "metadata", f"{version_id}.json")
                     if os.path.exists(metadata_path):
                         with open(metadata_path, "r") as f:
                             metadata = json.load(f)
@@ -763,17 +749,13 @@ class VersionManager(BaseComponent):
 
                         # Get similarity scores from relations
                         if "related_versions" in version_data and version_data["related_versions"]:
-                            relations_path = os.path.join(
-                                self.storage_path, "relations", f"{version_id}.json"
-                            )
+                            relations_path = os.path.join(self.storage_path, "relations", f"{version_id}.json")
                             if os.path.exists(relations_path):
                                 with open(relations_path, "r") as f:
                                     relations = json.load(f)
 
                                 for related in relations.get("related_versions", []):
-                                    if (
-                                        "similarity" in related and related["similarity"] < 1.0
-                                    ):  # Exclude exact matches
+                                    if "similarity" in related and related["similarity"] < 1.0:  # Exclude exact matches
                                         similarities.append(related["similarity"])
                 except Exception as e:
                     self.logger.warning(f"Failed to load metadata for version {version_id}: {e}")
@@ -790,9 +772,7 @@ class VersionManager(BaseComponent):
                         # Extract year and month from timestamp
                         date = datetime.datetime.fromisoformat(timestamp)
                         month_key = f"{date.year}-{date.month:02d}"
-                        stats["versions_by_month"][month_key] = (
-                            stats["versions_by_month"].get(month_key, 0) + 1
-                        )
+                        stats["versions_by_month"][month_key] = stats["versions_by_month"].get(month_key, 0) + 1
                     except Exception:
                         pass
 
@@ -802,9 +782,7 @@ class VersionManager(BaseComponent):
 
             # Find most revised functions (functions with most versions)
             most_revised = sorted(function_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-            stats["most_revised_functions"] = [
-                {"name": name, "count": count} for name, count in most_revised
-            ]
+            stats["most_revised_functions"] = [{"name": name, "count": count} for name, count in most_revised]
 
             return stats
 

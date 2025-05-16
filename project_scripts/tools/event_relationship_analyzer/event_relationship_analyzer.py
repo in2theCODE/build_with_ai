@@ -3,6 +3,7 @@
 Event-Driven Template Relationship Analyzer
 Discovers and manages relationships between templates via Pulsar events
 """
+
 import argparse
 import asyncio
 from collections import defaultdict
@@ -12,7 +13,7 @@ import logging
 import os
 import signal
 import sys
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 
 # Configure logging
@@ -54,7 +55,9 @@ class EventRelationshipAnalyzer:
             )
 
             # Create producer for relationship analysis responses
-            self.producer = self.client.create_producer(topic="template.relationship.response")
+            self.producer = self.client.create_producer(
+                topic="template.relationship.response"
+            )
 
             logger.info(f"Connected to Pulsar broker at {self.broker_url}")
             logger.info("Listening for relationship analysis requests...")
@@ -134,7 +137,9 @@ class EventRelationshipAnalyzer:
         self.producer.send(json.dumps(response).encode("utf-8"))
         logger.info(f"Sent response for request {request_id}")
 
-    async def analyze_relationships(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze_relationships(
+        self, request_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Analyze relationships between templates"""
         try:
             # Load all templates
@@ -145,13 +150,17 @@ class EventRelationshipAnalyzer:
 
             # Apply relationships if requested
             if request_data.get("apply", False):
-                updated_count = self._apply_discovered_relationships(templates, relationships)
+                updated_count = self._apply_discovered_relationships(
+                    templates, relationships
+                )
 
                 return {
                     "status": "success",
                     "relationships": relationships,
                     "template_count": len(templates),
-                    "relationship_count": sum(len(rels) for rels in relationships.values()),
+                    "relationship_count": sum(
+                        len(rels) for rels in relationships.values()
+                    ),
                     "updated_templates": updated_count,
                 }
             else:
@@ -159,12 +168,17 @@ class EventRelationshipAnalyzer:
                     "status": "success",
                     "relationships": relationships,
                     "template_count": len(templates),
-                    "relationship_count": sum(len(rels) for rels in relationships.values()),
+                    "relationship_count": sum(
+                        len(rels) for rels in relationships.values()
+                    ),
                 }
 
         except Exception as e:
             logger.error(f"Relationship analysis error: {str(e)}")
-            return {"status": "error", "message": f"Failed to analyze relationships: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Failed to analyze relationships: {str(e)}",
+            }
 
     async def apply_relationships(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply specified relationships to templates"""
@@ -178,13 +192,18 @@ class EventRelationshipAnalyzer:
             templates = self._load_templates()
 
             # Apply the relationships
-            updated_count = self._apply_discovered_relationships(templates, relationships)
+            updated_count = self._apply_discovered_relationships(
+                templates, relationships
+            )
 
             return {"status": "success", "updated_templates": updated_count}
 
         except Exception as e:
             logger.error(f"Apply relationships error: {str(e)}")
-            return {"status": "error", "message": f"Failed to apply relationships: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Failed to apply relationships: {str(e)}",
+            }
 
     def _load_templates(self) -> Dict[str, Dict[str, Any]]:
         """Load all templates from the directory"""
@@ -198,7 +217,10 @@ class EventRelationshipAnalyzer:
                         with open(file_path, "r") as f:
                             template = json.load(f)
                             template_id = template.get("id", os.path.splitext(file)[0])
-                            templates[template_id] = {"path": file_path, "data": template}
+                            templates[template_id] = {
+                                "path": file_path,
+                                "data": template,
+                            }
                     except Exception as e:
                         logger.error(f"Error loading template {file}: {e}")
 
@@ -276,7 +298,9 @@ class EventRelationshipAnalyzer:
 
         return dict(relationships)
 
-    def _are_complementary(self, template1: Dict[str, Any], template2: Dict[str, Any]) -> bool:
+    def _are_complementary(
+        self, template1: Dict[str, Any], template2: Dict[str, Any]
+    ) -> bool:
         """Check if two templates are complementary"""
         # Templates are complementary if they have different services
         # that could work together
@@ -293,7 +317,9 @@ class EventRelationshipAnalyzer:
         )
 
     def _apply_discovered_relationships(
-        self, templates: Dict[str, Dict[str, Any]], relationships: Dict[str, List[Dict[str, Any]]]
+        self,
+        templates: Dict[str, Dict[str, Any]],
+        relationships: Dict[str, List[Dict[str, Any]]],
     ) -> int:
         """Apply discovered relationships to templates"""
         updated_count = 0
@@ -308,7 +334,9 @@ class EventRelationshipAnalyzer:
 
             # Get existing relationships
             existing_relationships = template.get("relationships", [])
-            existing_related_ids = {rel.get("related_id") for rel in existing_relationships}
+            existing_related_ids = {
+                rel.get("related_id") for rel in existing_relationships
+            }
 
             # Add new relationships
             added = False
@@ -346,8 +374,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Event-driven template relationship analyzer service"
     )
-    parser.add_argument("--template-dir", default="./templates", help="Template directory")
-    parser.add_argument("--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL")
+    parser.add_argument(
+        "--template-dir", default="./templates", help="Template directory"
+    )
+    parser.add_argument(
+        "--broker-url", default="pulsar://localhost:6650", help="Pulsar broker URL"
+    )
 
     args = parser.parse_args()
 

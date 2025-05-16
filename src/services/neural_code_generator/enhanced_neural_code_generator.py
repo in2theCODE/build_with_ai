@@ -25,8 +25,6 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from src.services.shared import SynthesisResult
 from src.services.shared.models.base import BaseComponent
-from src.services.shared.pulsar import MessageProcessor
-from src.services.shared.pulsar import PulsarConnection
 import torch
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
@@ -78,7 +76,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
     - Tree-based transformers for AST processing
     - Hierarchical generation approach
     - Syntax-aware beam search
-    - Hybrid grammar-neural models
+    - Hybrid grammar-neural app
 
     Optimized for DeepSeek 8B model with Pulsar integration.
     """
@@ -89,7 +87,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Core generation parameters
-        self.model_path = self.get_param("model_path", "models/deepseek-coder-8b-instruct")
+        self.model_path = self.get_param("model_path", "app/deepseek-coder-8b-instruct")
         self.target_language = self.get_param("target_language", "python")
         self.max_context_length = self.get_param("max_context_length", 8192)
         self.temperature = self.get_param("temperature", 0.2)
@@ -158,7 +156,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         self.knowledge_base = None
         self.pulsar_connection = None
 
-        # Initialize the underlying models and services
+        # Initialize the underlying app and services
         self._initialize_models()
 
         # Initialize Pulsar connection if enabled
@@ -166,17 +164,11 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             self._initialize_pulsar()
 
     def _initialize_models(self):
-        """Initialize the neural models and other services."""
+        """Initialize the neural app and other services."""
         try:
-            self.logger.info(
-                f"Initializing neural code generator with {self.num_attention_heads} attention heads"
-            )
-            self.logger.info(
-                f"Context length: {self.max_context_length}, Target language: {self.target_language}"
-            )
-            self.logger.info(
-                f"Using DeepSeek-Coder 8B model with quantization: {self.quantization}"
-            )
+            self.logger.info(f"Initializing neural code generator with {self.num_attention_heads} attention heads")
+            self.logger.info(f"Context length: {self.max_context_length}, Target language: {self.target_language}")
+            self.logger.info(f"Using DeepSeek-Coder 8B model with quantization: {self.quantization}")
 
             # Initialize tokenizer
             self._initialize_tokenizer()
@@ -188,7 +180,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             if self.use_retrieval_augmentation:
                 self._initialize_retrieval_model()
 
-            # Initialize specialized models and services
+            # Initialize specialized app and services
             if self.use_tree_transformers:
                 self._initialize_tree_transformer()
 
@@ -204,7 +196,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             self.logger.info("Neural code generator initialized successfully")
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize neural models: {e}")
+            self.logger.error(f"Failed to initialize neural app: {e}")
             # Fallback to simpler generation approach if initialization fails
             self.logger.warning("Falling back to basic generation approach")
 
@@ -212,9 +204,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         """Initialize the tokenizer for the base model."""
         try:
             self.logger.info(f"Loading tokenizer from {self.model_path}")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, trust_remote_code=True, use_fast=True
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=True)
             self.tokenizer.padding_side = "left"
             self.logger.info(f"Tokenizer vocabulary size: {len(self.tokenizer)}")
         except Exception as e:
@@ -254,9 +244,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 self.model.config.attention_mode = "sliding_window"
                 self.model.config.window_size = self.attention_window_size
 
-            self.logger.info(
-                f"Model loaded successfully with {self.model.config.num_attention_heads} attention heads"
-            )
+            self.logger.info(f"Model loaded successfully with {self.model.config.num_attention_heads} attention heads")
 
             # Optimize for generation
             self.model.eval()
@@ -354,7 +342,9 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
                 return results[:limit]
 
         self.knowledge_base = SimpleKnowledgeBase(
-            self.file_storage_path, self.embedding_model_instance, self.similarity_threshold
+            self.file_storage_path,
+            self.embedding_model_instance,
+            self.similarity_threshold,
         )
 
     def _initialize_tree_transformer(self):
@@ -362,7 +352,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         self.logger.info("Initializing tree-based transformer model")
 
         try:
-            # In a production environment, you'd load specialized models for AST processing
+            # In a production environment, you'd load specialized app for AST processing
             # For now, we'll use the base model but add AST processing utilities
 
             # Import AST utilities
@@ -459,7 +449,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         """Initialize hybrid grammar-neural model."""
         self.logger.info("Initializing hybrid grammar-neural model")
 
-        # For hybrid models, we combine grammar-based constraints
+        # For hybrid app, we combine grammar-based constraints
         # with neural generation
 
         # Check if we have a working syntax checker
@@ -664,11 +654,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         prompt = self._create_generation_prompt(formal_spec)
 
         # Augment with retrieved examples if enabled
-        if (
-            self.use_retrieval_augmentation
-            and hasattr(self, "knowledge_base")
-            and self.knowledge_base
-        ):
+        if self.use_retrieval_augmentation and hasattr(self, "knowledge_base") and self.knowledge_base:
             prompt = self._augment_with_retrievals(prompt, formal_spec)
 
         # Select the appropriate generation strategy based on enabled techniques
@@ -677,9 +663,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         strategy_used = "neural"
 
         if self.use_tree_transformers and getattr(self, "tree_transformer_ready", False):
-            program_ast, confidence_score = self._generate_with_tree_transformer(
-                prompt, formal_spec
-            )
+            program_ast, confidence_score = self._generate_with_tree_transformer(prompt, formal_spec)
             strategy_used = "tree_transformer"
 
         elif self.use_hierarchical_generation and getattr(self, "hierarchical_model_ready", False):
@@ -698,9 +682,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
         end_time = time.time()
         time_taken = end_time - start_time
 
-        self.logger.info(
-            f"Code generation completed in {time_taken:.2f} seconds using {strategy_used} strategy"
-        )
+        self.logger.info(f"Code generation completed in {time_taken:.2f} seconds using {strategy_used} strategy")
         self.logger.info(f"Confidence score: {confidence_score:.4f}")
 
         # Create the result object
@@ -771,9 +753,7 @@ class EnhancedNeuralCodeGenerator(BaseComponent):
             if isinstance(example, dict):
                 input_values = ", ".join([f"{k}={v}" for k, v in example.get("input", {}).items()])
                 output_value = example.get("output", "")
-                examples_info += (
-                    f"Example {i+1}: For input {input_values}, output should be {output_value}\n"
-                )
+                examples_info += f"Example {i + 1}: For input {input_values}, output should be {output_value}\n"
 
         # Extract function name and parameters
         function_name = ast_info.get("name", "generated_function")

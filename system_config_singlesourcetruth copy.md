@@ -310,7 +310,7 @@ development_environment:
       
     mocks:
       external_services: "Wiremock"
-      ml_models: "Pre-trained lightweight models for local testing"
+      ml_models: "Pre-trained lightweight app for local testing"
   
   # Development Environment
   dev:

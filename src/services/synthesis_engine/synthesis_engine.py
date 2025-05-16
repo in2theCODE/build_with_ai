@@ -32,9 +32,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
         for strategy, config in synthesizer_configs.items():
             self._initialize_synthesizer(strategy, config)
 
-        self.logger.info(
-            f"Spec-based synthesis engine initialized with default strategy {self.default_strategy}"
-        )
+        self.logger.info(f"Spec-based synthesis engine initialized with default strategy {self.default_strategy}")
 
     def _initialize_synthesizer(self, strategy, config):
         """Initialize a specialized synthesizer for a specific strategy."""
@@ -48,9 +46,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
 
             if synthesizer:
                 self.synthesizers[strategy] = synthesizer
-                self.logger.info(
-                    f"Initialized {synthesizer_type} synthesizer for {strategy} strategy"
-                )
+                self.logger.info(f"Initialized {synthesizer_type} synthesizer for {strategy} strategy")
         except Exception as e:
             self.logger.error(f"Failed to initialize synthesizer for {strategy}: {e}")
 
@@ -139,9 +135,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
 
         # If all attempts failed, return best-effort result
         end_time = time.time()
-        self.logger.warning(
-            f"All synthesis attempts failed after {end_time - start_time:.2f} seconds"
-        )
+        self.logger.warning(f"All synthesis attempts failed after {end_time - start_time:.2f} seconds")
 
         # Create a fallback result
         return {
@@ -210,7 +204,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
     async def _synthesize_with_default(self, formal_spec, original_strategy):
         """Synthesize using the default approach when others fail."""
         try:
-            self.logger.info(f"Falling back to neural code generator")
+            self.logger.info("Falling back to neural code generator")
             start_time = time.time()
 
             # Generate code
@@ -227,7 +221,7 @@ class SpecBasedSynthesisEngine(BaseComponent):
                     "code": result,
                     "confidence_score": 0.5,
                     "time_taken": end_time - start_time,
-                    "strategy": f"fallback_neural",
+                    "strategy": "fallback_neural",
                 }
 
             return result
@@ -331,7 +325,7 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class {container_name.title().replace(' ', '')}:
+class {container_name.title().replace(" ", "")}:
     \"\"\"
     {description}
     \"\"\"
@@ -354,7 +348,7 @@ class {container_name.title().replace(' ', '')}:
 
 if __name__ == "__main__":
     # Run the container
-    container = {container_name.title().replace(' ', '')}()
+    container = {container_name.title().replace(" ", "")}()
     asyncio.run(container.start())
 """
 

@@ -7,7 +7,6 @@ architecture, showing relationships between components, data flows, and dependen
 It groups results by container/service and supports multiple output formats.
 """
 
-import os
 import re
 import ast
 import json
@@ -15,8 +14,8 @@ import yaml
 import argparse
 import logging
 from pathlib import Path
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Set, Optional, Any, Tuple, Union
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 
 # Configure logging
@@ -82,7 +81,10 @@ class ImprovedApplicationMapper:
     """Maps the application architecture by analyzing the codebase with improved service grouping."""
 
     def __init__(
-        self, root_path: str, exclude_patterns: List[str] = None, output_format: str = "json"
+        self,
+        root_path: str,
+        exclude_patterns: List[str] = None,
+        output_format: str = "json",
     ):
         self.root_path = Path(root_path)
         self.exclude_patterns = exclude_patterns or []
@@ -98,7 +100,12 @@ class ImprovedApplicationMapper:
 
         # Service mapping
         self.services: Dict[str, Dict[str, Any]] = defaultdict(
-            lambda: {"components": [], "event_flows": [], "templates": [], "infra_files": []}
+            lambda: {
+                "components": [],
+                "event_flows": [],
+                "templates": [],
+                "infra_files": [],
+            }
         )
 
         # Patterns for detecting specific aspects
@@ -159,7 +166,9 @@ class ImprovedApplicationMapper:
         files = []
         for file_path in self.root_path.glob(f"**/*{extension}"):
             # Skip excluded paths
-            if any(re.search(pattern, str(file_path)) for pattern in self.exclude_patterns):
+            if any(
+                re.search(pattern, str(file_path)) for pattern in self.exclude_patterns
+            ):
                 continue
 
             service_name = self.get_service_name(file_path)
@@ -172,7 +181,7 @@ class ImprovedApplicationMapper:
         files = []
         for file_type, patterns in self.infra_file_patterns.items():
             for pattern in patterns:
-                for file_path in self.root_path.glob(f"**/*"):
+                for file_path in self.root_path.glob("**/*"):
                     if re.search(pattern, str(file_path.name), re.IGNORECASE):
                         # Skip excluded paths
                         if any(
@@ -257,7 +266,8 @@ class ImprovedApplicationMapper:
                                 else:
                                     # Look for string-based event names
                                     string_matches = re.findall(
-                                        r'(?:send|publish)\(\s*[\'"](\w+)[\'"]', method_source
+                                        r'(?:send|publish)\(\s*[\'"](\w+)[\'"]',
+                                        method_source,
                                     )
                                     event_publishers.extend(string_matches)
 
@@ -274,7 +284,9 @@ class ImprovedApplicationMapper:
 
                     # Check for event-related classes
                     is_event_class = False
-                    if "Event" in node.name or any("event" in base.lower() for base in bases):
+                    if "Event" in node.name or any(
+                        "event" in base.lower() for base in bases
+                    ):
                         is_event_class = True
                         # Register this as an event
                         self._register_event_class(node.name, module_name, service_name)
@@ -357,7 +369,9 @@ class ImprovedApplicationMapper:
         except Exception as e:
             logger.error(f"Error analyzing file {file_path}: {e}")
 
-    def _register_event_class(self, class_name: str, module_name: str, service_name: str) -> None:
+    def _register_event_class(
+        self, class_name: str, module_name: str, service_name: str
+    ) -> None:
         """Register an event class as a potential event flow."""
         event_flow = EventFlow(
             name=class_name,
@@ -418,7 +432,9 @@ class ImprovedApplicationMapper:
         source_lower = node_source.lower()
 
         # Check for event bus patterns in docstring or code
-        if any(pattern in docstring_lower for pattern in self.event_bus_patterns) or any(
+        if any(
+            pattern in docstring_lower for pattern in self.event_bus_patterns
+        ) or any(
             pattern.lower() in source_lower for pattern in self.event_bus_patterns
         ):
             roles.append("event_bus")
@@ -462,7 +478,9 @@ class ImprovedApplicationMapper:
     ) -> None:
         """Detect templates and their usage."""
         # Look for template file patterns
-        if any(re.search(pattern, str(file_path)) for pattern in self.template_patterns):
+        if any(
+            re.search(pattern, str(file_path)) for pattern in self.template_patterns
+        ):
             template = Template(
                 path=str(file_path),
                 service=service_name,
@@ -484,7 +502,9 @@ class ImprovedApplicationMapper:
 
             if template_path.exists():
                 # Find or create template
-                template = next((t for t in self.templates if t.path == str(template_path)), None)
+                template = next(
+                    (t for t in self.templates if t.path == str(template_path)), None
+                )
                 if not template:
                     template = Template(
                         path=str(template_path),
@@ -580,7 +600,9 @@ class ImprovedApplicationMapper:
         # Link handlers to events
         for handler in set(event_handlers):
             # Find matching event flow
-            event_flow = next((ef for ef in self.event_flows if ef.name == handler), None)
+            event_flow = next(
+                (ef for ef in self.event_flows if ef.name == handler), None
+            )
             if event_flow:
                 event_flow.targets.append(module_name)
                 event_flow.handlers.append(f"{module_name}.handle_{handler}")
@@ -605,7 +627,9 @@ class ImprovedApplicationMapper:
                 if module_name not in event_flow.targets:
                     event_flow.targets.append(module_name)
 
-    def analyze_infra_file(self, file_path: Path, service_name: str, file_type: str) -> None:
+    def analyze_infra_file(
+        self, file_path: Path, service_name: str, file_type: str
+    ) -> None:
         """Analyze an infrastructure file to extract relevant information."""
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -617,7 +641,9 @@ class ImprovedApplicationMapper:
             if file_type in ["dockerfile", "compose", "kubernetes", "helm"]:
                 # Look for FROM references in Dockerfiles
                 if file_type == "dockerfile":
-                    from_refs = re.findall(r"FROM\s+([^\s:]+)(?::[^\s]+)?", content, re.IGNORECASE)
+                    from_refs = re.findall(
+                        r"FROM\s+([^\s:]+)(?::[^\s]+)?", content, re.IGNORECASE
+                    )
                     references.extend(from_refs)
 
                 # Look for image references in compose or k8s files
@@ -641,7 +667,10 @@ class ImprovedApplicationMapper:
 
             # Create InfraFile object
             infra_file = InfraFile(
-                path=str(file_path), type=file_type, service=service_name, references=references
+                path=str(file_path),
+                type=file_type,
+                service=service_name,
+                references=references,
             )
             self.infra_files.append(infra_file)
 
@@ -665,7 +694,9 @@ class ImprovedApplicationMapper:
         for pattern in self.template_patterns:
             pattern_str = pattern[:-1] if pattern.endswith("$") else pattern
             for file_tuple in self.find_files(pattern_str):
-                if not any(re.search(ex, str(file_tuple[0])) for ex in self.exclude_patterns):
+                if not any(
+                    re.search(ex, str(file_tuple[0])) for ex in self.exclude_patterns
+                ):
                     template_files.append(file_tuple)
 
         logger.info(f"Found {len(template_files)} template files")
@@ -685,7 +716,7 @@ class ImprovedApplicationMapper:
         self._organize_by_service()
 
         # Log results
-        logger.info(f"Analysis complete:")
+        logger.info("Analysis complete:")
         logger.info(f"  - Components: {len(self.components)}")
         logger.info(f"  - Event flows: {len(self.event_flows)}")
         logger.info(f"  - Templates: {len(self.templates)}")
@@ -760,7 +791,9 @@ class ImprovedApplicationMapper:
                 "methods": component.methods,
                 "event_handlers": component.event_handlers,
                 "event_publishers": component.event_publishers,
-                "description": component.docstring.split("\n")[0] if component.docstring else None,
+                "description": component.docstring.split("\n")[0]
+                if component.docstring
+                else None,
             }
 
         # Add event flows
@@ -840,7 +873,9 @@ class ImprovedApplicationMapper:
                 f.write(f"- Components: {len(service_data['components'])}\n")
                 f.write(f"- Event Flows: {len(service_data['event_flows'])}\n")
                 f.write(f"- Templates: {len(service_data['templates'])}\n")
-                f.write(f"- Infrastructure Files: {len(service_data['infra_files'])}\n\n")
+                f.write(
+                    f"- Infrastructure Files: {len(service_data['infra_files'])}\n\n"
+                )
 
             # Components
             f.write("## Components\n\n")
@@ -866,12 +901,18 @@ class ImprovedApplicationMapper:
                         for method in sorted(component["methods"]):
                             f.write(f"  - `{method}`\n")
 
-                    if component.get("event_handlers") and len(component["event_handlers"]) > 0:
+                    if (
+                        component.get("event_handlers")
+                        and len(component["event_handlers"]) > 0
+                    ):
                         f.write("- Event Handlers:\n")
                         for handler in sorted(component["event_handlers"]):
                             f.write(f"  - `{handler}`\n")
 
-                    if component.get("event_publishers") and len(component["event_publishers"]) > 0:
+                    if (
+                        component.get("event_publishers")
+                        and len(component["event_publishers"]) > 0
+                    ):
                         f.write("- Event Publishers:\n")
                         for publisher in sorted(component["event_publishers"]):
                             f.write(f"  - `{publisher}`\n")
@@ -995,9 +1036,13 @@ class ImprovedApplicationMapper:
                 "networkx library is required for GraphML output. Please install with 'pip install networkx'"
             )
             # Fallback to JSON
-            with open(output_path.replace(".graphml", ".json"), "w", encoding="utf-8") as f:
+            with open(
+                output_path.replace(".graphml", ".json"), "w", encoding="utf-8"
+            ) as f:
                 json.dump(app_map, f, indent=2)
-            logger.info(f"Falling back to JSON output: {output_path.replace('.graphml', '.json')}")
+            logger.info(
+                f"Falling back to JSON output: {output_path.replace('.graphml', '.json')}"
+            )
 
 
 def main():
@@ -1018,7 +1063,9 @@ def main():
         choices=["json", "yaml", "markdown", "graphml"],
         default="json",
     )
-    parser.add_argument("--verbose", "-v", help="Enable verbose logging", action="store_true")
+    parser.add_argument(
+        "--verbose", "-v", help="Enable verbose logging", action="store_true"
+    )
 
     args = parser.parse_args()
 
@@ -1031,7 +1078,9 @@ def main():
 
     # Create mapper
     mapper = ImprovedApplicationMapper(
-        root_path=args.root_path, exclude_patterns=exclude_patterns, output_format=args.format
+        root_path=args.root_path,
+        exclude_patterns=exclude_patterns,
+        output_format=args.format,
     )
 
     # Analyze codebase

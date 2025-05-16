@@ -12,7 +12,7 @@ from enum import Enum
 from functools import wraps
 import logging
 import time
-from typing import Any, Callable, cast, Dict, Optional, TypeVar, Union
+from typing import Any, Callable, cast, Dict, Optional, TypeVar
 
 
 # Import metrics collector if available
@@ -102,18 +102,14 @@ class CircuitBreaker:
         old_state = self.state
         self.state = new_state
 
-        logger.info(
-            f"Circuit breaker '{self.name}' state changed: {old_state.value} -> {new_state.value}"
-        )
+        logger.info(f"Circuit breaker '{self.name}' state changed: {old_state.value} -> {new_state.value}")
 
         # Record state change in metrics if available
         if self.metrics_collector:
             try:
                 # Record event if the metrics collector has that method
                 if hasattr(self.metrics_collector, "record_event_emitted"):
-                    self.metrics_collector.record_event_emitted(
-                        f"circuit_breaker_{new_state.value}"
-                    )
+                    self.metrics_collector.record_event_emitted(f"circuit_breaker_{new_state.value}")
 
                 # Update component status based on circuit state
                 if hasattr(self.metrics_collector, "set_component_up"):
@@ -176,16 +172,12 @@ class CircuitBreaker:
                     self.half_open_requests = 0
                 else:
                     # Still in timeout period
-                    raise CircuitBreakerError(
-                        f"Circuit '{self.name}' is open. Service unavailable."
-                    )
+                    raise CircuitBreakerError(f"Circuit '{self.name}' is open. Service unavailable.")
 
             # In half-open state, only allow limited requests
             elif self.state == CircuitState.HALF_OPEN:
                 if self.half_open_requests >= self.half_open_max_requests:
-                    raise CircuitBreakerError(
-                        f"Circuit '{self.name}' is half-open and at capacity."
-                    )
+                    raise CircuitBreakerError(f"Circuit '{self.name}' is half-open and at capacity.")
 
     def is_open(self) -> bool:
         """
@@ -223,9 +215,7 @@ class CircuitBreaker:
 
     def __str__(self) -> str:
         """String representation of the circuit breaker."""
-        return (
-            f"CircuitBreaker({self.name}, state={self.state.value}, failures={self.failure_count})"
-        )
+        return f"CircuitBreaker({self.name}, state={self.state.value}, failures={self.failure_count})"
 
 
 def circuit_breaker(breaker: CircuitBreaker) -> Callable[[F], F]:

@@ -1,10 +1,13 @@
 # agent_template_service/workflows/agent_workflow.py
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
 import uuid
 
-from src.services.shared.models.enums import EventType, WorkflowPhase
-from src.services.shared.workflow_registry import WorkflowDefinition, WorkflowStep, WorkflowRegistry
+from src.services.shared.workflow_registry import (
+    WorkflowDefinition,
+    WorkflowStep,
+    WorkflowRegistry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,11 @@ async def analyze_project_for_agents(context: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "Notification Agent",
                 "description": "Sends notifications through various channels",
-                "blocks": ["event_listener", "message_formatter", "notification_sender"],
+                "blocks": [
+                    "event_listener",
+                    "message_formatter",
+                    "notification_sender",
+                ],
             },
         ]
     }

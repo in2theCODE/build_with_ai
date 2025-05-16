@@ -144,9 +144,7 @@ def _check_boundary_violations(counterexamples: List[Dict[str, Any]]) -> Dict[st
     return {}
 
 
-def _extract_error_patterns(
-    specification: str, verification_result: VerificationReport
-) -> Dict[str, Any]:
+def _extract_error_patterns(specification: str, verification_result: VerificationReport) -> Dict[str, Any]:
     """Extract patterns from verification failures."""
     error_patterns = {
         "verification_status": verification_result.status.value,
@@ -156,15 +154,9 @@ def _extract_error_patterns(
 
     # Add specific patterns based on counterexamples
     if verification_result.counterexamples:
-        error_patterns["boundary_violations"] = _check_boundary_violations(
-            verification_result.counterexamples
-        )
-        error_patterns["type_violations"] = _check_type_violations(
-            verification_result.counterexamples
-        )
-        error_patterns["common_values"] = _extract_common_values(
-            verification_result.counterexamples
-        )
+        error_patterns["boundary_violations"] = _check_boundary_violations(verification_result.counterexamples)
+        error_patterns["type_violations"] = _check_type_violations(verification_result.counterexamples)
+        error_patterns["common_values"] = _extract_common_values(verification_result.counterexamples)
 
     return error_patterns
 
@@ -263,7 +255,7 @@ class FeedbackCollector(BaseComponent):
         elif self.storage_type == "database":
             # In a real implementation, this would initialize database connections
             # For demonstration, we'll log a message
-            self.logger.info(f"Database storage selected but not implemented")
+            self.logger.info("Database storage selected but not implemented")
             self.logger.info("Falling back to file storage")
             self.storage_type = "file"
             self._initialize_storage()
@@ -274,7 +266,10 @@ class FeedbackCollector(BaseComponent):
             self._initialize_storage()
 
     def record_success(
-        self, specification: str, context: Dict[str, Any], synthesis_result: SynthesisResult
+        self,
+        specification: str,
+        context: Dict[str, Any],
+        synthesis_result: SynthesisResult,
     ) -> None:
         """
         Record successful synthesis information for future learning.
@@ -348,9 +343,7 @@ class FeedbackCollector(BaseComponent):
 
         # Add error patterns if enabled
         if self.collect_error_patterns:
-            failure_data["error_patterns"] = _extract_error_patterns(
-                specification, verification_result
-            )
+            failure_data["error_patterns"] = _extract_error_patterns(specification, verification_result)
 
         # Add performance metrics if enabled
         if self.collect_performance_metrics:
@@ -434,9 +427,7 @@ class FeedbackCollector(BaseComponent):
             self.logger.error(f"Failed to export feedback for training: {e}")
             return False
 
-    def _store_feedback(
-        self, feedback_type: str, data: Dict[str, Any], context: Dict[str, Any]
-    ) -> None:
+    def _store_feedback(self, feedback_type: str, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         """Store feedback data in the appropriate storage.
         :type feedback_type: object
         """
@@ -498,9 +489,7 @@ class FeedbackCollector(BaseComponent):
                         # Remove the original file
                         os.remove(file)
 
-                self.logger.info(
-                    f"Compressed {len(files_to_compress)} old feedback files to {zip_filename}"
-                )
+                self.logger.info(f"Compressed {len(files_to_compress)} old feedback files to {zip_filename}")
 
     def _load_feedback_data(self, feedback_type: str) -> List[Dict[str, Any]]:
         """Load feedback data of the specified type."""

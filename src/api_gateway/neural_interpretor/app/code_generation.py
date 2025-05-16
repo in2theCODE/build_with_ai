@@ -5,7 +5,7 @@ from enum import Enum
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional
 import uuid
 
 import pulsar
@@ -91,9 +91,7 @@ class CodeGenRouter:
         self._lock = asyncio.Lock()
 
         # Keywords for request type classification
-        self.request_type_keywords = self.config.get("code_gen_classification", {}).get(
-            "request_types", {}
-        )
+        self.request_type_keywords = self.config.get("code_gen_classification", {}).get("request_types", {})
         self.language_keywords = self.config.get("code_gen_classification", {}).get("languages", {})
 
     async def initialize(self):
@@ -277,9 +275,7 @@ class CodeGenRouter:
                     },
                 )
 
-                logger.info(
-                    f"Routed request {request.request_id} to topic {topic_key} as {request.request_type}"
-                )
+                logger.info(f"Routed request {request.request_id} to topic {topic_key} as {request.request_type}")
 
                 # Track processing time
                 processing_time = time.time() - start_time

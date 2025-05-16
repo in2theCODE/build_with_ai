@@ -7,12 +7,10 @@ requests via Apache Pulsar and sends responses back to specified topics.
 """
 
 import asyncio
-import json
 import logging
 import os
 import signal
 import sys
-from typing import Any, Dict, Optional
 
 
 # Setup logging
@@ -23,7 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger("neural_code_generator_service")
 
 # Ensure the module can be found in the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+)
 
 # Import the enhanced neural code generator
 try:
@@ -53,17 +53,25 @@ async def main():
         "subscription_name": subscription_name,
         "pulsar_enabled": True,
         # Model configuration
-        "model_path": os.environ.get("MODEL_PATH", "~/.models/deepseek-coder-6.7b"),
+        "model_path": os.environ.get("MODEL_PATH", "~/.app/deepseek-coder-6.7b"),
         "target_language": os.environ.get("TARGET_LANGUAGE", "python"),
         "max_context_length": int(os.environ.get("MAX_CONTEXT_LENGTH", "8192")),
         "quantization": os.environ.get("QUANTIZATION", "int8"),
-        "use_flash_attention": os.environ.get("USE_FLASH_ATTENTION", "true").lower() == "true",
+        "use_flash_attention": os.environ.get("USE_FLASH_ATTENTION", "true").lower()
+        == "true",
         # Technique configuration
-        "use_retrieval_augmentation": os.environ.get("USE_RETRIEVAL", "true").lower() == "true",
-        "use_tree_transformers": os.environ.get("USE_TREE_TRANSFORMERS", "true").lower() == "true",
-        "use_hierarchical_generation": os.environ.get("USE_HIERARCHICAL", "true").lower() == "true",
-        "use_syntax_aware_search": os.environ.get("USE_SYNTAX_AWARE", "true").lower() == "true",
-        "use_hybrid_grammar_neural": os.environ.get("USE_HYBRID", "true").lower() == "true",
+        "use_retrieval_augmentation": os.environ.get("USE_RETRIEVAL", "true").lower()
+        == "true",
+        "use_tree_transformers": os.environ.get("USE_TREE_TRANSFORMERS", "true").lower()
+        == "true",
+        "use_hierarchical_generation": os.environ.get(
+            "USE_HIERARCHICAL", "true"
+        ).lower()
+        == "true",
+        "use_syntax_aware_search": os.environ.get("USE_SYNTAX_AWARE", "true").lower()
+        == "true",
+        "use_hybrid_grammar_neural": os.environ.get("USE_HYBRID", "true").lower()
+        == "true",
         # Performance configuration
         "batch_size": int(os.environ.get("BATCH_SIZE", "1")),
         "mixed_precision": os.environ.get("MIXED_PRECISION", "true").lower() == "true",

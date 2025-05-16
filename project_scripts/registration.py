@@ -69,7 +69,9 @@ def register_components():
     )
 
     factory.register_component(
-        ComponentType.CODE_GENERATOR, "enhanced_neural_code_generator", EnhancedNeuralCodeGenerator
+        ComponentType.CODE_GENERATOR,
+        "enhanced_neural_code_generator",
+        EnhancedNeuralCodeGenerator,
     )
 
     # Register new services
@@ -82,18 +84,28 @@ def register_components():
     )
 
     factory.register_component(
-        ComponentType.INCREMENTAL_SYNTHESIS, "incremental_synthesis", IncrementalSynthesis
+        ComponentType.INCREMENTAL_SYNTHESIS,
+        "incremental_synthesis",
+        IncrementalSynthesis,
     )
 
-    factory.register_component(ComponentType.LANGUAGE_INTEROP, "language_interop", LanguageInterop)
+    factory.register_component(
+        ComponentType.LANGUAGE_INTEROP, "language_interop", LanguageInterop
+    )
 
     factory.register_component(ComponentType.META_LEARNER, "meta_learner", MetaLearner)
 
-    factory.register_component(ComponentType.SPEC_INFERENCE, "spec_inference", SpecInference)
+    factory.register_component(
+        ComponentType.SPEC_INFERENCE, "spec_inference", SpecInference
+    )
 
-    factory.register_component(ComponentType.SYNTHESIS_ENGINE, "synthesis_engine", SynthesisEngine)
+    factory.register_component(
+        ComponentType.SYNTHESIS_ENGINE, "synthesis_engine", SynthesisEngine
+    )
 
-    factory.register_component(ComponentType.VERSION_MANAGER, "version_manager", VersionManager)
+    factory.register_component(
+        ComponentType.VERSION_MANAGER, "version_manager", VersionManager
+    )
 
     logger.info("All services registered successfully")
 

@@ -1,16 +1,15 @@
-# src/services/spec_registry/app/spec_registry.py
+# app/services/spec_registry/app/spec_registry.py
 import asyncio
 from datetime import datetime
 import json
 import re
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from src.services.shared.logging.logger import get_logger
+from src.services.shared.loggerService.loggingService import get_logger
 from src.services.spec_registry.app.models import (
     FieldType,
     SpecStatus,
-    SpecTemplate,
     ValidationResult,
     FieldDefinition,
     FieldConstraint,
@@ -400,9 +399,7 @@ class SpecRegistry:
                 if error:
                     validation_errors.append(error)
             else:
-                validation_errors.append(
-                    f"Unknown field type '{field_type}' for field '{field_name}'"
-                )
+                validation_errors.append(f"Unknown field type '{field_type}' for field '{field_name}'")
 
             # Validate constraints
             for constraint in field_data.get("constraints", []):
@@ -636,9 +633,7 @@ class SpecRegistry:
             self.logger.error(f"Error deleting spec {spec_id}: {e}", exc_info=True)
             return False
 
-    async def add_relation(
-        self, spec_id: str, related_spec_id: str, relation_type: str = "depends_on"
-    ) -> bool:
+    async def add_relation(self, spec_id: str, related_spec_id: str, relation_type: str = "depends_on") -> bool:
         """
         Add a relation between two spec sheets.
 
@@ -657,9 +652,7 @@ class SpecRegistry:
                 related_spec = await self.get_spec(related_spec_id)
 
                 if not spec or not related_spec:
-                    self.logger.warning(
-                        f"Cannot add relation: Spec {spec_id} or {related_spec_id} not found"
-                    )
+                    self.logger.warning(f"Cannot add relation: Spec {spec_id} or {related_spec_id} not found")
                     return False
 
                 # Add relation to in-memory cache
@@ -673,14 +666,13 @@ class SpecRegistry:
 
                 # Store in repository
                 if self._storage_repository:
-                    await self._storage_repository.store_spec_relation(
-                        spec_id, related_spec_id, relation_type
-                    )
+                    await self._storage_repository.store_spec_relation(spec_id, related_spec_id, relation_type)
 
                 return True
         except Exception as e:
             self.logger.error(
-                f"Error adding relation between {spec_id} and {related_spec_id}: {e}", exc_info=True
+                f"Error adding relation between {spec_id} and {related_spec_id}: {e}",
+                exc_info=True,
             )
             return False
 
@@ -707,9 +699,7 @@ class SpecRegistry:
                 for relation in self._spec_relations[spec_id]:
                     related_spec = await self.get_spec(relation["spec_id"])
                     if related_spec:
-                        related_specs.append(
-                            {"spec": related_spec, "relation_type": relation["type"]}
-                        )
+                        related_specs.append({"spec": related_spec, "relation_type": relation["type"]})
 
                 return related_specs
         except Exception as e:
@@ -751,9 +741,7 @@ class SpecRegistry:
             # Get new template
             new_template = None
             if self._storage_repository:
-                new_template = await self._storage_repository.get_template(
-                    template_type, new_template_version
-                )
+                new_template = await self._storage_repository.get_template(template_type, new_template_version)
 
             # If no template found in storage, use hardcoded template
             if not new_template:
@@ -854,7 +842,8 @@ class SpecRegistry:
             return result
         except Exception as e:
             self.logger.error(
-                f"Error analyzing template compatibility for {spec_id}: {e}", exc_info=True
+                f"Error analyzing template compatibility for {spec_id}: {e}",
+                exc_info=True,
             )
             raise
 
@@ -889,9 +878,7 @@ class SpecRegistry:
             # Get new template
             new_template = None
             if self._storage_repository:
-                new_template = await self._storage_repository.get_template(
-                    template_type, new_template_version
-                )
+                new_template = await self._storage_repository.get_template(template_type, new_template_version)
 
             # If no template found in storage, use hardcoded template
             if not new_template:
@@ -920,7 +907,10 @@ class SpecRegistry:
                     current_field = current_fields[field_name]
 
                     # Keep current value
-                    updated_fields[field_name] = {**field_data, "value": current_field.get("value")}
+                    updated_fields[field_name] = {
+                        **field_data,
+                        "value": current_field.get("value"),
+                    }
                 else:
                     # Field doesn't exist in current spec
                     updated_fields[field_name] = field_data
@@ -958,7 +948,10 @@ class SpecRegistry:
             raise
 
     async def generate_template_from_spec(
-        self, spec_id: str, template_name: Optional[str] = None, template_version: str = "1.0"
+        self,
+        spec_id: str,
+        template_name: Optional[str] = None,
+        template_version: str = "1.0",
     ) -> Dict[str, Any]:
         """
         Generate a new template from an existing spec.
@@ -988,7 +981,10 @@ class SpecRegistry:
             template_fields = {}
             for field_name, field_data in spec.get("fields", {}).items():
                 # Copy field definition, but not the value
-                template_fields[field_name] = {**field_data, "value": None}  # Clear value
+                template_fields[field_name] = {
+                    **field_data,
+                    "value": None,
+                }  # Clear value
 
             # Create template
             template = {
@@ -1049,9 +1045,7 @@ class SpecRegistry:
                 if self._storage_repository:
                     await self._storage_repository.update_spec(spec)
 
-            return ValidationResult(
-                spec_id=spec_id, is_valid=is_valid, validation_errors=validation_errors
-            )
+            return ValidationResult(spec_id=spec_id, is_valid=is_valid, validation_errors=validation_errors)
         except Exception as e:
             self.logger.error(f"Error validating spec {spec_id}: {e}", exc_info=True)
             raise

@@ -11,7 +11,6 @@ import hmac
 import json
 import logging
 import os
-import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
 import pulsar
@@ -127,10 +126,7 @@ class SecureEventListener:
             categories.add(category)
 
         # Create topic names for each category
-        return [
-            f"persistent://{self.tenant}/{self.namespace}/{category}-events"
-            for category in categories
-        ]
+        return [f"persistent://{self.tenant}/{self.namespace}/{category}-events" for category in categories]
 
     def _verify_signature(self, data: Dict[str, Any]) -> bool:
         """
@@ -153,7 +149,9 @@ class SecureEventListener:
 
         # Generate expected signature
         expected_signature = hmac.new(
-            key=self.secret_key.encode(), msg=canonical.encode(), digestmod=hashlib.sha256
+            key=self.secret_key.encode(),
+            msg=canonical.encode(),
+            digestmod=hashlib.sha256,
         ).digest()
         expected_signature_b64 = base64.b64encode(expected_signature).decode()
 

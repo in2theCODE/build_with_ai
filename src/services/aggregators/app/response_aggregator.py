@@ -1,14 +1,13 @@
 import asyncio
-import xyz
 import time
-from typing import Any, Callable, Dict, List, Optional, Set, Union
-from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Union
+from datetime import datetime
 from redis.asyncio import Redis
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.services.shared.models import BaseComponent
 from src.services.shared.models import BaseEvent, EventType
-from src.services.shared.logging.logger import logger
+from src.services.shared.loggerService.loggingService import logger
 from src.services.shared.monitoring.metrics_collector import MetricsCollector
 
 
@@ -35,12 +34,8 @@ class ResponseAggregator(BaseComponent):
         self.cleanup_interval = params.get("cleanup_interval", 30)  # Cleanup every 30 seconds
         self.max_retries = params.get("max_retries", 3)  # Maximum retry attempts
         self.retry_delay = params.get("retry_delay", 5)  # Seconds between retries
-        self.circuit_breaker_threshold = params.get(
-            "circuit_breaker_threshold", 5
-        )  # Failures before circuit breaks
-        self.circuit_reset_timeout = params.get(
-            "circuit_reset_timeout", 60
-        )  # Seconds before circuit resets
+        self.circuit_breaker_threshold = params.get("circuit_breaker_threshold", 5)  # Failures before circuit breaks
+        self.circuit_reset_timeout = params.get("circuit_reset_timeout", 60)  # Seconds before circuit resets
 
         # State
         self.running = False
@@ -233,9 +228,7 @@ class ResponseAggregator(BaseComponent):
         except Exception as e:
             self.logger.error(f"Failed to store event in MongoDB: {str(e)}")
 
-        self.logger.debug(
-            f"Handling event: {event.event_type} with correlation_id: {correlation_id}"
-        )
+        self.logger.debug(f"Handling event: {event.event_type} with correlation_id: {correlation_id}")
 
         # Check if circuit breaker is open for this service
         service_name = event.metadata.get("source_service")
@@ -271,12 +264,11 @@ class ResponseAggregator(BaseComponent):
         # Process with custom handler if registered
         if event.event_type in self.response_processors:
             try:
-                await self.response_processors[event.event_type](
-                    event, self.pending_requests[correlation_id]
-                )
+                await self.response_processors[event.event_type](event, self.pending_requests[correlation_id])
             except Exception as e:
                 self.logger.error(
-                    f"Error in custom processor for {event.event_type}: {str(e)}", exc_info=True
+                    f"Error in custom processor for {event.event_type}: {str(e)}",
+                    exc_info=True,
                 )
                 self.metrics.record_error("custom_processor_error")
 
@@ -335,9 +327,7 @@ class ResponseAggregator(BaseComponent):
             f"total_responses={len(request_data['responses'])}"
         )
 
-    async def _handle_failure_event(
-        self, correlation_id: str, event: BaseEvent, service_name: Optional[str] = None
-    ):
+    async def _handle_failure_event(self, correlation_id: str, event: BaseEvent, service_name: Optional[str] = None):
         """Handle a failure event with potential retry logic."""
         request_data = self.pending_requests[correlation_id]
 
@@ -395,9 +385,7 @@ class ResponseAggregator(BaseComponent):
                         metadata={"target": "redis"},
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Failed to publish Redis state event: {str(e)}", exc_info=True
-                    )
+                    self.logger.error(f"Failed to publish Redis state event: {str(e)}", exc_info=True)
 
                 # Schedule retry
                 asyncio.create_task(self._retry_request(correlation_id, service, delay, event))
@@ -410,9 +398,7 @@ class ResponseAggregator(BaseComponent):
             f"total_failures={len(request_data['failures'])}"
         )
 
-    async def _retry_request(
-        self, correlation_id: str, service: str, delay: float, original_event: BaseEvent
-    ):
+    async def _retry_request(self, correlation_id: str, service: str, delay: float, original_event: BaseEvent):
         """Retry a request after delay."""
         await asyncio.sleep(delay)
 
@@ -449,9 +435,7 @@ class ResponseAggregator(BaseComponent):
                 metadata=retry_metadata,
             )
 
-            self.metrics.record_event(
-                "retry_attempt", {"service": service, "correlation_id": correlation_id}
-            )
+            self.metrics.record_event("retry_attempt", {"service": service, "correlation_id": correlation_id})
         except Exception as e:
             self.logger.error(f"Failed to publish retry event: {str(e)}", exc_info=True)
             self.metrics.record_error("retry_publish_error")
@@ -517,9 +501,7 @@ class ResponseAggregator(BaseComponent):
         start_time = time.time()
 
         # Aggregate the responses
-        aggregated_result = self._aggregate_responses(
-            request_data["responses"], request_data["failures"], timed_out
-        )
+        aggregated_result = self._aggregate_responses(request_data["responses"], request_data["failures"], timed_out)
 
         # Add request metadata
         total_time = time.time() - request_data["timestamp"]
@@ -565,11 +547,7 @@ class ResponseAggregator(BaseComponent):
         )
 
         # Emit a completion event
-        event_type = (
-            EventType.AGGREGATION_COMPLETED_PARTIAL
-            if timed_out
-            else EventType.AGGREGATION_COMPLETED
-        )
+        event_type = EventType.AGGREGATION_COMPLETED_PARTIAL if timed_out else EventType.AGGREGATION_COMPLETED
 
         try:
             await self.event_bus.publish_event(
@@ -600,7 +578,10 @@ class ResponseAggregator(BaseComponent):
             self.metrics.record_error("completion_event_error")
 
     def _aggregate_responses(
-        self, responses: List[Dict[str, Any]], failures: List[Dict[str, Any]], timed_out: bool
+        self,
+        responses: List[Dict[str, Any]],
+        failures: List[Dict[str, Any]],
+        timed_out: bool,
     ) -> Dict[str, Any]:
         """
         Aggregate multiple responses into a single result.
@@ -698,15 +679,11 @@ class ResponseAggregator(BaseComponent):
         circuit["last_failure"] = time.time()
 
         # Check if we should open the circuit
-        if (
-            circuit["status"] == "closed"
-            and circuit["failure_count"] >= self.circuit_breaker_threshold
-        ):
+        if circuit["status"] == "closed" and circuit["failure_count"] >= self.circuit_breaker_threshold:
             circuit["status"] = "open"
             circuit["opened_at"] = time.time()
             self.logger.warning(
-                f"Circuit breaker opened for service {service_name} "
-                f"after {circuit['failure_count']} failures"
+                f"Circuit breaker opened for service {service_name} after {circuit['failure_count']} failures"
             )
             self.metrics.record_event("circuit_breaker_opened", {"service": service_name})
 
@@ -730,23 +707,15 @@ class ResponseAggregator(BaseComponent):
                         if current_time - circuit.get("opened_at", 0) > self.circuit_reset_timeout:
                             circuit["status"] = "half-open"
                             circuit["failure_count"] = 0
-                            self.logger.info(
-                                f"Circuit breaker for {service_name} changed to half-open state"
-                            )
-                            self.metrics.record_event(
-                                "circuit_breaker_half_open", {"service": service_name}
-                            )
+                            self.logger.info(f"Circuit breaker for {service_name} changed to half-open state")
+                            self.metrics.record_event("circuit_breaker_half_open", {"service": service_name})
                     elif circuit["status"] == "half-open":
                         # If no failures in half-open state for a while, close it
                         if current_time - circuit["last_failure"] > self.circuit_reset_timeout:
                             circuit["status"] = "closed"
                             circuit["failure_count"] = 0
-                            self.logger.info(
-                                f"Circuit breaker for {service_name} reset to closed state"
-                            )
-                            self.metrics.record_event(
-                                "circuit_breaker_closed", {"service": service_name}
-                            )
+                            self.logger.info(f"Circuit breaker for {service_name} reset to closed state")
+                            self.metrics.record_event("circuit_breaker_closed", {"service": service_name})
             except Exception as e:
                 self.logger.error(f"Error in circuit breaker task: {str(e)}", exc_info=True)
                 self.metrics.record_error("circuit_breaker_error")
@@ -761,12 +730,8 @@ class ResponseAggregator(BaseComponent):
                 self.metrics.record_gauge("pending_requests", len(self.pending_requests))
 
                 # Record circuit breaker states
-                open_circuits = sum(
-                    1 for c in self.circuit_breakers.values() if c["status"] == "open"
-                )
-                half_open_circuits = sum(
-                    1 for c in self.circuit_breakers.values() if c["status"] == "half-open"
-                )
+                open_circuits = sum(1 for c in self.circuit_breakers.values() if c["status"] == "open")
+                half_open_circuits = sum(1 for c in self.circuit_breakers.values() if c["status"] == "half-open")
 
                 self.metrics.record_gauge("open_circuits", open_circuits)
                 self.metrics.record_gauge("half_open_circuits", half_open_circuits)

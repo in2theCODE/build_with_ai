@@ -1,11 +1,10 @@
-# src/services/spec_registry/app/postgresql_spec_repository.py
+# app/services/spec_registry/app/postgresql_spec_repository.py
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 import json
 
 import asyncpg
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +22,7 @@ class PostgreSQLSpecRepository:
 
     async def initialize(self):
         """Initialize the database connection pool and create tables if they don't exist."""
-        self.pool = await asyncpg.create_pool(
-            self.connection_string, min_size=2, max_size=self.max_connections
-        )
+        self.pool = await asyncpg.create_pool(self.connection_string, min_size=2, max_size=self.max_connections)
 
         # Create tables if they don't exist
         await self._create_tables()
@@ -276,13 +273,9 @@ class PostgreSQLSpecRepository:
                     # Convert JSON string fields back to Python objects
                     result["fields"] = json.loads(result["fields"]) if result["fields"] else {}
                     result["validation_errors"] = (
-                        json.loads(result["validation_errors"])
-                        if result["validation_errors"]
-                        else []
+                        json.loads(result["validation_errors"]) if result["validation_errors"] else []
                     )
-                    result["metadata"] = (
-                        json.loads(result["metadata"]) if result["metadata"] else {}
-                    )
+                    result["metadata"] = json.loads(result["metadata"]) if result["metadata"] else {}
 
                     # Merge metadata back into the result for backward compatibility
                     result.update(result["metadata"])
@@ -295,9 +288,7 @@ class PostgreSQLSpecRepository:
             self.logger.error(f"Error listing specs: {e}")
             return []
 
-    async def store_spec_relation(
-        self, spec_id: str, related_spec_id: str, relation_type: str
-    ) -> bool:
+    async def store_spec_relation(self, spec_id: str, related_spec_id: str, relation_type: str) -> bool:
         """Store a relation between two spec sheets."""
         try:
             async with self.pool.acquire() as connection:
@@ -316,9 +307,7 @@ class PostgreSQLSpecRepository:
 
             return True
         except Exception as e:
-            self.logger.error(
-                f"Error storing relation between {spec_id} and {related_spec_id}: {e}"
-            )
+            self.logger.error(f"Error storing relation between {spec_id} and {related_spec_id}: {e}")
             return False
 
     async def get_related_specs(self, spec_id: str) -> List[Dict[str, Any]]:
@@ -343,13 +332,9 @@ class PostgreSQLSpecRepository:
                     # Convert JSON string fields back to Python objects
                     result["fields"] = json.loads(result["fields"]) if result["fields"] else {}
                     result["validation_errors"] = (
-                        json.loads(result["validation_errors"])
-                        if result["validation_errors"]
-                        else []
+                        json.loads(result["validation_errors"]) if result["validation_errors"] else []
                     )
-                    result["metadata"] = (
-                        json.loads(result["metadata"]) if result["metadata"] else {}
-                    )
+                    result["metadata"] = json.loads(result["metadata"]) if result["metadata"] else {}
 
                     # Merge metadata back into the result for backward compatibility
                     result.update(result["metadata"])
@@ -397,9 +382,7 @@ class PostgreSQLSpecRepository:
             self.logger.error(f"Error storing template {template_type} v{version}: {e}")
             return False
 
-    async def get_template(
-        self, template_type: str, version: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+    async def get_template(self, template_type: str, version: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get a template by type and optional version."""
         try:
             query = f"""
@@ -453,9 +436,7 @@ class PostgreSQLSpecRepository:
 
                     # Convert JSON string fields back to Python objects
                     result["fields"] = json.loads(result["fields"]) if result["fields"] else {}
-                    result["metadata"] = (
-                        json.loads(result["metadata"]) if result["metadata"] else {}
-                    )
+                    result["metadata"] = json.loads(result["metadata"]) if result["metadata"] else {}
 
                     # Merge metadata back into the result for backward compatibility
                     result.update(result["metadata"])
@@ -469,7 +450,10 @@ class PostgreSQLSpecRepository:
             return []
 
     async def delete_template(
-        self, template_type: str, version: Optional[str] = None, hard_delete: bool = False
+        self,
+        template_type: str,
+        version: Optional[str] = None,
+        hard_delete: bool = False,
     ) -> bool:
         """Delete a template or mark it as inactive."""
         try:

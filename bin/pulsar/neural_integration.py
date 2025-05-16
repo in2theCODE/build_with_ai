@@ -14,9 +14,6 @@ import sys
 from program_synthesis_system.src.components.component_factory import (
     ComponentFactory,
 )
-from program_synthesis_system.src.components.neural_code_generator.neural_code_generator import (
-    NeuralCodeGenerator,
-)
 from program_synthesis_system.src.shared.enums import ComponentType
 import yaml
 
@@ -25,7 +22,9 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 script_dir = Path(__file__).parent
-project_root = script_dir.parent.parent  # Assuming bin is two levels down from project root
+project_root = (
+    script_dir.parent.parent
+)  # Assuming bin is two levels down from project root
 default_config_path = project_root / "configs" / "neural_system_configs.yaml"
 
 
@@ -39,10 +38,17 @@ def parse_args():
         help="Path to system configuration file",
     )
     parser.add_argument(
-        "--spec", "-s", required=True, help="Path to specification file or specification string"
+        "--spec",
+        "-s",
+        required=True,
+        help="Path to specification file or specification string",
     )
-    parser.add_argument("--output", "-o", help="Output file for generated code (default: stdout)")
-    parser.add_argument("--language", "-l", default="python", help="Target programming language")
+    parser.add_argument(
+        "--output", "-o", help="Output file for generated code (default: stdout)"
+    )
+    parser.add_argument(
+        "--language", "-l", default="python", help="Target programming language"
+    )
     parser.add_argument(
         "--technique",
         "-t",
@@ -51,13 +57,21 @@ def parse_args():
         help="Neural generation technique to use",
     )
     parser.add_argument(
-        "--beam-width", "-b", type=int, default=5, help="Beam width for syntax-aware search"
+        "--beam-width",
+        "-b",
+        type=int,
+        default=5,
+        help="Beam width for syntax-aware search",
     )
     parser.add_argument(
-        "--kb-path", "-k", help="Path to knowledge base for retrieval-augmented generation"
+        "--kb-path",
+        "-k",
+        help="Path to knowledge base for retrieval-augmented generation",
     )
-    parser.add_argument("--model-path", "-m", help="Path to pre-trained models")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+    parser.add_argument("--model-path", "-m", help="Path to pre-trained app")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
 
     return parser.parse_args()
 
@@ -118,7 +132,7 @@ def setup_neural_code_generator(args, config):
         ComponentType.CODE_GENERATOR, "neural_code_generator", params
     )
 
-    # If model path specified, load pre-trained models
+    # If model path specified, load pre-trained app
     if args.model_path and neural_generator:
         neural_generator.import_model(args.model_path)
 

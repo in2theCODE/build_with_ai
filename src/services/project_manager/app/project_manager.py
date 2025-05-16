@@ -9,12 +9,9 @@ creating and managing projects, analyzing requirements, and generating
 the appropriate spec sheets based on project needs.
 """
 
-import asyncio
 from datetime import datetime
-import json
 import logging
-import os
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
 
@@ -24,7 +21,6 @@ from models.project import ProjectAnalysisResult
 from models.project import ProjectStatus
 from models.project import ProjectType
 from models.project import Requirement
-from models.project import RequirementCategory
 from models.project import SpecSheetRequirement
 from models.project import TechnologyStack
 from models.spec_sheet import FieldValue
@@ -298,9 +294,7 @@ class ProjectManager:
                             spec_sheet_type="architecture/event-driven/event_template",
                             count=event_count,
                             reason=f"Project requires {event_count} event definitions",
-                            related_requirements=self._get_requirement_ids_by_keyword(
-                                project, ["event", "message"]
-                            ),
+                            related_requirements=self._get_requirement_ids_by_keyword(project, ["event", "message"]),
                         )
                     )
 
@@ -314,9 +308,7 @@ class ProjectManager:
                     spec_sheet_type="backend/api/rest",
                     count=1,
                     reason="Project requires a REST API",
-                    related_requirements=self._get_requirement_ids_by_keyword(
-                        project, ["api", "rest", "endpoint"]
-                    ),
+                    related_requirements=self._get_requirement_ids_by_keyword(project, ["api", "rest", "endpoint"]),
                 )
             )
 
@@ -344,9 +336,7 @@ class ProjectManager:
                             spec_sheet_type=f"backend/database/providers/{db_provider}",
                             count=1,
                             reason=f"Project requires {db_provider} as database provider",
-                            related_requirements=self._get_requirement_ids_by_keyword(
-                                project, [db_provider]
-                            ),
+                            related_requirements=self._get_requirement_ids_by_keyword(project, [db_provider]),
                         )
                     )
 
@@ -373,9 +363,7 @@ class ProjectManager:
                             spec_sheet_type=f"backend/auth/providers/{auth_provider}",
                             count=1,
                             reason=f"Project requires {auth_provider} as auth provider",
-                            related_requirements=self._get_requirement_ids_by_keyword(
-                                project, [auth_provider]
-                            ),
+                            related_requirements=self._get_requirement_ids_by_keyword(project, [auth_provider]),
                         )
                     )
 
@@ -530,8 +518,8 @@ class ProjectManager:
         return max(endpoint_count, 5)
 
     def _estimate_model_count(self, project: Project) -> int:
-        """Estimate the number of database models needed."""
-        # Count requirements that mention entities or models
+        """Estimate the number of database app needed."""
+        # Count requirements that mention entities or app
         model_keywords = ["model", "entity", "table", "schema", "data"]
         model_count = 0
 
@@ -581,7 +569,14 @@ class ProjectManager:
         # Check for specific database types in requirements
         nosql_keywords = ["nosql", "document", "mongodb", "firestore", "dynamodb"]
         graph_keywords = ["graph", "neo4j", "relationship"]
-        vector_keywords = ["vector", "embedding", "similarity", "semantic", "pinecone", "milvus"]
+        vector_keywords = [
+            "vector",
+            "embedding",
+            "similarity",
+            "semantic",
+            "pinecone",
+            "milvus",
+        ]
 
         for req in project.requirements:
             desc = req.description.lower()
@@ -717,7 +712,12 @@ class ProjectManager:
 
         # Initialize stack with empty lists
         stack = TechnologyStack(
-            languages=[], frameworks=[], databases=[], frontend=[], backend=[], infrastructure=[]
+            languages=[],
+            frameworks=[],
+            databases=[],
+            frontend=[],
+            backend=[],
+            infrastructure=[],
         )
 
         # Determine languages based on requirements
@@ -868,9 +868,7 @@ class ProjectManager:
             try:
                 # Determine template category from spec_sheet_type
                 template_category = (
-                    req.spec_sheet_type.split("/")[0]
-                    if "/" in req.spec_sheet_type
-                    else req.spec_sheet_type
+                    req.spec_sheet_type.split("/")[0] if "/" in req.spec_sheet_type else req.spec_sheet_type
                 )
 
                 # List templates in this category
@@ -906,12 +904,8 @@ class ProjectManager:
                         errors.append(f"Failed to create spec sheet for template: {template.id}")
 
             except Exception as e:
-                logger.error(
-                    f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}"
-                )
-                errors.append(
-                    f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}"
-                )
+                logger.error(f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}")
+                errors.append(f"Error creating spec sheet for requirement {req.spec_sheet_type}: {str(e)}")
 
         # Update project with spec sheet IDs
         if spec_sheets:
@@ -945,9 +939,7 @@ class ProjectManager:
                 fields = []
 
                 for template_field in template_field.fields:
-                    fields.append(
-                        FieldValue(name=template_field.name, value=template_field.default_value)
-                    )
+                    fields.append(FieldValue(name=template_field.name, value=template_field.default_value))
 
                 sections.append(SectionValues(name=template_section.name, fields=fields))
 

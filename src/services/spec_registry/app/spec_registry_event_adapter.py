@@ -1,11 +1,11 @@
-# src/services/spec_registry/app/spec_registry_event_adapter.py
+# app/services/spec_registry/app/spec_registry_event_adapter.py
 import asyncio
 import datetime
 import os
 import uuid
 from typing import List, Dict, Any, Optional, Union
 
-from src.services.shared import BaseComponent, logging
+from src.services.shared import BaseComponent, loggerService
 from src.services.shared.models import EventType, Components, BaseEvent, SpecInstanceEvent
 from src.services.spec_registry.app.models import SpecTemplate, SpecStatus, ValidationResult
 from src.services.spec_registry.app.spec_registry import SpecRegistry
@@ -18,7 +18,7 @@ class InMemorySpecRepository:
         self._specs = {}
         self._templates = {}
         self._relations = {}
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = loggerService.getLogger(self.__class__.__name__)
 
     async def initialize(self):
         """Initialize the repository."""
@@ -198,7 +198,7 @@ class SecureEventEmitter:
         self.secret_key = secret_key
         self.tenant = tenant
         self.namespace = namespace
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = loggerService.getLogger(self.__class__.__name__)
         self.logger.info(f"Initialized SecureEventEmitter with service URL: {service_url}")
 
     async def emit_async(self, event: BaseEvent) -> bool:
@@ -239,7 +239,7 @@ class SecureEventListener:
         self.tenant = tenant
         self.namespace = namespace
         self.handlers = {}
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = loggerService.getLogger(self.__class__.__name__)
         self.logger.info(
             f"Initialized SecureEventListener with service URL: {service_url}, "
             f"subscription: {subscription_name}"
@@ -337,7 +337,7 @@ class SpecRegistryEventAdapter(BaseComponent):
                 db_schema: Database schema
         """
         super().__init__(**params)
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = loggerService.getLogger(self.__class__.__name__)
 
         # Extract configuration parameters
         self.pulsar_service_url = self.get_param("pulsar_service_url", "pulsar://localhost:6650")

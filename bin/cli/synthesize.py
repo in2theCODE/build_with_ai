@@ -25,18 +25,27 @@ def parse_args():
         help="Path to system configuration file",
     )
     parser.add_argument(
-        "--spec", "-s", required=True, help="Path to specification file or specification string"
+        "--spec",
+        "-s",
+        required=True,
+        help="Path to specification file or specification string",
     )
     parser.add_argument("--context", "-x", help="Path to context JSON file")
-    parser.add_argument("--output", "-o", help="Output file for generated code (default: stdout)")
-    parser.add_argument("--language", "-l", default="python", help="Target programming language")
+    parser.add_argument(
+        "--output", "-o", help="Output file for generated code (default: stdout)"
+    )
+    parser.add_argument(
+        "--language", "-l", default="python", help="Target programming language"
+    )
     parser.add_argument(
         "--best-effort",
         "-b",
         action="store_true",
         help="Allow best-effort results if verification fails",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
 
     return parser.parse_args()
 

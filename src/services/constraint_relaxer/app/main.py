@@ -20,9 +20,7 @@ from src.services.constraint_relaxer.app.constraint_relaxer import (
 
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("constraint_relaxer_service")
 
 
@@ -61,9 +59,7 @@ class ConstraintRelaxerService:
         await self.event_bus.connect()
 
         # Subscribe to relevant topics
-        await self.event_bus.subscribe(
-            self.config.RELAXATION_REQUEST_TOPIC, self._handle_relaxation_request
-        )
+        await self.event_bus.subscribe(self.config.RELAXATION_REQUEST_TOPIC, self._handle_relaxation_request)
 
         # Keep the service running
         while self.running:
@@ -103,9 +99,7 @@ class ConstraintRelaxerService:
             # Convert to objects
             formal_spec = self._deserialize_spec(spec_data)
             verification_result = (
-                self._deserialize_verification_result(verification_data)
-                if verification_data
-                else None
+                self._deserialize_verification_result(verification_data) if verification_data else None
             )
 
             # Process the relaxation

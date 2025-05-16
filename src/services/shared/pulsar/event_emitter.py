@@ -11,8 +11,7 @@ import hmac
 import json
 import logging
 import os
-import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import pulsar
 from pulsar.schema import *
@@ -118,9 +117,7 @@ class SecureEventEmitter:
         Returns:
             Base64-encoded signature
         """
-        signature = hmac.new(
-            key=self.secret_key.encode(), msg=message.encode(), digestmod=hashlib.sha256
-        ).digest()
+        signature = hmac.new(key=self.secret_key.encode(), msg=message.encode(), digestmod=hashlib.sha256).digest()
         return base64.b64encode(signature).decode()
 
     def _add_signature(self, event_data: Dict[str, Any]) -> Dict[str, Any]:

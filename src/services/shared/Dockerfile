@@ -14,11 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better layer caching
-COPY src/services/aggregators/requirements.txt .
+COPY shared-models/src/services/aggregators/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy service code with proper directory structure
-COPY src /app/src
+COPY shared-models/src /app/src
 
 # Run the service using module notation
 CMD ["python",  "src.services.aggregators.app.response_aggregator.py"]

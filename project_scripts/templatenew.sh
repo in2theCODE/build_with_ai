@@ -3278,7 +3278,7 @@ cat > ./template-registry/config/config.json << 'EOF'
 }
 EOF
 
-# Create the core models for template data structures
+# Create the core app for template data structures
 cat > ./template-registry/models/template_models.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -5184,7 +5184,7 @@ cat > ./template-registry/config/config.json << 'EOF'
 }
 EOF
 
-# Create the core models for template data structures
+# Create the core app for template data structures
 cat > ./template-registry/models/template_models.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -7381,7 +7381,7 @@ cat > ./template-registry/config/config.json << 'EOF'
 }
 EOF
 
-# Create the core models for template data structures
+# Create the core app for template data structures
 cat > ./template-registry/models/template_models.py << 'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-

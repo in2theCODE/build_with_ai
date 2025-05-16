@@ -19,7 +19,7 @@ download_path = "/Users/justinrussell/.models"
 os.makedirs(download_path, exist_ok=True)
 
 # Use a non-gated model instead
-# The Mistral open models are available through other repositories
+# The Mistral open app are available through other repositories
 tokenizer = AutoTokenizer.from_pretrained(
     "TheBloke/Mistral-7B-v0.1-GGUF",  # Non-gated alternative
     cache_dir=download_path,
@@ -28,7 +28,9 @@ tokenizer = AutoTokenizer.from_pretrained(
 )
 
 # Check if MPS is available
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+device = (
+    torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+)
 print(f"Using device: {device}")
 
 # Download DeepSeek model to the specific path and move to MPS

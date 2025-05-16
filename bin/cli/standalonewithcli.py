@@ -23,7 +23,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("neural_code_generator_standalone")
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+)
 
 # Import the enhanced neural code generator
 try:
@@ -37,12 +39,21 @@ except ImportError:
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Neural Code Generator - Standalone Mode")
-    parser.add_argument(
-        "--spec", "-s", required=True, help="Path to specification file or specification string"
+    parser = argparse.ArgumentParser(
+        description="Neural Code Generator - Standalone Mode"
     )
-    parser.add_argument("--output", "-o", help="Output file for generated code (default: stdout)")
-    parser.add_argument("--language", "-l", default="python", help="Target programming language")
+    parser.add_argument(
+        "--spec",
+        "-s",
+        required=True,
+        help="Path to specification file or specification string",
+    )
+    parser.add_argument(
+        "--output", "-o", help="Output file for generated code (default: stdout)"
+    )
+    parser.add_argument(
+        "--language", "-l", default="python", help="Target programming language"
+    )
     parser.add_argument(
         "--technique",
         "-t",
@@ -51,12 +62,18 @@ def parse_args():
         help="Neural generation technique to use",
     )
     parser.add_argument(
-        "--beam-width", "-b", type=int, default=5, help="Beam width for syntax-aware search"
+        "--beam-width",
+        "-b",
+        type=int,
+        default=5,
+        help="Beam width for syntax-aware search",
     )
     parser.add_argument(
-        "--kb-path", "-k", help="Path to knowledge base for retrieval-augmented generation"
+        "--kb-path",
+        "-k",
+        help="Path to knowledge base for retrieval-augmented generation",
     )
-    parser.add_argument("--model-path", "-m", help="Path to pre-trained models")
+    parser.add_argument("--model-path", "-m", help="Path to pre-trained app")
     parser.add_argument(
         "--quantization",
         "-q",
@@ -64,12 +81,22 @@ def parse_args():
         default="int8",
         help="Model quantization level",
     )
-    parser.add_argument("--no-flash-attention", action="store_true", help="Disable Flash Attention")
-    parser.add_argument("--no-mixed-precision", action="store_true", help="Disable mixed precision")
     parser.add_argument(
-        "--format", "-f", choices=["json", "code", "ast"], default="code", help="Output format"
+        "--no-flash-attention", action="store_true", help="Disable Flash Attention"
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--no-mixed-precision", action="store_true", help="Disable mixed precision"
+    )
+    parser.add_argument(
+        "--format",
+        "-f",
+        choices=["json", "code", "ast"],
+        default="code",
+        help="Output format",
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
 
     return parser.parse_args()
 
@@ -88,7 +115,9 @@ def load_specification(spec_path_or_string):
                 try:
                     return json.loads(content)
                 except json.JSONDecodeError:
-                    logger.warning("Failed to parse specification as JSON, using raw content")
+                    logger.warning(
+                        "Failed to parse specification as JSON, using raw content"
+                    )
                     return content
             else:
                 return content
@@ -111,7 +140,8 @@ def setup_neural_code_generator(args):
         "use_flash_attention": not args.no_flash_attention,
         "mixed_precision": not args.no_mixed_precision,
         # Advanced technique parameters based on selected technique
-        "use_retrieval_augmentation": args.kb_path is not None and (args.technique in ["all"]),
+        "use_retrieval_augmentation": args.kb_path is not None
+        and (args.technique in ["all"]),
         "use_tree_transformers": args.technique in ["tree", "all"],
         "use_hierarchical_generation": args.technique in ["hierarchical", "all"],
         "use_syntax_aware_search": True,
@@ -133,7 +163,9 @@ def setup_neural_code_generator(args):
     # Create the neural code generator
     try:
         neural_generator = EnhancedNeuralCodeGenerator(**params)
-        logger.info(f"Neural code generator initialized with {args.technique} technique")
+        logger.info(
+            f"Neural code generator initialized with {args.technique} technique"
+        )
         return neural_generator
     except Exception as e:
         logger.error(f"Failed to initialize neural code generator: {e}")
@@ -159,7 +191,9 @@ def save_output(result, args):
         if hasattr(result, "program_ast") and "code" in result.program_ast:
             output = result.program_ast["code"]
         elif (
-            isinstance(result, dict) and "program_ast" in result and "code" in result["program_ast"]
+            isinstance(result, dict)
+            and "program_ast" in result
+            and "code" in result["program_ast"]
         ):
             output = result["program_ast"]["code"]
         else:
@@ -195,7 +229,7 @@ def main():
     try:
         logger.info(f"Generating code using {args.technique} technique")
         result = neural_generator.generate(spec)
-        logger.info(f"Code generation complete")
+        logger.info("Code generation complete")
 
         # Show generation stats
         if (

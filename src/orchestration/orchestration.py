@@ -165,26 +165,16 @@ class CodeGenOrchestrator(BaseComponent):
             EventType.CODE_GENERATION_COMPLETED, self._handle_code_generation_completed
         )
 
-        self.event_listener.register_handler(
-            EventType.CODE_GENERATION_FAILED, self._handle_code_generation_failed
-        )
+        self.event_listener.register_handler(EventType.CODE_GENERATION_FAILED, self._handle_code_generation_failed)
 
         # Register handlers for spec sheet events
-        self.event_listener.register_handler(
-            EventType.SPEC_SHEET_CREATED, self._handle_spec_sheet_created
-        )
+        self.event_listener.register_handler(EventType.SPEC_SHEET_CREATED, self._handle_spec_sheet_created)
 
-        self.event_listener.register_handler(
-            EventType.SPEC_SHEET_UPDATED, self._handle_spec_sheet_updated
-        )
+        self.event_listener.register_handler(EventType.SPEC_SHEET_UPDATED, self._handle_spec_sheet_updated)
 
-        self.event_listener.register_handler(
-            EventType.SPEC_SHEET_COMPLETED, self._handle_spec_sheet_completed
-        )
+        self.event_listener.register_handler(EventType.SPEC_SHEET_COMPLETED, self._handle_spec_sheet_completed)
 
-        self.event_listener.register_handler(
-            EventType.SPEC_SHEET_VALIDATED, self._handle_spec_sheet_validated
-        )
+        self.event_listener.register_handler(EventType.SPEC_SHEET_VALIDATED, self._handle_spec_sheet_validated)
 
         self.logger.info("Event handlers registered")
 
@@ -285,9 +275,7 @@ class CodeGenOrchestrator(BaseComponent):
             if project_id and project_id in self.project_states:
                 await self._update_project_state(project_id)
 
-            self.logger.info(
-                f"Code generation completed for {generation_id} with confidence {confidence_score}"
-            )
+            self.logger.info(f"Code generation completed for {generation_id} with confidence {confidence_score}")
 
         except Exception as e:
             self.logger.error(f"Error handling code generation completion: {e}")
@@ -348,9 +336,7 @@ class CodeGenOrchestrator(BaseComponent):
         try:
             # Extract spec sheet ID and project ID
             spec_sheet_id = (
-                event.spec_sheet_id
-                if hasattr(event, "spec_sheet_id")
-                else event.payload.get("spec_sheet_id")
+                event.spec_sheet_id if hasattr(event, "spec_sheet_id") else event.payload.get("spec_sheet_id")
             )
             project_id = event.payload.get("project_id")
 
@@ -390,9 +376,7 @@ class CodeGenOrchestrator(BaseComponent):
         try:
             # Extract spec sheet ID
             spec_sheet_id = (
-                event.spec_sheet_id
-                if hasattr(event, "spec_sheet_id")
-                else event.payload.get("spec_sheet_id")
+                event.spec_sheet_id if hasattr(event, "spec_sheet_id") else event.payload.get("spec_sheet_id")
             )
 
             if not spec_sheet_id or spec_sheet_id not in self.spec_states:
@@ -413,9 +397,7 @@ class CodeGenOrchestrator(BaseComponent):
         try:
             # Extract spec sheet ID
             spec_sheet_id = (
-                event.spec_sheet_id
-                if hasattr(event, "spec_sheet_id")
-                else event.payload.get("spec_sheet_id")
+                event.spec_sheet_id if hasattr(event, "spec_sheet_id") else event.payload.get("spec_sheet_id")
             )
 
             if not spec_sheet_id or spec_sheet_id not in self.spec_states:
@@ -445,9 +427,7 @@ class CodeGenOrchestrator(BaseComponent):
         try:
             # Extract spec sheet ID and validation result
             spec_sheet_id = (
-                event.spec_sheet_id
-                if hasattr(event, "spec_sheet_id")
-                else event.payload.get("spec_sheet_id")
+                event.spec_sheet_id if hasattr(event, "spec_sheet_id") else event.payload.get("spec_sheet_id")
             )
             if isinstance(event.payload, dict):
                 is_valid = event.payload.get("is_valid", False)
@@ -474,9 +454,7 @@ class CodeGenOrchestrator(BaseComponent):
                     auto_generate = self.project_states[project_id].get("auto_generate_code", False)
                     if auto_generate:
                         # Request code generation
-                        target_language = self.project_states[project_id].get(
-                            "target_language", "python"
-                        )
+                        target_language = self.project_states[project_id].get("target_language", "python")
                         await self._request_code_generation(spec_sheet_id, target_language)
             else:
                 self.spec_states[spec_sheet_id]["status"] = "validation_failed"
@@ -487,9 +465,7 @@ class CodeGenOrchestrator(BaseComponent):
         except Exception as e:
             self.logger.error(f"Error handling spec sheet validation: {e}")
 
-    async def _orchestrate_code_generation(
-        self, generation_id: str, spec_sheet: Dict[str, Any], target_language: str
-    ):
+    async def _orchestrate_code_generation(self, generation_id: str, spec_sheet: Dict[str, Any], target_language: str):
         """
         Orchestrate the code generation process through multiple phases.
 
@@ -545,9 +521,7 @@ class CodeGenOrchestrator(BaseComponent):
                 # Phase 6: Code Optimization (if verification passed)
                 if verification_result.get("is_valid", False):
                     state["current_phase"] = CodeGenPhase.CODE_OPTIMIZATION
-                    optimized_code = await self._optimize_code(
-                        state["generated_code"], target_language
-                    )
+                    optimized_code = await self._optimize_code(state["generated_code"], target_language)
                     state["optimized_code"] = optimized_code
                     state["phases_completed"].append(CodeGenPhase.CODE_OPTIMIZATION)
 
@@ -559,9 +533,7 @@ class CodeGenOrchestrator(BaseComponent):
 
                 # Phase 7: Documentation
                 state["current_phase"] = CodeGenPhase.DOCUMENTATION
-                documentation = await self._generate_documentation(
-                    state["final_code"], spec_sheet, target_language
-                )
+                documentation = await self._generate_documentation(state["final_code"], spec_sheet, target_language)
                 state["documentation"] = documentation
                 state["phases_completed"].append(CodeGenPhase.DOCUMENTATION)
 
@@ -573,8 +545,7 @@ class CodeGenOrchestrator(BaseComponent):
                     state["ast"],
                     result.get("confidence_score", 0.0),
                     result.get("strategy_used", "neural"),
-                    time.time()
-                    - time.mktime(datetime.fromisoformat(state["start_time"]).timetuple()),
+                    time.time() - time.mktime(datetime.fromisoformat(state["start_time"]).timetuple()),
                 )
 
             else:
@@ -642,9 +613,7 @@ class CodeGenOrchestrator(BaseComponent):
 
         return analysis_result
 
-    async def _select_template(
-        self, analysis_result: Dict[str, Any], target_language: str
-    ) -> Dict[str, Any]:
+    async def _select_template(self, analysis_result: Dict[str, Any], target_language: str) -> Dict[str, Any]:
         """
         Select the appropriate template based on analysis results.
 
@@ -682,12 +651,8 @@ class CodeGenOrchestrator(BaseComponent):
                 "import json",
                 "import asyncio",
             ]
-            template["structure"][
-                "class_template"
-            ] = "class {name}:\n    def __init__(self):\n        pass"
-            template["structure"]["function_templates"] = [
-                'def {name}({params}):\n    """Docstring"""\n    pass'
-            ]
+            template["structure"]["class_template"] = "class {name}:\n    def __init__(self):\n        pass"
+            template["structure"]["function_templates"] = ['def {name}({params}):\n    """Docstring"""\n    pass']
 
         elif target_language == "typescript":
             template["structure"]["imports"] = [
@@ -695,9 +660,7 @@ class CodeGenOrchestrator(BaseComponent):
                 "import * as path from 'path'",
             ]
             template["structure"]["class_template"] = "class {name} {\n  constructor() {}\n}"
-            template["structure"]["function_templates"] = [
-                "function {name}({params}): void {\n  // Implementation\n}"
-            ]
+            template["structure"]["function_templates"] = ["function {name}({params}): void {\n  // Implementation\n}"]
 
         # Simulate template selection time
         await asyncio.sleep(0.1)
@@ -731,9 +694,7 @@ class CodeGenOrchestrator(BaseComponent):
         }
 
         # Add imports from template
-        ast["imports"] = [
-            {"type": "Import", "value": imp} for imp in template["structure"]["imports"]
-        ]
+        ast["imports"] = [{"type": "Import", "value": imp} for imp in template["structure"]["imports"]]
 
         # Generate AST based on spec type
         if spec_type == "container":
@@ -903,18 +864,16 @@ class CodeGenOrchestrator(BaseComponent):
                         params = "self"
                         if method_name != "__init__":
                             code_lines.append(f"    def {method_name}({params}):")
-                            code_lines.append(f'        """')
+                            code_lines.append('        """')
                             code_lines.append(f"        {method_name.capitalize()} method")
-                            code_lines.append(f'        """')
+                            code_lines.append('        """')
                             code_lines.append(f"        # TODO: Implement {method_name}")
-                            code_lines.append(f"        pass")
+                            code_lines.append("        pass")
                         else:
                             code_lines.append(f"    def {method_name}({params}):")
                             code_lines.append(f"        # Initialize {decl['name']}")
-                            code_lines.append(
-                                f"        self.logger = logging.getLogger(self.__class__.__name__)"
-                            )
-                            code_lines.append(f"        self.initialized = True")
+                            code_lines.append("        self.logger = logging.getLogger(self.__class__.__name__)")
+                            code_lines.append("        self.initialized = True")
 
                     code_lines.append("")  # Empty line after class
 
@@ -926,14 +885,14 @@ class CodeGenOrchestrator(BaseComponent):
                     for method in decl.get("methods", []):
                         method_name = method["name"]
                         if method_name == "constructor":
-                            code_lines.append(f"  constructor() {{")
+                            code_lines.append("  constructor() {")
                             code_lines.append(f"    // Initialize {decl['name']}")
-                            code_lines.append(f"    this.initialized = true;")
-                            code_lines.append(f"  }}")
+                            code_lines.append("    this.initialized = true;")
+                            code_lines.append("  }")
                         else:
                             code_lines.append(f"  {method_name}(): void {{")
                             code_lines.append(f"    // TODO: Implement {method_name}")
-                            code_lines.append(f"  }}")
+                            code_lines.append("  }")
 
                     code_lines.append("}")  # Class closing brace
                     code_lines.append("")  # Empty line after class
@@ -950,13 +909,10 @@ class CodeGenOrchestrator(BaseComponent):
                 code_lines.append(f"    instance = {class_name}()")
 
                 # Find start method
-                has_start = any(
-                    method["name"] == "start"
-                    for method in ast.get("declarations")[0].get("methods", [])
-                )
+                has_start = any(method["name"] == "start" for method in ast.get("declarations")[0].get("methods", []))
                 if has_start:
-                    code_lines.append(f"    # Start the instance")
-                    code_lines.append(f"    instance.start()")
+                    code_lines.append("    # Start the instance")
+                    code_lines.append("    instance.start()")
 
         # Join code lines
         return "\n".join(code_lines)
@@ -1496,9 +1452,7 @@ class CodeGenOrchestrator(BaseComponent):
             "phases_completed": state.get("phases_completed", []),
             "start_time": state.get("start_time"),
             "completion_time": state.get("completion_time"),
-            "generated_code": (
-                state.get("final_code") if state.get("status") == "completed" else None
-            ),
+            "generated_code": (state.get("final_code") if state.get("status") == "completed" else None),
         }
 
     async def get_project_status(self, project_id: str) -> Dict[str, Any]:
@@ -1532,9 +1486,7 @@ class CodeGenOrchestrator(BaseComponent):
 # Example usage
 async def run_orchestrator():
     """Run the code generation orchestrator service."""
-    orchestrator = CodeGenOrchestrator(
-        pulsar_service_url="pulsar://localhost:6650", enable_metrics=True
-    )
+    orchestrator = CodeGenOrchestrator(pulsar_service_url="pulsar://localhost:6650", enable_metrics=True)
 
     try:
         # Initialize and start the orchestrator

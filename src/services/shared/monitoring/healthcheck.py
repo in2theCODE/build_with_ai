@@ -5,11 +5,8 @@ This module provides a simple HTTP server for container health checks
 and basic monitoring of the Neural Code Generator.
 """
 
-import asyncio
-import json
 import logging
 import os
-import sys
 import threading
 import time
 from typing import Any, Dict
@@ -114,7 +111,10 @@ async def health_check():
 @app.get("/")
 async def root():
     """Root endpoint redirecting to health check."""
-    return {"message": "Neural Code Generator Health Check API", "health_endpoint": "/health"}
+    return {
+        "message": "Neural Code Generator Health Check API",
+        "health_endpoint": "/health",
+    }
 
 
 @app.get("/readiness")
@@ -127,10 +127,7 @@ async def readiness_check():
             return Response(content="Low memory", status_code=503)
 
         # Check if GPU is available when required
-        if (
-            os.environ.get("REQUIRE_GPU", "false").lower() == "true"
-            and not torch.cuda.is_available()
-        ):
+        if os.environ.get("REQUIRE_GPU", "false").lower() == "true" and not torch.cuda.is_available():
             return Response(content="GPU not available", status_code=503)
 
         # Check for recent activity (if service has been running for a while)

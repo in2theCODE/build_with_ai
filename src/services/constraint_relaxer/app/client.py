@@ -6,13 +6,9 @@ Event bus client for connecting to Apache Pulsar.
 import asyncio
 import json
 import logging
-from typing import Any, Awaitable, Callable, Dict, Generic, Type, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Type, TypeVar
 
 import pulsar
-from pulsar.schema import AvroSchema
-from pulsar.schema import Integer
-from pulsar.schema import Record
-from pulsar.schema import String
 from src.services.shared.models.base import BaseMessage
 
 
@@ -114,9 +110,7 @@ class EventBusClient:
             self.logger.error(f"Failed to publish message to {topic}: {str(e)}")
             raise
 
-    async def subscribe_with_type(
-        self, topic: str, message_type: Type[T], handler: Callable[[T], Awaitable[None]]
-    ):
+    async def subscribe_with_type(self, topic: str, message_type: Type[T], handler: Callable[[T], Awaitable[None]]):
         """
         Subscribe to a topic with a specific message type.
 
@@ -149,9 +143,7 @@ class EventBusClient:
             subscription_name = "constraint-relaxer-service"
 
             # Create consumer
-            consumer = self.client.subscribe(
-                full_topic, subscription_name, consumer_type=pulsar.ConsumerType.Shared
-            )
+            consumer = self.client.subscribe(full_topic, subscription_name, consumer_type=pulsar.ConsumerType.Shared)
 
             self.consumers[topic] = consumer
             self.logger.info(f"Subscribed to topic {topic}")
@@ -163,9 +155,7 @@ class EventBusClient:
             self.logger.error(f"Failed to subscribe to {topic}: {str(e)}")
             raise
 
-    async def _listen_for_messages(
-        self, topic: str, consumer, handler: Callable[[Dict[str, Any]], Awaitable[None]]
-    ):
+    async def _listen_for_messages(self, topic: str, consumer, handler: Callable[[Dict[str, Any]], Awaitable[None]]):
         """
         Listen for messages on a topic.
 
